@@ -121,16 +121,33 @@ pub fn trick(s: &str) -> u64 {
 }
 
 pub fn trick2(s: &str) -> u64 {
+    parse_u64(s).unwrap()
+}
+
+pub fn parse_u64(s: &str) -> Result<u64,()> {
+    // TODO need a faster way to check this!
+    // for x in s.as_bytes() {
+    //     if x.wrapping_sub(b'0') > 9 {
+    //         return Err(());
+    //     }
+    // }
     let l = s.len();
     if l <= 8 {
         let mut res =  parse_8_chars(s);
         if l < 8 {
             res = res / MULTIPLIER[MULTIPLIER.len() - 1 - (8 - l)] as u64
         }
-        return res;
+        return Ok(res);
     }
     let (upper_digits, lower_digits) = s.split_at(l - 8);
-    parse_8_chars(upper_digits) * MULTIPLIER[MULTIPLIER.len() - 1 - (l-8)] as u64 + parse_8_chars(lower_digits)
+    let res = match parse_8_chars(upper_digits).checked_mul(MULTIPLIER[MULTIPLIER.len() - 1 - (l-8)] as u64) {
+        Some(res) => { res },
+        None => { return Err(()) }
+    }.checked_add(parse_8_chars(lower_digits));
+    match res {
+        Some(res) => Ok(res),
+        None => { return Err(()) }
+    }
 }
 
 pub fn trick3(src: &str) -> i64 {
