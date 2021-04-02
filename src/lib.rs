@@ -4,8 +4,6 @@ use core::arch::x86_64::{
     _mm_cvtsi128_si64, _mm_lddqu_si128, _mm_madd_epi16, _mm_maddubs_epi16, _mm_packus_epi32,
     _mm_set1_epi8, _mm_set_epi16, _mm_set_epi8, _mm_sub_epi16,
 };
-use core::arch::x86_64::_mm_loadu_si64;
-use core::arch::x86_64::_mm_cvtsi128_si32;
 pub fn str_parse(s: &str) -> u64 {
     s.parse().unwrap()
 }
@@ -232,10 +230,10 @@ pub fn trick_simd(s: &str) -> u64 {
     }
 }
 
-pub fn trick_simd_8(s: &str) -> u64 {
-    let (upper_digits, lower_digits) = s.split_at(8);
-    parse_8_chars_simd(lower_digits)
-}
+// pub fn trick_simd_8(s: &str) -> u64 {
+//     let (upper_digits, lower_digits) = s.split_at(8);
+//     parse_8_chars_simd(lower_digits)
+// }
 
 fn parse_8_chars(s: &str) -> Result<u64, ()> {
     const MASK_HI: u64 = 0xf0f0f0f0f0f0f0f0u64;
@@ -307,25 +305,25 @@ fn parse_8_chars_unchecked(s: &str) -> u64 {
     chunk
 }
 
-fn parse_8_chars_simd(s: &str) -> u64 {
-    unsafe {
-        let chunk = _mm_loadu_si64(std::mem::transmute_copy(&s));
-        let zeros = _mm_set1_epi8(b'0' as i8);
-        let chunk = _mm_sub_epi16(chunk, zeros);
+// fn parse_8_chars_simd(s: &str) -> u64 {
+//     unsafe {
+//         let chunk = _mm_loadu_si64(std::mem::transmute_copy(&s));
+//         let zeros = _mm_set1_epi8(b'0' as i8);
+//         let chunk = _mm_sub_epi16(chunk, zeros);
 
-        let mult = _mm_set_epi8(10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1);
-        let chunk = _mm_maddubs_epi16(chunk, mult);
+//         let mult = _mm_set_epi8(10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1);
+//         let chunk = _mm_maddubs_epi16(chunk, mult);
 
-        let mult = _mm_set_epi16(100, 1, 100, 1, 100, 1, 100, 1);
-        let chunk = _mm_madd_epi16(chunk, mult);
+//         let mult = _mm_set_epi16(100, 1, 100, 1, 100, 1, 100, 1);
+//         let chunk = _mm_madd_epi16(chunk, mult);
 
-        let chunk = _mm_packus_epi32(chunk, chunk);
-        let mult = _mm_set_epi16(10000, 1, 10000, 1, 10000, 1, 10000, 1);
-        let chunk = _mm_madd_epi16(chunk, mult);
+//         let chunk = _mm_packus_epi32(chunk, chunk);
+//         let mult = _mm_set_epi16(10000, 1, 10000, 1, 10000, 1, 10000, 1);
+//         let chunk = _mm_madd_epi16(chunk, mult);
 
-        _mm_cvtsi128_si32(chunk) as u64
-    }
-}
+//         _mm_cvtsi128_si32(chunk) as u64
+//     }
+// }
 
 pub fn trick_simd_c16(s: &str) -> u64 {
     let d: &mut [u8; 16] = &mut b"0000000000000000".clone();

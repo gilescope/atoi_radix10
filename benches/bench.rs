@@ -130,12 +130,12 @@ fn bench_trick_simd(b: &mut Bencher) {
     b.iter(|| trick_simd(black_box(EXAMPLE_TIMESTAMP)));
 }
 
-#[bench]
-fn bench_trick_simd_8(b: &mut Bencher) {
-    assert_eq!(trick_simd_8(EXAMPLE_TIMESTAMP), EXPECTED_TIMESTAMP);
-    b.bytes = EXAMPLE_TIMESTAMP.len() as u64;
-    b.iter(|| trick_simd_8(black_box(EXAMPLE_TIMESTAMP)));
-}
+// #[bench]
+// fn bench_trick_simd_8(b: &mut Bencher) {
+//     assert_eq!(trick_simd_8(EXAMPLE_TIMESTAMP), EXPECTED_TIMESTAMP);
+//     b.bytes = EXAMPLE_TIMESTAMP.len() as u64;
+//     b.iter(|| trick_simd_8(black_box(EXAMPLE_TIMESTAMP)));
+// }
 
 #[bench]
 fn bench_trick_simd_c16(b: &mut Bencher) {
