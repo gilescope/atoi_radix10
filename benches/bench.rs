@@ -106,27 +106,27 @@ fn bench_trick(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_trick2(b: &mut Bencher) {
-    assert_eq!(trick2(EXAMPLE_TIMESTAMP), EXPECTED_TIMESTAMP);
+fn bench_trick_with_checks(b: &mut Bencher) {
+    assert_eq!(trick_with_checks(EXAMPLE_TIMESTAMP), EXPECTED_TIMESTAMP);
     b.bytes = EXAMPLE_TIMESTAMP.len() as u64;
-    b.iter(|| trick2(black_box(EXAMPLE_TIMESTAMP)));
+    b.iter(|| trick_with_checks(black_box(EXAMPLE_TIMESTAMP)));
 }
 
 #[bench]
-fn bench_trick2_small(b: &mut Bencher) {
+fn bench_trick_with_checks_small_u64(b: &mut Bencher) {
     assert_eq!(parse_u64(":1234"), Err(()));
-    assert_eq!(trick2("12345"), 12345u64);
+    assert_eq!(trick_with_checks("12345"), 12345u64);
     assert_eq!(parse_u64("1234/"), Err(()));
-    assert_eq!(trick2("1234"), 1234u64);
+    assert_eq!(trick_with_checks("1234"), 1234u64);
     b.bytes = "1234".len() as u64;
-    b.iter(|| trick2(black_box("1234")));
+    b.iter(|| trick_with_checks(black_box("1234")));
 }
 
 #[bench]
-fn bench_trick3_i64(b: &mut Bencher) {
-    assert_eq!(trick3(EXAMPLE_TIMESTAMP), EXPECTED_TIMESTAMP as i64);
+fn bench_trick_with_checks_i64(b: &mut Bencher) {
+    assert_eq!(trick_with_checks_i64(EXAMPLE_TIMESTAMP), EXPECTED_TIMESTAMP as i64);
     b.bytes = EXAMPLE_TIMESTAMP.len() as u64;
-    b.iter(|| trick3(black_box(EXAMPLE_TIMESTAMP)));
+    b.iter(|| trick_with_checks_i64(black_box(EXAMPLE_TIMESTAMP)));
 }
 
 // #[bench]

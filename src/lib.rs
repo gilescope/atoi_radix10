@@ -117,10 +117,10 @@ pub fn unrolled_safe(s: &str) -> u64 {
 
 pub fn trick(s: &str) -> u64 {
     let (upper_digits, lower_digits) = s.split_at(8);
-    parse_8_chars(upper_digits).unwrap() * 100000000 + parse_8_chars(lower_digits).unwrap()
+    parse_8_chars_unchecked(upper_digits) * 100000000 + parse_8_chars_unchecked(lower_digits)
 }
 
-pub fn trick2(s: &str) -> u64 {
+pub fn trick_with_checks(s: &str) -> u64 {
     parse_u64(s).unwrap()
 }
 
@@ -135,19 +135,18 @@ pub fn parse_u64(s: &str) -> Result<u64, ()> {
     }
     let (upper_digits, lower_digits) = s.split_at(l - 8);
     let res = match parse_8_chars(upper_digits)?
-        .checked_mul(MULTIPLIER[MULTIPLIER.len() - 1 - (l - 8)] as u64)
+        .checked_mul(MULTIPLIER[MULTIPLIER.len() - l + 7] as u64)
     {
         Some(res) => res,
         None => return Err(()),
-    }
-    .checked_add(parse_8_chars(lower_digits)?);
-    match res {
+    };
+    match res.checked_add(parse_8_chars(lower_digits)?) {
         Some(res) => Ok(res),
         None => return Err(()),
     }
 }
 
-pub fn trick3(src: &str) -> i64 {
+pub fn trick_with_checks_i64(src: &str) -> i64 {
     parse_signed64(src).unwrap()
 }
 
@@ -163,13 +162,14 @@ pub fn parse_signed64(src: &str) -> Result<i64, ()> {
         b'-' => (false, &src[1..]),
         _ => (true, src),
     };
-    let i = trick2(digits);
+    let i = parse_u64(digits)?;
     if is_positive {
         if i > i64::MAX as u64 {
             return Err(());
         }
         Ok(i as i64)
     } else {
+        // Negative
         if i > i64::MAX as u64 + 1 {
             return Err(());
         }
@@ -277,6 +277,33 @@ fn parse_8_chars(s: &str) -> Result<u64, ()> {
     let upper_digits = (chunk & 0x000000000000ffff) * 10000;
     let chunk = lower_digits + upper_digits;
     Ok(chunk)
+}
+
+fn parse_8_chars_unchecked(s: &str) -> u64 {
+    let mut chunk = 0;
+    unsafe {
+        std::ptr::copy_nonoverlapping(
+            s.as_ptr() as *const _,
+            &mut chunk,
+            std::mem::size_of_val(&chunk),
+        );
+    }
+
+    // 1-byte mask trick (works on 4 pairs of single digits)
+    let lower_digits = (chunk & 0x0f000f000f000f00) >> 8;
+    let upper_digits = (chunk & 0x000f000f000f000f) * 10;
+    let chunk = lower_digits + upper_digits;
+
+    // 2-byte mask trick (works on 2 pairs of two digits)
+    let lower_digits = (chunk & 0x00ff000000ff0000) >> 16;
+    let upper_digits = (chunk & 0x000000ff000000ff) * 100;
+    let chunk = lower_digits + upper_digits;
+
+    // 4-byte mask trick (works on a pair of four digits)
+    let lower_digits = (chunk & 0x0000ffff00000000) >> 32;
+    let upper_digits = (chunk & 0x000000000000ffff) * 10000;
+    let chunk = lower_digits + upper_digits;
+    chunk
 }
 
 // fn parse_8_chars_simd(s: &str) -> u64 {
