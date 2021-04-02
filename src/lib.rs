@@ -126,15 +126,11 @@ pub fn trick_with_checks(s: &str) -> u64 {
 pub fn parse_u64(s: &str) -> Result<u64, ()> {
     let l = s.len();
     if l <= 8 {
-        let mut res = parse_8_chars(s)?;
-        if l < 8 {
-            res = res / MULTIPLIER[MULTIPLIER.len() - 1 - (8 - l)] as u64
-        }
-        return Ok(res);
+        return parse_8_chars(s);
     }
     let (upper_digits, lower_digits) = s.split_at(l - 8);
     let res = match parse_8_chars(upper_digits)?
-        .checked_mul(MULTIPLIER[MULTIPLIER.len() - l + 7] as u64)
+        .checked_mul(MULTIPLIER[MULTIPLIER.len() - 1 - (l - 8)] as u64)
     {
         Some(res) => res,
         None => return Err(()),
@@ -246,17 +242,17 @@ fn parse_8_chars(s: &str) -> Result<u64, ()> {
             &mut chunk,
             std::mem::size_of_val(&chunk),
         );
-    }
 
-    // Make bit pattern regular if < 8 chars by prefixing with b'0's:
-    let chunk = chunk | 0x3030303030303030u64 << s.len() * 8;
+        // SAFETY: Unknown memory due to < 8 len replaced with with b'0's:
+        chunk = chunk << ((8 - s.len()) * 8) | 0x3030303030303030u64 >> s.len() * 8;
+    }
 
     // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
     let x = chunk & MASK_LOW;
     const RESULT_MASK: u64 = !0u64 / 255 * 128;
     const N: u64 = 9;
     const N_MASK: u64 = !0u64 / 255 * (127 - N);
-    if (chunk & MASK_HI) != M3 || (x + N_MASK | x) & RESULT_MASK > 0 {
+    if (chunk & MASK_HI) - M3 | ((x + N_MASK | x) & RESULT_MASK) != 0 {
         // _mm_cmpgt_epi8 would also work nicely here if available on target.
         return Err(());
     }
