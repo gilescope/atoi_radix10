@@ -7,26 +7,26 @@ use test::{black_box, Bencher};
 const EXAMPLE_TIMESTAMP: &str = "1585201087123789";
 const EXPECTED_TIMESTAMP: u64 = 1585201087123789;
 
-#[bench]
-fn bench_str_parse_unchecked(b: &mut Bencher) {
-    assert_eq!(str_parse(EXAMPLE_TIMESTAMP), EXPECTED_TIMESTAMP);
-    b.bytes = EXAMPLE_TIMESTAMP.len() as u64;
-    b.iter(|| str_parse_unchecked(black_box(EXAMPLE_TIMESTAMP)));
-}
+// #[bench]
+// fn bench_str_parse_unchecked(b: &mut Bencher) {
+//     assert_eq!(str_parse(EXAMPLE_TIMESTAMP), EXPECTED_TIMESTAMP);
+//     b.bytes = EXAMPLE_TIMESTAMP.len() as u64;
+//     b.iter(|| str_parse_unchecked(black_box(EXAMPLE_TIMESTAMP)));
+// }
 
-#[bench]
-fn bench_str_parse_multiplier(b: &mut Bencher) {
-    assert_eq!(str_parse(EXAMPLE_TIMESTAMP), EXPECTED_TIMESTAMP);
-    b.bytes = EXAMPLE_TIMESTAMP.len() as u64;
-    b.iter(|| str_parse_multiplier(black_box(EXAMPLE_TIMESTAMP)));
-}
+// #[bench]
+// fn bench_str_parse_multiplier(b: &mut Bencher) {
+//     assert_eq!(str_parse(EXAMPLE_TIMESTAMP), EXPECTED_TIMESTAMP);
+//     b.bytes = EXAMPLE_TIMESTAMP.len() as u64;
+//     b.iter(|| str_parse_multiplier(black_box(EXAMPLE_TIMESTAMP)));
+// }
 
-#[bench]
-fn bench_str_parse(b: &mut Bencher) {
-    assert_eq!(str_parse(EXAMPLE_TIMESTAMP), EXPECTED_TIMESTAMP);
-    b.bytes = EXAMPLE_TIMESTAMP.len() as u64;
-    b.iter(|| str_parse(black_box(EXAMPLE_TIMESTAMP)));
-}
+// #[bench]
+// fn bench_str_parse(b: &mut Bencher) {
+//     assert_eq!(str_parse(EXAMPLE_TIMESTAMP), EXPECTED_TIMESTAMP);
+//     b.bytes = EXAMPLE_TIMESTAMP.len() as u64;
+//     b.iter(|| str_parse(black_box(EXAMPLE_TIMESTAMP)));
+// }
 
 // #[bench]
 // fn bench_naive_chars(b: &mut Bencher) {
@@ -105,7 +105,6 @@ fn bench_trick(b: &mut Bencher) {
     b.iter(|| trick(black_box(EXAMPLE_TIMESTAMP)));
 }
 
-
 #[bench]
 fn bench_trick2(b: &mut Bencher) {
     assert_eq!(trick2(EXAMPLE_TIMESTAMP), EXPECTED_TIMESTAMP);
@@ -113,9 +112,11 @@ fn bench_trick2(b: &mut Bencher) {
     b.iter(|| trick2(black_box(EXAMPLE_TIMESTAMP)));
 }
 
-
 #[bench]
 fn bench_trick2_small(b: &mut Bencher) {
+    assert_eq!(parse_u64(":1234"), Err(()));
+    assert_eq!(trick2("12345"), 12345u64);
+    assert_eq!(parse_u64("1234/"), Err(()));
     assert_eq!(trick2("1234"), 1234u64);
     b.bytes = "1234".len() as u64;
     b.iter(|| trick2(black_box("1234")));

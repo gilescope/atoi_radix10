@@ -117,36 +117,33 @@ pub fn unrolled_safe(s: &str) -> u64 {
 
 pub fn trick(s: &str) -> u64 {
     let (upper_digits, lower_digits) = s.split_at(8);
-    parse_8_chars(upper_digits) * 100000000 + parse_8_chars(lower_digits)
+    parse_8_chars(upper_digits).unwrap() * 100000000 + parse_8_chars(lower_digits).unwrap()
 }
 
 pub fn trick2(s: &str) -> u64 {
     parse_u64(s).unwrap()
 }
 
-pub fn parse_u64(s: &str) -> Result<u64,()> {
-    // TODO need a faster way to check this!
-    // for x in s.as_bytes() {
-    //     if x.wrapping_sub(b'0') > 9 {
-    //         return Err(());
-    //     }
-    // }
+pub fn parse_u64(s: &str) -> Result<u64, ()> {
     let l = s.len();
     if l <= 8 {
-        let mut res =  parse_8_chars(s);
+        let mut res = parse_8_chars(s)?;
         if l < 8 {
             res = res / MULTIPLIER[MULTIPLIER.len() - 1 - (8 - l)] as u64
         }
         return Ok(res);
     }
     let (upper_digits, lower_digits) = s.split_at(l - 8);
-    let res = match parse_8_chars(upper_digits).checked_mul(MULTIPLIER[MULTIPLIER.len() - 1 - (l-8)] as u64) {
-        Some(res) => { res },
-        None => { return Err(()) }
-    }.checked_add(parse_8_chars(lower_digits));
+    let res = match parse_8_chars(upper_digits)?
+        .checked_mul(MULTIPLIER[MULTIPLIER.len() - 1 - (l - 8)] as u64)
+    {
+        Some(res) => res,
+        None => return Err(()),
+    }
+    .checked_add(parse_8_chars(lower_digits)?);
     match res {
         Some(res) => Ok(res),
-        None => { return Err(()) }
+        None => return Err(()),
     }
 }
 
@@ -154,7 +151,7 @@ pub fn trick3(src: &str) -> i64 {
     parse_signed64(src).unwrap()
 }
 
-pub fn parse_signed64(src: &str) -> Result<i64,()> {
+pub fn parse_signed64(src: &str) -> Result<i64, ()> {
     if src.is_empty() {
         return Err(());
     }
@@ -169,16 +166,16 @@ pub fn parse_signed64(src: &str) -> Result<i64,()> {
     let i = trick2(digits);
     if is_positive {
         if i > i64::MAX as u64 {
-            return Err(())
+            return Err(());
         }
         Ok(i as i64)
     } else {
         if i > i64::MAX as u64 + 1 {
-            return Err(())
+            return Err(());
         }
         match 0_i64.checked_sub(i as i64) {
-            Some(res) => { Ok(res) },
-            None => { Err(()) }
+            Some(res) => Ok(res),
+            None => Err(()),
         }
     }
 }
@@ -239,14 +236,31 @@ pub fn trick_simd(s: &str) -> u64 {
 //     parse_8_chars_simd(lower_digits)
 // }
 
-fn parse_8_chars(s: &str) -> u64 {
-    let ss = s.as_ptr() as *const _;
+fn parse_8_chars(s: &str) -> Result<u64, ()> {
+    const MASK_HI: u64 = 0xf0f0f0f0f0f0f0f0u64;
+    const MASK_LOW: u64 = 0x0f0f0f0f0f0f0f0fu64;
+    const M3: u64 = 0x3030303030303030u64;
     let mut chunk = 0;
     unsafe {
-        std::ptr::copy_nonoverlapping(ss, &mut chunk, std::mem::size_of_val(&chunk));
+        std::ptr::copy_nonoverlapping(
+            s.as_ptr() as *const _,
+            &mut chunk,
+            std::mem::size_of_val(&chunk),
+        );
     }
-    //chunk = chunk.shr((8 - s.len()));
-    
+
+    // Make bit pattern regular if < 8 chars by prefixing with b'0's:
+    let chunk = chunk | 0x3030303030303030u64 << s.len() * 8;
+
+    // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
+    let x = chunk & MASK_LOW;
+    const RESULT_MASK: u64 = !0u64 / 255 * 128;
+    const N: u64 = 9;
+    const N_MASK: u64 = !0u64 / 255 * (127 - N);
+    if (chunk & MASK_HI) != M3 || (x + N_MASK | x) & RESULT_MASK > 0 {
+        // _mm_cmpgt_epi8 would also work nicely here if available on target.
+        return Err(());
+    }
 
     // 1-byte mask trick (works on 4 pairs of single digits)
     let lower_digits = (chunk & 0x0f000f000f000f00) >> 8;
@@ -262,9 +276,7 @@ fn parse_8_chars(s: &str) -> u64 {
     let lower_digits = (chunk & 0x0000ffff00000000) >> 32;
     let upper_digits = (chunk & 0x000000000000ffff) * 10000;
     let chunk = lower_digits + upper_digits;
-    //println!("{:0x}", chunk);
-    
-    chunk
+    Ok(chunk)
 }
 
 // fn parse_8_chars_simd(s: &str) -> u64 {
@@ -311,15 +323,6 @@ pub fn trick_simd_c16(s: &str) -> u64 {
         ((chunk & 0xffffffff) * 100000000) + (chunk >> 32)
     }
 }
-
-
-
-
-
-
-
-
-
 
 #[doc(hidden)]
 trait FromStrRadixHelper: PartialOrd + Copy {
@@ -395,9 +398,6 @@ doit! { i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize }
 
 use std::{num::*, ops::Shr};
 
-
-
-
 pub fn str_parse_unchecked(s: &str) -> u64 {
     from_str_radix_unchecked::<u64>(s, 10).unwrap()
 }
@@ -431,7 +431,7 @@ fn from_str_radix_unchecked<T: FromStrRadixHelper>(src: &str, radix: u32) -> Res
     };
 
     let mut result = T::from_u32(0);
-    if radix <= 16 && src.len() <= std::mem::size_of::<T>() * 2 - if is_signed_ty { 1 } else { 0 }  {
+    if radix <= 16 && src.len() <= std::mem::size_of::<T>() * 2 - if is_signed_ty { 1 } else { 0 } {
         // The ALU can reorder these adds and do more in parallel
         // as each mul isn't dependent on the previous answer.
         unsafe {
@@ -499,23 +499,11 @@ fn from_str_radix_unchecked<T: FromStrRadixHelper>(src: &str, radix: u32) -> Res
     Ok(result)
 }
 
-
-
-
-
-
-
-
-
-
-
 pub fn str_parse_multiplier(s: &str) -> u64 {
     from_str_radix_multiplier::<u64>(s, 10).unwrap()
 }
 
-
 fn from_str_radix_multiplier<T: FromStrRadixHelper>(src: &str, radix: u32) -> Result<T, ()> {
-
     assert!(
         radix >= 2 && radix <= 36,
         "from_str_radix_int: must lie in the range `[2, 36]` - found {}",
@@ -529,7 +517,7 @@ fn from_str_radix_multiplier<T: FromStrRadixHelper>(src: &str, radix: u32) -> Re
     // Compiler can't compile the following:
     //const is_signed_ty : bool =  T::MIN < T::MAX;
     //If it could I might push for T::ZERO to be defined.
-    let is_signed_ty : bool =  T::from_u32(0) > T::min_value();
+    let is_signed_ty: bool = T::from_u32(0) > T::min_value();
 
     // all valid digits are ascii, so we will just iterate over the utf8 bytes
     // and cast them to chars. .to_digit() will safely return None for anything
@@ -554,70 +542,60 @@ fn from_str_radix_multiplier<T: FromStrRadixHelper>(src: &str, radix: u32) -> Re
         let mut idx = MULTIPLIER.len() - todo.min(9);
         if is_positive {
             unsafe {
-            for &c in digits {
-                if idx == MULTIPLIER.len() {
-                    todo -= 9;
-                    idx = MULTIPLIER.len() - todo.min(9);
-                    result = result.mul(*MULTIPLIER.get_unchecked(idx - 1));
-                }
-                let mut x = match (c as char).to_digit(radix) {
-                    Some(x) => x,
-                    None => return Err(()),
-                };
-                x = match MULTIPLIER.get_unchecked(idx).checked_mul(x) {
-                    Some(result) => result,
-                    None => return Err(()),
-                };
-                result = match result.checked_add(x) {
-                    Some(result) => result,
-                    None => return Err(()),
-                };
+                for &c in digits {
+                    if idx == MULTIPLIER.len() {
+                        todo -= 9;
+                        idx = MULTIPLIER.len() - todo.min(9);
+                        result = result.mul(*MULTIPLIER.get_unchecked(idx - 1));
+                    }
+                    let mut x = match (c as char).to_digit(radix) {
+                        Some(x) => x,
+                        None => return Err(()),
+                    };
+                    x = match MULTIPLIER.get_unchecked(idx).checked_mul(x) {
+                        Some(result) => result,
+                        None => return Err(()),
+                    };
+                    result = match result.checked_add(x) {
+                        Some(result) => result,
+                        None => return Err(()),
+                    };
 
-                idx += 1;
-             }
+                    idx += 1;
+                }
             }
         } else {
             if is_signed_ty {
-             unsafe 
-            {
-            for &c in digits {
-                if idx == MULTIPLIER.len() {
-                    todo -= 9;
-                    idx = MULTIPLIER.len() - todo.min(9);
-                    result = result.mul(*MULTIPLIER.get_unchecked(idx - 1));
-                }
-                let mut x = match (c as char).to_digit(radix) {
-                    Some(x) => x,
-                    None => return Err(()),
-                };
-                x = match MULTIPLIER.get_unchecked(idx).checked_mul(x) {
-                    Some(result) => result,
-                    None => return Err(()),
-                };
-                result = match result.checked_sub(x) {
-                    Some(result) => result,
-                    None => return Err(()),
-                };
+                unsafe {
+                    for &c in digits {
+                        if idx == MULTIPLIER.len() {
+                            todo -= 9;
+                            idx = MULTIPLIER.len() - todo.min(9);
+                            result = result.mul(*MULTIPLIER.get_unchecked(idx - 1));
+                        }
+                        let mut x = match (c as char).to_digit(radix) {
+                            Some(x) => x,
+                            None => return Err(()),
+                        };
+                        x = match MULTIPLIER.get_unchecked(idx).checked_mul(x) {
+                            Some(result) => result,
+                            None => return Err(()),
+                        };
+                        result = match result.checked_sub(x) {
+                            Some(result) => result,
+                            None => return Err(()),
+                        };
 
-                idx += 1;
-             }
-            }
+                        idx += 1;
+                    }
+                }
             }
         }
     } else {
-      //snipped
+        //snipped
     }
     Ok(result)
 }
-
-
-
-
-
-
-
-
-
 
 const MULTIPLIER: &[u32] = &[
     1_000_000_000,
@@ -631,112 +609,113 @@ const MULTIPLIER: &[u32] = &[
     10,
     1,
 ];
-const XMULTIPLIER: &[[u32;10]] = &[[
-    1_000_000_000,
-    100_000_000,
-    10_000_000,
-    1_000_000,
-    100_000,
-    10_000,
-    1_000,
-    100,
-    10,
-    1,
-],
-[
-    1_000_000_000,
-    200_000_000,
-    20_000_000,
-    2_000_000,
-    200_000,
-    20_000,
-    2_000,
-    200,
-    20,
-    2,
-],
-[
-    1_000_000_000,
-    300_000_000,
-    30_000_000,
-    3_000_000,
-    300_000,
-    30_000,
-    3_000,
-    300,
-    30,
-    3,
-],
-[
-    1_000_000_000,
-    400_000_000,
-    40_000_000,
-    4_000_000,
-    400_000,
-    40_000,
-    4_000,
-    400,
-    40,
-    4,
-],
-[
-    1_000_000_000,
-    500_000_000,
-    50_000_000,
-    5_000_000,
-    500_000,
-    50_000,
-    5_000,
-    500,
-    50,
-    5,
-],
-[
-    1_000_000_000,
-    600_000_000,
-    60_000_000,
-    6_000_000,
-    600_000,
-    60_000,
-    6_000,
-    600,
-    60,
-    6,
-],
-[
-    1_000_000_000,
-    700_000_000,
-    70_000_000,
-    7_000_000,
-    700_000,
-    70_000,
-    7_000,
-    700,
-    70,
-    7,
-],
-[
-    1_000_000_000,
-    800_000_000,
-    80_000_000,
-    8_000_000,
-    800_000,
-    80_000,
-    8_000,
-    800,
-    80,
-    8,
-],
-[
-    1_000_000_000,
-    900_000_000,
-    90_000_000,
-    9_000_000,
-    900_000,
-    90_000,
-    9_000,
-    900,
-    90,
-    9,
-]
+const XMULTIPLIER: &[[u32; 10]] = &[
+    [
+        1_000_000_000,
+        100_000_000,
+        10_000_000,
+        1_000_000,
+        100_000,
+        10_000,
+        1_000,
+        100,
+        10,
+        1,
+    ],
+    [
+        1_000_000_000,
+        200_000_000,
+        20_000_000,
+        2_000_000,
+        200_000,
+        20_000,
+        2_000,
+        200,
+        20,
+        2,
+    ],
+    [
+        1_000_000_000,
+        300_000_000,
+        30_000_000,
+        3_000_000,
+        300_000,
+        30_000,
+        3_000,
+        300,
+        30,
+        3,
+    ],
+    [
+        1_000_000_000,
+        400_000_000,
+        40_000_000,
+        4_000_000,
+        400_000,
+        40_000,
+        4_000,
+        400,
+        40,
+        4,
+    ],
+    [
+        1_000_000_000,
+        500_000_000,
+        50_000_000,
+        5_000_000,
+        500_000,
+        50_000,
+        5_000,
+        500,
+        50,
+        5,
+    ],
+    [
+        1_000_000_000,
+        600_000_000,
+        60_000_000,
+        6_000_000,
+        600_000,
+        60_000,
+        6_000,
+        600,
+        60,
+        6,
+    ],
+    [
+        1_000_000_000,
+        700_000_000,
+        70_000_000,
+        7_000_000,
+        700_000,
+        70_000,
+        7_000,
+        700,
+        70,
+        7,
+    ],
+    [
+        1_000_000_000,
+        800_000_000,
+        80_000_000,
+        8_000_000,
+        800_000,
+        80_000,
+        8_000,
+        800,
+        80,
+        8,
+    ],
+    [
+        1_000_000_000,
+        900_000_000,
+        90_000_000,
+        9_000_000,
+        900_000,
+        90_000,
+        9_000,
+        900,
+        90,
+        9,
+    ],
 ];
