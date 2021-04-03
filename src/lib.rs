@@ -141,16 +141,19 @@ pub fn parse_u64(mut s: &str) -> Result<u64, ()> {
 
     let mut result:u64 = 0;
     let mut s = s.as_bytes();
-    let mut step = l & 0b111; // l % 8
-    if step == 0 {
-        step = 8;
-    }
-
-    while l > 8 {
+    let step = l % 8;
+    if step > 0 {
         let break_point = step;
         let (upper_digits, lower) = (&s[0..break_point], &s[break_point..]);
         s = lower;
-        result = match result.checked_add(parse_8_chars(upper_digits)?) {
+        result = match parse_8_chars(upper_digits)?.checked_mul(100_000_000) {
+            Some(res) => res,
+            None => return Err(()),
+        };
+        l -= step;
+    }
+    while l > 8 {
+        result = match result.checked_add(parse_8_chars(&s[0..8])?) {
             Some(res) => res,
             None => return Err(()),
         };
@@ -158,8 +161,8 @@ pub fn parse_u64(mut s: &str) -> Result<u64, ()> {
             Some(res) => res,
             None => return Err(()),
         };
-        l -= step;
-        step = 8;
+        s = &s[8..];
+        l -= 8;
     }
     match result.checked_add(parse_8_chars(s)?) {
         Some(res) => Ok(res),
