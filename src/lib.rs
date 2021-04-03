@@ -135,8 +135,7 @@ pub fn parse_u64(mut s: &str) -> Result<u64, ()> {
         return parse_8_chars(s);
     }
     let (upper_digits, lower_digits) = s.split_at(l - 8);
-    let res = match parse_8_chars(upper_digits)?
-        .checked_mul(MULTIPLIER[MULTIPLIER.len() - 1 - (l - 8)] as u64)
+    let res = match parse_8_chars(upper_digits)?.checked_mul(100_000_000)
     {
         Some(res) => res,
         None => return Err(()),
