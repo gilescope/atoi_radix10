@@ -127,20 +127,41 @@ pub fn parse_u64(mut s: &str) -> Result<u64, ()> {
     if s.as_bytes()[0] == b'+' {
         s = &s[1..];
     }
-    let l = s.len();
+    let mut l = s.len();
     if l <= 8 {
-        if l == 0 {
-            return Err(());
-        }
-        return parse_8_chars(s);
+        return if l <= 1 {
+            match s.as_bytes().get(0).map(|v| v.wrapping_sub(b'0')) {
+                Some(val) if val <= 9 => Ok(val as u64),
+                _ => Err(()),
+            }
+        } else {
+            parse_8_chars(s.as_bytes())
+        };
     }
-    let (upper_digits, lower_digits) = s.split_at(l - 8);
-    let res = match parse_8_chars(upper_digits)?.checked_mul(100_000_000)
-    {
-        Some(res) => res,
-        None => return Err(()),
-    };
-    match res.checked_add(parse_8_chars(lower_digits)?) {
+
+    let mut result:u64 = 0;
+    let mut s = s.as_bytes();
+    let mut step = l & 0b111; // l % 8
+    if step == 0 {
+        step = 8;
+    }
+
+    while l > 8 {
+        let break_point = step;
+        let (upper_digits, lower) = (&s[0..break_point], &s[break_point..]);
+        s = lower;
+        result = match result.checked_add(parse_8_chars(upper_digits)?) {
+            Some(res) => res,
+            None => return Err(()),
+        };
+        result = match result.checked_mul(100_000_000) {
+            Some(res) => res,
+            None => return Err(()),
+        };
+        l -= step;
+        step = 8;
+    }
+    match result.checked_add(parse_8_chars(s)?) {
         Some(res) => Ok(res),
         None => return Err(()),
     }
@@ -152,7 +173,9 @@ pub fn trick_with_checks_i64(src: &str) -> i64 {
 
 pub fn parse_signed64(src: &str) -> Result<i64, ()> {
     let (is_positive, digits) = match src.as_bytes().get(0) {
-        None => { return Err(()); }
+        None => {
+            return Err(());
+        }
         Some(b'-') => (false, &src[1..]),
         Some(_) => (true, src),
     };
@@ -230,7 +253,7 @@ pub fn trick_simd(s: &str) -> u64 {
 //     parse_8_chars_simd(lower_digits)
 // }
 
-fn parse_8_chars(s: &str) -> Result<u64, ()> {
+fn parse_8_chars(s: &[u8]) -> Result<u64, ()> {
     let l = s.len();
     // if l == 1 {
     //     let val = s.as_bytes()[0].wrapping_sub(b'0');
