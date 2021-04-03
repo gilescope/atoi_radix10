@@ -123,9 +123,15 @@ pub fn trick_with_checks(s: &str) -> u64 {
     parse_u64(s).unwrap()
 }
 
-pub fn parse_u64(s: &str) -> Result<u64, ()> {
+pub fn parse_u64(mut s: &str) -> Result<u64, ()> {
+    if s.as_bytes()[0] == b'+' {
+        s = &s[1..];
+    }
     let l = s.len();
     if l <= 8 {
+        if l == 0 {
+            return Err(());
+        }
         return parse_8_chars(s);
     }
     let (upper_digits, lower_digits) = s.split_at(l - 8);
@@ -146,16 +152,10 @@ pub fn trick_with_checks_i64(src: &str) -> i64 {
 }
 
 pub fn parse_signed64(src: &str) -> Result<i64, ()> {
-    if src.is_empty() {
-        return Err(());
-    }
-    let (is_positive, digits) = match src.as_bytes()[0] {
-        b'+' | b'-' if src[1..].is_empty() => {
-            return Err(());
-        }
-        b'+' => (true, &src[1..]),
-        b'-' => (false, &src[1..]),
-        _ => (true, src),
+    let (is_positive, digits) = match src.as_bytes().get(0) {
+        None => { return Err(()); }
+        Some(b'-') => (false, &src[1..]),
+        Some(_) => (true, src),
     };
     let i = parse_u64(digits)?;
     if is_positive {
@@ -232,9 +232,18 @@ pub fn trick_simd(s: &str) -> u64 {
 // }
 
 fn parse_8_chars(s: &str) -> Result<u64, ()> {
+    let l = s.len();
+    // if l == 1 {
+    //     let val = s.as_bytes()[0].wrapping_sub(b'0');
+    //     return if val <= 9 {
+    //         Ok(val as u64)
+    //     } else {
+    //         Err(())
+    //     }
+    // }
     const MASK_HI: u64 = 0xf0f0f0f0f0f0f0f0u64;
     const MASK_LOW: u64 = 0x0f0f0f0f0f0f0f0fu64;
-    const M3: u64 = 0x3030303030303030u64;
+    const ASCII_ZEROS: u64 = 0x3030303030303030u64;
     let mut chunk = 0;
     unsafe {
         std::ptr::copy_nonoverlapping(
@@ -244,7 +253,7 @@ fn parse_8_chars(s: &str) -> Result<u64, ()> {
         );
 
         // SAFETY: Unknown memory due to < 8 len replaced with with b'0's:
-        chunk = chunk << ((8 - s.len()) * 8) | 0x3030303030303030u64 >> s.len() * 8;
+        chunk = chunk << ((8 - l) * 8) | 0x3030303030303030u64 >> l * 8;
     }
 
     // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
@@ -252,7 +261,7 @@ fn parse_8_chars(s: &str) -> Result<u64, ()> {
     const RESULT_MASK: u64 = !0u64 / 255 * 128;
     const N: u64 = 9;
     const N_MASK: u64 = !0u64 / 255 * (127 - N);
-    if (chunk & MASK_HI) - M3 | ((x + N_MASK | x) & RESULT_MASK) != 0 {
+    if (chunk & MASK_HI) - ASCII_ZEROS | ((x + N_MASK | x) & RESULT_MASK) != 0 {
         // _mm_cmpgt_epi8 would also work nicely here if available on target.
         return Err(());
     }

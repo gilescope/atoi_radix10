@@ -1,0 +1,107 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_OUTPUT_MODE	u-ctags	/u-ctags or e-ctags/
+!_TAG_PROGRAM_AUTHOR	Universal Ctags Team	//
+!_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
+!_TAG_PROGRAM_URL	https://ctags.io/	/official site/
+!_TAG_PROGRAM_VERSION	0.0.0	/1208e45/
+0	target/release/.fingerprint/parseint-4bd3d8f62590d6bc/test-lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":174046132101/;"	o	array:local
+0	target/release/.fingerprint/parseint-4c486e2887f16749/test-bench-bench.json	/^{"rustc":4712542145745680002,"features":"[]","target":6628690783967570892,"profile":174046132101/;"	a	array:deps
+0	target/release/.fingerprint/parseint-4c486e2887f16749/test-bench-bench.json	/^{"rustc":4712542145745680002,"features":"[]","target":6628690783967570892,"profile":174046132101/;"	n	array:deps.0
+0	target/release/.fingerprint/parseint-4c486e2887f16749/test-bench-bench.json	/^{"rustc":4712542145745680002,"features":"[]","target":6628690783967570892,"profile":174046132101/;"	o	array:local
+0	target/release/.fingerprint/parseint-e1ebe09b638d8141/lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":228515222820/;"	o	array:local
+1	target/release/.fingerprint/parseint-4c486e2887f16749/test-bench-bench.json	/^{"rustc":4712542145745680002,"features":"[]","target":6628690783967570892,"profile":174046132101/;"	s	array:deps.0
+17598535894874457435	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	o	object:outputs
+2	target/release/.fingerprint/parseint-4c486e2887f16749/test-bench-bench.json	/^{"rustc":4712542145745680002,"features":"[]","target":6628690783967570892,"profile":174046132101/;"	b	array:deps.0
+2797684049618456168	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	o	object:outputs
+3	target/release/.fingerprint/parseint-4c486e2887f16749/test-bench-bench.json	/^{"rustc":4712542145745680002,"features":"[]","target":6628690783967570892,"profile":174046132101/;"	n	array:deps.0
+931469667778813386	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	o	object:outputs
+CheckDepInfo	target/release/.fingerprint/parseint-4bd3d8f62590d6bc/test-lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":174046132101/;"	o	object:local.0
+CheckDepInfo	target/release/.fingerprint/parseint-4c486e2887f16749/test-bench-bench.json	/^{"rustc":4712542145745680002,"features":"[]","target":6628690783967570892,"profile":174046132101/;"	o	object:local.0
+CheckDepInfo	target/release/.fingerprint/parseint-e1ebe09b638d8141/lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":228515222820/;"	o	object:local.0
+Faster Integer Parsing (rust port)	README.md	/^Faster Integer Parsing (rust port)$/;"	c
+bench_naive_bytes	benches/bench.rs	/^fn bench_naive_bytes(b: &mut Bencher) {$/;"	f
+bench_naive_bytes_and	benches/bench.rs	/^fn bench_naive_bytes_and(b: &mut Bencher) {$/;"	f
+bench_naive_bytes_and_c16	benches/bench.rs	/^fn bench_naive_bytes_and_c16(b: &mut Bencher) {$/;"	f
+bench_naive_bytes_iter	benches/bench.rs	/^fn bench_naive_bytes_iter(b: &mut Bencher) {$/;"	f
+bench_naive_chars	benches/bench.rs	/^fn bench_naive_chars(b: &mut Bencher) {$/;"	f
+bench_naive_chars_and	benches/bench.rs	/^fn bench_naive_chars_and(b: &mut Bencher) {$/;"	f
+bench_naive_chars_iter	benches/bench.rs	/^fn bench_naive_chars_iter(b: &mut Bencher) {$/;"	f
+bench_str_parse	benches/bench.rs	/^fn bench_str_parse(b: &mut Bencher) {$/;"	f
+bench_trick	benches/bench.rs	/^fn bench_trick(b: &mut Bencher) {$/;"	f
+bench_trick_128	benches/bench.rs	/^fn bench_trick_128(b: &mut Bencher) {$/;"	f
+bench_trick_simd	benches/bench.rs	/^fn bench_trick_simd(b: &mut Bencher) {$/;"	f
+bench_trick_simd_c16	benches/bench.rs	/^fn bench_trick_simd_c16(b: &mut Bencher) {$/;"	f
+bench_unrolled	benches/bench.rs	/^fn bench_unrolled(b: &mut Bencher) {$/;"	f
+bench_unrolled_safe	benches/bench.rs	/^fn bench_unrolled_safe(b: &mut Bencher) {$/;"	f
+bench_unrolled_unsafe	benches/bench.rs	/^fn bench_unrolled_unsafe(b: &mut Bencher) {$/;"	f
+code	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	n	object:outputs.17598535894874457435
+code	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	n	object:outputs.2797684049618456168
+code	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	n	object:outputs.931469667778813386
+compile_kind	target/release/.fingerprint/parseint-4bd3d8f62590d6bc/test-lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":174046132101/;"	n
+compile_kind	target/release/.fingerprint/parseint-4c486e2887f16749/test-bench-bench.json	/^{"rustc":4712542145745680002,"features":"[]","target":6628690783967570892,"profile":174046132101/;"	n
+compile_kind	target/release/.fingerprint/parseint-e1ebe09b638d8141/lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":228515222820/;"	n
+config	target/release/.fingerprint/parseint-4bd3d8f62590d6bc/test-lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":174046132101/;"	n
+config	target/release/.fingerprint/parseint-4c486e2887f16749/test-bench-bench.json	/^{"rustc":4712542145745680002,"features":"[]","target":6628690783967570892,"profile":174046132101/;"	n
+config	target/release/.fingerprint/parseint-e1ebe09b638d8141/lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":228515222820/;"	n
+dep_info	target/release/.fingerprint/parseint-4bd3d8f62590d6bc/test-lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":174046132101/;"	s	object:local.0.CheckDepInfo
+dep_info	target/release/.fingerprint/parseint-4c486e2887f16749/test-bench-bench.json	/^{"rustc":4712542145745680002,"features":"[]","target":6628690783967570892,"profile":174046132101/;"	s	object:local.0.CheckDepInfo
+dep_info	target/release/.fingerprint/parseint-e1ebe09b638d8141/lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":228515222820/;"	s	object:local.0.CheckDepInfo
+deps	target/release/.fingerprint/parseint-4bd3d8f62590d6bc/test-lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":174046132101/;"	a
+deps	target/release/.fingerprint/parseint-4c486e2887f16749/test-bench-bench.json	/^{"rustc":4712542145745680002,"features":"[]","target":6628690783967570892,"profile":174046132101/;"	a
+deps	target/release/.fingerprint/parseint-e1ebe09b638d8141/lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":228515222820/;"	a
+features	target/release/.fingerprint/parseint-4bd3d8f62590d6bc/test-lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":174046132101/;"	s
+features	target/release/.fingerprint/parseint-4c486e2887f16749/test-bench-bench.json	/^{"rustc":4712542145745680002,"features":"[]","target":6628690783967570892,"profile":174046132101/;"	s
+features	target/release/.fingerprint/parseint-e1ebe09b638d8141/lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":228515222820/;"	s
+local	target/release/.fingerprint/parseint-4bd3d8f62590d6bc/test-lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":174046132101/;"	a
+local	target/release/.fingerprint/parseint-4c486e2887f16749/test-bench-bench.json	/^{"rustc":4712542145745680002,"features":"[]","target":6628690783967570892,"profile":174046132101/;"	a
+local	target/release/.fingerprint/parseint-e1ebe09b638d8141/lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":228515222820/;"	a
+metadata	target/release/.fingerprint/parseint-4bd3d8f62590d6bc/test-lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":174046132101/;"	n
+metadata	target/release/.fingerprint/parseint-4c486e2887f16749/test-bench-bench.json	/^{"rustc":4712542145745680002,"features":"[]","target":6628690783967570892,"profile":174046132101/;"	n
+metadata	target/release/.fingerprint/parseint-e1ebe09b638d8141/lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":228515222820/;"	n
+naive_bytes	src/lib.rs	/^pub fn naive_bytes(s: &str) -> u64 {$/;"	f
+naive_bytes_and	src/lib.rs	/^pub fn naive_bytes_and(s: &str) -> u64 {$/;"	f
+naive_bytes_and_c16	src/lib.rs	/^pub fn naive_bytes_and_c16(s: &str) -> u64 {$/;"	f
+naive_bytes_iter	src/lib.rs	/^pub fn naive_bytes_iter(s: &str) -> u64 {$/;"	f
+naive_chars	src/lib.rs	/^pub fn naive_chars(s: &str) -> u64 {$/;"	f
+naive_chars_and	src/lib.rs	/^pub fn naive_chars_and(s: &str) -> u64 {$/;"	f
+naive_chars_iter	src/lib.rs	/^pub fn naive_chars_iter(s: &str) -> u64 {$/;"	f
+outputs	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	o
+parse_8_chars	src/lib.rs	/^fn parse_8_chars(s: &str) -> u64 {$/;"	f
+path	target/release/.fingerprint/parseint-4bd3d8f62590d6bc/test-lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":174046132101/;"	n
+path	target/release/.fingerprint/parseint-4c486e2887f16749/test-bench-bench.json	/^{"rustc":4712542145745680002,"features":"[]","target":6628690783967570892,"profile":174046132101/;"	n
+path	target/release/.fingerprint/parseint-e1ebe09b638d8141/lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":228515222820/;"	n
+profile	target/release/.fingerprint/parseint-4bd3d8f62590d6bc/test-lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":174046132101/;"	n
+profile	target/release/.fingerprint/parseint-4c486e2887f16749/test-bench-bench.json	/^{"rustc":4712542145745680002,"features":"[]","target":6628690783967570892,"profile":174046132101/;"	n
+profile	target/release/.fingerprint/parseint-e1ebe09b638d8141/lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":228515222820/;"	n
+rustc	target/release/.fingerprint/parseint-4bd3d8f62590d6bc/test-lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":174046132101/;"	n
+rustc	target/release/.fingerprint/parseint-4c486e2887f16749/test-bench-bench.json	/^{"rustc":4712542145745680002,"features":"[]","target":6628690783967570892,"profile":174046132101/;"	n
+rustc	target/release/.fingerprint/parseint-e1ebe09b638d8141/lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":228515222820/;"	n
+rustc_fingerprint	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	n
+rustflags	target/release/.fingerprint/parseint-4bd3d8f62590d6bc/test-lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":174046132101/;"	a
+rustflags	target/release/.fingerprint/parseint-4c486e2887f16749/test-bench-bench.json	/^{"rustc":4712542145745680002,"features":"[]","target":6628690783967570892,"profile":174046132101/;"	a
+rustflags	target/release/.fingerprint/parseint-e1ebe09b638d8141/lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":228515222820/;"	a
+status	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	s	object:outputs.17598535894874457435
+status	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	s	object:outputs.2797684049618456168
+status	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	s	object:outputs.931469667778813386
+stderr	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	s	object:outputs.17598535894874457435
+stderr	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	s	object:outputs.2797684049618456168
+stderr	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	s	object:outputs.931469667778813386
+stdout	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	s	object:outputs.17598535894874457435
+stdout	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	s	object:outputs.2797684049618456168
+stdout	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	s	object:outputs.931469667778813386
+str_parse	src/lib.rs	/^pub fn str_parse(s: &str) -> u64 {$/;"	f
+success	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	b	object:outputs.17598535894874457435
+success	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	b	object:outputs.2797684049618456168
+success	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	b	object:outputs.931469667778813386
+successes	target/.rustc_info.json	/^{"rustc_fingerprint":9851385122578847373,"outputs":{"17598535894874457435":{"success":true,"stat/;"	o
+target	target/release/.fingerprint/parseint-4bd3d8f62590d6bc/test-lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":174046132101/;"	n
+target	target/release/.fingerprint/parseint-4c486e2887f16749/test-bench-bench.json	/^{"rustc":4712542145745680002,"features":"[]","target":6628690783967570892,"profile":174046132101/;"	n
+target	target/release/.fingerprint/parseint-e1ebe09b638d8141/lib-parseint.json	/^{"rustc":4712542145745680002,"features":"[]","target":7876227839133864575,"profile":228515222820/;"	n
+trick	src/lib.rs	/^pub fn trick(s: &str) -> u64 {$/;"	f
+trick_128	src/lib.rs	/^pub fn trick_128(s: &str) -> u64 {$/;"	f
+trick_simd	src/lib.rs	/^pub fn trick_simd(s: &str) -> u64 {$/;"	f
+trick_simd_c16	src/lib.rs	/^pub fn trick_simd_c16(s: &str) -> u64 {$/;"	f
+unrolled	src/lib.rs	/^pub fn unrolled(s: &str) -> u64 {$/;"	f
+unrolled_safe	src/lib.rs	/^pub fn unrolled_safe(s: &str) -> u64 {$/;"	f
+unrolled_unsafe	src/lib.rs	/^pub fn unrolled_unsafe(s: &str) -> u64 {$/;"	f
