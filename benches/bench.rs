@@ -1,16 +1,11 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use criterion::BenchmarkId;
 use criterion::Throughput;
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 use paste::paste;
 
 use parseint::*;
 
-const EXAMPLE_TIMESTAMP: &str = "1585201087123789";
-const EXPECTED_TIMESTAMP: u64 = 1585201087123789;
-
-const DIGITS_15: u64 = 585201087123789;
-const DIGITS_15_STR: &str = "585201087123789";
 
 macro_rules! ok_bench {
     ($target_type:ty, $meth:expr, $baseline_method:expr, $values:expr) => {
@@ -37,18 +32,76 @@ macro_rules! ok_bench {
     };
 }
 
-ok_bench!(u8, parse_u8, std_parse_u8, ["0", "10", "100", "200", "255", "+255"]);
+ok_bench!(
+    u8,
+    parse_u8,
+    std_parse_u8,
+    ["0", "10", "100", "200", "255", "+255"]
+);
 
-ok_bench!(u16, parse_u16, std_parse_u16, ["0", "10", "255", "1234", "54321", &u16::MAX.to_string()]);
+ok_bench!(
+    u16,
+    parse_u16,
+    std_parse_u16,
+    ["0", "10", "255", "1234", "54321", &u16::MAX.to_string()]
+);
 
-ok_bench!(u32, parse_u32, std_parse_u32, ["0", "10", "255", "1234", "54321", "987654","1234567","87654321","123456789",&u32::MAX.to_string()]);
+ok_bench!(
+    u32,
+    parse_u32,
+    std_parse_u32,
+    [
+        "0",
+        "10",
+        "255",
+        "1234",
+        "54321",
+        "987654",
+        "1234567",
+        "87654321",
+        "123456789",
+        &u32::MAX.to_string()
+    ]
+);
 
-ok_bench!(u64, parse_u64, std_parse_u64, ["0", "10", "255", "1234", "54321", "987654","1234567","87654321","123456789","1234567890","12345678901","123456789012","1234567890123","12345678901234","123456789012345","1234567890123456","12345678901234567","123456789012345678","1234567890123456789","12345678901234567890",&u64::MAX.to_string()]);
+ok_bench!(
+    u64,
+    parse_u64,
+    std_parse_u64,
+    [
+        "0",
+        "10",
+        "255",
+        "1234",
+        "54321",
+        "987654",
+        "1234567",
+        "87654321",
+        "123456789",
+        "1234567890",
+        "12345678901",
+        "123456789012",
+        "1234567890123",
+        "12345678901234",
+        "123456789012345",
+        "1234567890123456",
+        "12345678901234567",
+        "123456789012345678",
+        "1234567890123456789",
+        "12345678901234567890",
+        &u64::MAX.to_string()
+    ]
+);
 
-criterion_group!(benches, bench_parse_u8, bench_parse_u16, bench_parse_u32, bench_parse_u64);
+criterion_group!(
+    benches,
+    bench_parse_u8,
+    bench_parse_u16,
+    bench_parse_u32,
+    bench_parse_u64
+);
 
 criterion_main!(benches);
-
 
 // #[bench]
 // fn bench_trick_with_checks_i64(b: &mut Bencher) {

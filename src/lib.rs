@@ -1,18 +1,18 @@
 //#![feature(unchecked_math)]
-use std::convert::TryInto;
 use core::arch::x86_64::{
     _mm_cvtsi128_si64, _mm_lddqu_si128, _mm_madd_epi16, _mm_maddubs_epi16, _mm_packus_epi32,
     _mm_set1_epi8, _mm_set_epi16, _mm_set_epi8, _mm_sub_epi16,
 };
+use std::convert::TryInto;
 pub fn std_parse_u64(s: &str) -> u64 {
     s.parse().unwrap()
 }
 
-pub fn std_parse_u8(s: &str) -> Result<u8,()> {
+pub fn std_parse_u8(s: &str) -> Result<u8, ()> {
     s.parse().map_err(|_| ())
 }
 
-pub fn std_parse_u16(s: &str) -> Result<u16,()> {
+pub fn std_parse_u16(s: &str) -> Result<u16, ()> {
     s.parse().map_err(|_| ())
 }
 
@@ -74,19 +74,16 @@ pub fn parse_u8(s: &str) -> Result<u8, ()> {
     let mut s = s.as_bytes();
     let first = s.get(0);
     match first {
-        Some(val) if *val == b'+' => { s = &s[1..] }
+        Some(val) if *val == b'+' => s = &s[1..],
         Some(val) => {
             if s.len() == 1 {
                 let result = val.wrapping_sub(b'0');
-                return if result <= 9 {
-                    Ok(result)
-                } else {
-                    Err(())
-                }
+                return if result <= 9 { Ok(result) } else { Err(()) };
             }
-        },
-        None => return Err(())
+        }
+        None => return Err(()),
     };
+
     let result = parse_4_chars(s)?;
     if result <= u8::MAX as u32 {
         Ok(result as u8)
@@ -102,18 +99,21 @@ pub fn parse_u16(s: &str) -> Result<u16, ()> {
         Some(val) if *val == b'+' => {
             s = &s[1..];
         }
-        Some(_val) => {},
-        None => return Err(())
+        Some(_val) => {}
+        None => return Err(()),
     }
 
     let l = s.len();
-    if l > 5 { return Err(()) }
+    if l > 5 {
+        return Err(());
+    }
     if l == 1 {
         let val = s[0].wrapping_sub(b'0');
         return if val <= 9 {
             Ok(val as u16)
-        }
-         else { return Err(()) };
+        } else {
+            return Err(());
+        };
     }
     if l == 5 {
         let val = match s.get(0).map(|v| v.wrapping_sub(b'0')) {
@@ -122,35 +122,39 @@ pub fn parse_u16(s: &str) -> Result<u16, ()> {
         };
         let val = match val.checked_mul(10_000) {
             Some(val) => val,
-            None => return Err(())
+            None => return Err(()),
         };
         match val.checked_add(parse_4_chars(&s[1..])? as u16) {
             Some(val) => Ok(val),
-            None => return Err(())
+            None => return Err(()),
         }
     } else {
         parse_4_chars(s).map(|val| val as u16)
     }
 }
 
-pub fn parse_u32(mut s: &str) -> Result<u32, ()> {
-    if s.as_bytes()[0] == b'+' {
-        s = &s[1..];
-    }
+pub fn parse_u32(s: &str) -> Result<u32, ()> {
+    let mut s = s.as_bytes();
     let l = s.len();
+    match s.get(0) {
+        None => return Err(()),
+        Some(val) if *val == b'+' => {
+            s = &s[1..];
+        }
+        Some(_val) => {}
+    }
     if l <= 4 {
         return if l <= 1 {
-            match s.as_bytes().get(0).map(|v| v.wrapping_sub(b'0')) {
+            match s.get(0).map(|v| v.wrapping_sub(b'0')) {
                 Some(val) if val <= 9 => Ok(val as u32),
                 _ => Err(()),
             }
         } else {
-            parse_4_chars(s.as_bytes())
+            parse_4_chars(s)
         };
     }
 
     let mut result: u32 = 0;
-    let mut s = s.as_bytes();
 
     // Consume enough string so rest is a multiple of 4:
     let unaligned = l % 4;
@@ -180,16 +184,21 @@ pub fn parse_u32(mut s: &str) -> Result<u32, ()> {
 
 pub fn parse_u32b(s: &str) -> Result<u32, ()> {
     let result = parse_u64(s)?;
-    result.try_into().map_err(|_|())
+    result.try_into().map_err(|_| ())
 }
 
-pub fn parse_u64(mut s: &str) -> Result<u64, ()> {
-    if s.as_bytes()[0] == b'+' {
-        s = &s[1..];
+pub fn parse_u64(ss: &str) -> Result<u64, ()> {
+    let mut s = ss.as_bytes();
+    match s.get(0) {
+        None => return Err(()),
+        Some(val) if *val == b'+' => {
+            s = &s[1..];
+        }
+        Some(_) => {}
     }
     let l = s.len();
     if l < 10 {
-        return parse_u32(s).map(|val| val as u64);
+        return parse_u32(ss).map(|val| val as u64);
     }
     // if l <= 8 {
     //     return if l <= 1 {
@@ -203,7 +212,6 @@ pub fn parse_u64(mut s: &str) -> Result<u64, ()> {
     // }
 
     let mut result: u64 = 0;
-    let mut s = s.as_bytes();
 
     // Consume enough string so rest is a multiple of 8:
     let unaligned = l % 8;
@@ -237,7 +245,9 @@ pub fn trick_with_checks_i64(src: &str) -> i64 {
 
 pub fn parse_signed64(src: &str) -> Result<i64, ()> {
     let (is_positive, digits) = match src.as_bytes().get(0) {
-        None => { return Err(()); }
+        None => {
+            return Err(());
+        }
         Some(b'-') => (false, &src[1..]),
         Some(_) => (true, src),
     };
@@ -319,6 +329,7 @@ pub fn trick_simd(s: &str) -> u64 {
 
 fn parse_8_chars(s: &[u8]) -> Result<u64, ()> {
     let l = s.len();
+    debug_assert!(l <= 8);
     const MASK_HI: u64 = 0xf0f0f0f0f0f0f0f0u64;
     const MASK_LOW: u64 = 0x0f0f0f0f0f0f0f0fu64;
     const ASCII_ZEROS: u64 = 0x3030303030303030u64;
@@ -327,11 +338,12 @@ fn parse_8_chars(s: &[u8]) -> Result<u64, ()> {
         std::ptr::copy_nonoverlapping(
             s.as_ptr() as *const _,
             &mut chunk,
-            std::mem::size_of_val(&chunk),
+            s.len(), //std::mem::size_of_val(&chunk),
         );
 
         // SAFETY: Unknown memory due to < 8 len replaced with with b'0's:
-        chunk = chunk << ((8 - l) * 8) | 0x3030303030303030u64 >> l * 8;
+        let r = 0x3030303030303030u64.wrapping_shr(l as u32 * 8);
+        chunk = chunk << ((8 - l) * 8) | r;
     }
 
     // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
@@ -366,22 +378,24 @@ fn parse_4_chars(s: &[u8]) -> Result<u32, ()> {
     const MASK_HI: u32 = 0xf0f0f0f0u32;
     const MASK_LOW: u32 = 0x0f0f0f0fu32;
     const ASCII_ZEROS: u32 = 0x30303030u32;
-    let mut chunk = 0u32;
+    let mut chunk = 0;
     // println!("size:{}", std::mem::size_of_val(&s));
-    // println!("size:{}", std::mem::size_of_val(&chunk));
+    //println!("size:{}", std::mem::size_of_val(&chunk));
 
     //SAFETY:
     debug_assert!(s.len() <= 4); //todo make fn unsafe in case of larger inputs?
+    ///let mut chars4 : [u8; 4] =[0,0,0,0];// s.try_into().unwrap();//[0,0,0,0];
     unsafe {
         std::ptr::copy_nonoverlapping(
             s.as_ptr() as *const _,
             &mut chunk,
-            std::mem::size_of_val(&s),
+            s.len(), //std::mem::size_of_val(&s),
         );
         // SAFETY: Unknown memory due to < 8 len replaced with with b'0's:
-        chunk = chunk << ((4 - l) * 8) | ASCII_ZEROS >> l * 8;
+        let r = ASCII_ZEROS.wrapping_shr((l * 8) as u32);
+        chunk = chunk << ((4 - l) * 8) | r;
     }
-
+    //println!("size:{}", std::mem::size_of_val(&chunk));
     // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
     let x = chunk & MASK_LOW;
     const RESULT_MASK: u32 = !0u32 / 255 * 128;
@@ -410,7 +424,7 @@ fn parse_8_chars_unchecked(s: &str) -> u64 {
         std::ptr::copy_nonoverlapping(
             s.as_ptr() as *const _,
             &mut chunk,
-            std::mem::size_of_val(&s),
+            s.len(),
         );
     }
 
@@ -490,13 +504,83 @@ const MULTIPLIER: &[u32] = &[
 ];
 
 mod tests {
+    #[test]
+    fn test_empty() {
+        assert_eq!(Err(()), parse_u8(""));
+        assert_eq!(Err(()), parse_u16(""));
+        assert_eq!(Err(()), parse_u32(""));
+        assert_eq!(Err(()), parse_u64(""));
+    }
+
+    #[test]
+    fn test_invalid_ascii_low() {
+        assert_eq!(Err(()), parse_u8("1/4"));
+        assert_eq!(Err(()), parse_u16("1/4"));
+        assert_eq!(Err(()), parse_u32("1/4"));
+        assert_eq!(Err(()), parse_u64("1/4"));
+    }
+
+    #[test]
+    fn test_invalid_ascii_hi() {
+        assert_eq!(Err(()), parse_u8("1:4"));
+        assert_eq!(Err(()), parse_u16("1:4"));
+        assert_eq!(Err(()), parse_u32("1:4"));
+        assert_eq!(Err(()), parse_u64("1:4"));
+    }
+
+    #[test]
+    fn test_invalid_too_big() {
+        assert_eq!(Err(()), parse_u8(&(u8::MAX as u128 + 1).to_string()));
+        assert_eq!(Err(()), parse_u16(&(u16::MAX as u128 + 1).to_string()));
+        assert_eq!(Err(()), parse_u32(&(u32::MAX as u128 + 1).to_string()));
+        assert_eq!(Err(()), parse_u64(&(u64::MAX as u128 + 1).to_string()));
+    }
+
+
+
+
     use super::*;
     #[test]
     fn test_u8() {
+        let mut s = String::new();
         for i in u8::MIN..u8::MAX {
-            let s= i.to_string();
-            let p: Result<u8,()> = s.parse().map_err(|_|());
+            s.clear();
+            itoa::fmt(&mut s, i).unwrap();
+            let p: Result<u8, ()> = s.parse().map_err(|_| ());
             assert_eq!(p, parse_u8(&s), "fail to parse: '{}'", &s);
+        }
+    }
+
+    #[test]
+    fn test_u16() {
+        let mut s = String::new();
+        for i in u16::MIN..u16::MAX {
+            s.clear();
+            itoa::fmt(&mut s, i).unwrap();
+            let p: Result<u16, ()> = s.parse().map_err(|_| ());
+            assert_eq!(p, parse_u16(&s), "fail to parse: '{}'", &s);
+        }
+    }
+
+    #[test]
+    fn test_u32() {
+        let mut s = String::new();
+        for i in (u32::MIN..u32::MAX).step_by(10_301) {
+            s.clear();
+            itoa::fmt(&mut s, i).unwrap();
+            let p: Result<u32, ()> = s.parse().map_err(|_| ());
+            assert_eq!(p, parse_u32(&s), "fail to parse: '{}'", &s);
+        }
+    }
+
+    #[test]
+    fn test_u64() {
+        let mut s = String::new();
+        for i in (u64::MIN..u64::MAX).step_by(10_301_000_000_000) {
+            s.clear();
+            itoa::fmt(&mut s, i).unwrap();
+            let p: Result<u64, ()> = s.parse().map_err(|_| ());
+            assert_eq!(p, parse_u64(&s), "fail to parse: '{}'", &s);
         }
     }
 }
