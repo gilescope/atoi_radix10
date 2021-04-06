@@ -1,11 +1,10 @@
 use criterion::BenchmarkId;
 use criterion::Throughput;
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 
 use paste::paste;
 
 use parseint::*;
-
 
 macro_rules! ok_bench {
     ($target_type:ty, $meth:expr, $baseline_method:expr, $values:expr) => {
@@ -19,11 +18,11 @@ macro_rules! ok_bench {
                     let size : $target_type = num_str.parse().unwrap();
                     assert_eq!($meth(&num_str), Ok(size));
                     group.throughput(Throughput::Bytes(num_str.len() as u64));
-                    group.bench_with_input(BenchmarkId::new("std", size), &size, |b, &size| {
-                        b.iter(|| $baseline_method(&num_str));
+                    group.bench_with_input(BenchmarkId::new("std", size), &num_str, |b, &val| {
+                        b.iter(|| $baseline_method(&val));
                     });
-                    group.bench_with_input(BenchmarkId::new("new", size), &size, |b, &size| {
-                        b.iter(|| $meth(&num_str));
+                    group.bench_with_input(BenchmarkId::new("new", size), &num_str, |b, &val| {
+                        b.iter(|| $meth(&val));
                     });
                 }
                 group.finish();
@@ -36,14 +35,21 @@ ok_bench!(
     u8,
     parse_u8,
     std_parse_u8,
-    ["0", "10", "100", "200", "255", "+255"]
+    ["0", "10", "100", "+200", &u8::MAX.to_string()]
 );
 
 ok_bench!(
     u16,
     parse_u16,
     std_parse_u16,
-    ["0", "10", "255", "1234", "54321", &u16::MAX.to_string()]
+    [
+        "0",
+        "10",
+        &u8::MAX.to_string(),
+        "1234",
+        "54321",
+        &u16::MAX.to_string()
+    ]
 );
 
 ok_bench!(
@@ -53,10 +59,10 @@ ok_bench!(
     [
         "0",
         "10",
-        "255",
+        &u8::MAX.to_string(),
         "1234",
         "54321",
-        "987654",
+        &u16::MAX.to_string(),
         "1234567",
         "87654321",
         "123456789",
@@ -88,7 +94,6 @@ ok_bench!(
         "12345678901234567",
         "123456789012345678",
         "1234567890123456789",
-        "12345678901234567890",
         &u64::MAX.to_string()
     ]
 );
