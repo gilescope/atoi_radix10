@@ -15,13 +15,13 @@ macro_rules! ok_bench {
                     .warm_up_time(std::time::Duration::from_millis(400))
                     .measurement_time(std::time::Duration::from_millis(2000));
                 for num_str in $values.iter() {
-                    let size : $target_type = num_str.parse().unwrap();
-                    assert_eq!($meth(&num_str), Ok(size));
+                    let num : $target_type = num_str.parse().unwrap();
+                    assert_eq!($meth(&num_str), Ok(num));
                     group.throughput(Throughput::Bytes(num_str.len() as u64));
-                    group.bench_with_input(BenchmarkId::new("std", size), &num_str, |b, &val| {
+                    group.bench_with_input(BenchmarkId::new("std", num), &num_str, |b, &val| {
                         b.iter(|| $baseline_method(&val));
                     });
-                    group.bench_with_input(BenchmarkId::new("new", size), &num_str, |b, &val| {
+                    group.bench_with_input(BenchmarkId::new("new", num), &num_str, |b, &val| {
                         b.iter(|| $meth(&val));
                     });
                 }
