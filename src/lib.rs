@@ -19,6 +19,22 @@ pub fn std_parse_u32(s: &str) -> u32 {
     s.parse().unwrap()
 }
 
+pub fn cluatoi_parse_u32(s: &str) -> u32 {
+    use cluatoi::Atoi;
+    u32::atoi(s.as_bytes()).unwrap()
+}
+
+
+//bit faster than std
+pub fn btoi_parse_u32(s: &str) -> u32 {
+    btoi::btoi(s.as_bytes()).unwrap()
+}
+
+//atoi crate about the same speed as std.
+ pub fn atoi_parse_u32(s: &str) -> u32 {
+     atoi::atoi::<u32>(s.as_bytes()).unwrap()
+}
+
 pub fn naive_chars(s: &str) -> u64 {
     let mut result = 0;
     for digit in s.chars() {
@@ -196,119 +212,110 @@ pub fn parse_u16(s: &str) -> Result<u16, ()> {
 /// Parses from 0 -> 4_294_967_295 (10 digits and optionally +)
 pub fn parse_u32(s: &str) -> Result<u32, ()> {
     let mut s = s.as_bytes();
-    let l = s.len();
-    match s.get(0) {
-        Some(val) if *val == b'+' => {
-            s = &s[1..];
-        }
-        Some(val) => {
-            if l == 1 {
-                let val = val.wrapping_sub(b'0');
-                return if val <= 9 {Ok(val as u32)}
-                    else { Err(()) };
-            } else if l == 3 {
-                let val = val.wrapping_sub(b'0') * 100;
-                return Ok((parse_2_chars(&s[1..])? + val as u16) as u32)
+    let val = match s.get(0) {
+            Some(val) if *val == b'+' => {
+                s = &s[1..];
+                val
             }
+            Some(val) => {
+                val
+            }
+            None => return Err(()),
+        };
+    if s.len() < 10 {
+        let mut result = 0;
+        for c in s {
+            let val = c.wrapping_sub(b'0');
+            if val <= 9 {
+                result = result * 10 + val as u32;
+            }
+            else { return Err(()) };
         }
-        None => return Err(()),
-    }
-    if l == 2 {
-        return parse_2_chars(s).map(|v|v as u32);
-    }
-    if l >= 8 {
-        let mut result = parse_8_chars(&s)?;
-        if l == 8 { return Ok(result as u32) }
-        
-        result *= 10;
-        let val = s[8].wrapping_sub(b'0');
-        if val > 9 { return Err(()) }
-        result += val as u64;
-        if l == 9 { return Ok(result as u32) }
-
-        let mut result: u32 = match (result as u32).checked_mul(10) {
-            Some(val) => val,
-            None => return Err(())
-        };
-        let val = s[9].wrapping_sub(b'0');
-        if val > 9 { return Err(()) }
-        result = match result.checked_add(val as u32) {
-            Some(val) => val,
-            None => return Err(())
-        };
-        if l == 10 { return Ok(result)}
-        return Err(())
-    }
-    //4,5,6,7
-    let mut result = parse_4_chars(s)?;
-    if l == 4 {
+        return Ok(result);
+    } else {
+        let mut result = 0;
+        for c in s {
+            let val = c.wrapping_sub(b'0');
+            if val <= 9 {
+                result = result * 10 + val as u32;
+            }
+            else { return Err(()) };
+        }
         return Ok(result);
     }
-    if l == 5 {
-        result *= 10;
-        let val = s[4].wrapping_sub(b'0');
-        if val > 9 { return Err(()) }
-        return Ok(result + val as u32);
-    }
-    result *= 100;
-    let val = parse_2_chars(&s[4..])?;
-    result += val as u32;
-    if l == 6 {
-        return Ok(result);
-    }
-    debug_assert_eq!(l, 7);
-    result *= 10;
-    let val = s[6].wrapping_sub(b'0');
-    if val > 9 { return Err(()) }
-    return Ok(result + val as u32);
-
-
-    // let mut slice = s;
-    // if slice.len() > 8 {
-    //     slice = &s[0..8];
-    // }
-    // let result = parse_8_chars(&slice)?;
-    // if l <= 8 {
-    //     return Ok(result as u32);
-    // }
-    // debug_assert!(result < u32::MAX as u64);
-    // let result = result as u32;
-    // let rest = parse_4_chars(&s[8..])?;
-    // let result = match result.checked_mul(if l < 10 { 10 } else { 100 }) {
-    //     Some(val) => val,
-    //     None => return Err(()),
-    // };
-    // match result.checked_add(rest) {
-    //     Some(val) => Ok(val),
-    //     None => Err(()),
-    // }
-
-    // // Consume enough string so rest is a multiple of 4:
-    // let unaligned = l % 4;
-    // if unaligned > 0 {
-
-    //     s = &s[unaligned..];
-    // }
-    // while s.len() > 4 {
-    //     result = match result.checked_add(parse_4_chars(&s[0..4])?) {
-    //         Some(res) => res,
-    //         None => return Err(()),
-    //     };
-    //     result = match result.checked_mul(10_000) {
-    //         Some(res) => res,
-    //         None => return Err(()),
-    //     };
-    //     s = &s[4..];
-    // }
-    // match result.checked_add(parse_4_chars(s)?) {
-    //     Some(res) => Ok(res),
-    //     None => return Err(()),
-    // }
 }
 
-// pub fn parse_u32b(s: &str) -> Result<u32, ()> {
-//     let result = parse_u64(s)?;
-//     result.try_into().map_err(|_| ())
+// pub fn parse_u32(s: &str) -> Result<u32, ()> {
+//     let mut s = s.as_bytes();
+//     let l = s.len();
+//     let val = match s.get(0) {
+//         Some(val) if *val == b'+' => {
+//             s = &s[1..];
+//             val
+//         }
+//         Some(val) => {
+//             val
+//         }
+//         None => return Err(()),
+//     };
+//     if l == 1 {
+//         let val = val.wrapping_sub(b'0');
+//         return if val <= 9 {Ok(val as u32)}
+//             else { Err(()) };
+//     } else if l == 3 {
+//         let val = val.wrapping_sub(b'0');
+//         if val <= 9 {
+//             return Ok(val as u32 * 100 + parse_2_chars(&s[1..])? as u32)
+//         } else { return Err(()) }
+//     }
+//     if l == 2 {
+//         return parse_2_chars(s).map(|v|v as u32);
+//     }
+//     if l >= 8 {
+//         let mut result = parse_8_chars(&s)?;
+//         if l == 8 { return Ok(result as u32) }
+
+//         result *= 10;
+//         let val = s[8].wrapping_sub(b'0');
+//         if val > 9 { return Err(()) }
+//         result += val as u64;
+//         if l == 9 { return Ok(result as u32) }
+
+//         let mut result: u32 = match (result as u32).checked_mul(10) {
+//             Some(val) => val,
+//             None => return Err(())
+//         };
+//         let val = s[9].wrapping_sub(b'0');
+//         if val > 9 { return Err(()) }
+//         result = match result.checked_add(val as u32) {
+//             Some(val) => val,
+//             None => return Err(())
+//         };
+//         if l == 10 { return Ok(result)}
+//         return Err(())
+//     }
+//     //4,5,6,7
+//     let mut result = parse_4_chars(s)?;
+//     if l == 4 {
+//         return Ok(result);
+//     }
+//     if l == 5 {
+//         result *= 10;
+//         let val = s[4].wrapping_sub(b'0');
+//         if val > 9 { return Err(()) }
+//         return Ok(result + val as u32);
+//     }
+//     result *= 100;
+//     let val = parse_2_chars(&s[4..])?;
+//     result += val as u32;
+//     if l == 6 {
+//         return Ok(result);
+//     }
+//     debug_assert_eq!(l, 7);
+//     result *= 10;
+//     let val = s[6].wrapping_sub(b'0');
+//     if val > 9 { return Err(()) }
+//     return Ok(result + val as u32);
 // }
 
 /// Parses 0 to 18_446_744_073_709_551_615

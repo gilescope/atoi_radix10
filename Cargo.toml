@@ -8,6 +8,9 @@ edition = "2018"
 
 [dependencies]
 paste = "1.0"
+atoi = "0.4"
+btoi = "0.4"
+cluatoi = "0.2"
 
 [dev-dependencies]
 criterion = "0.3"

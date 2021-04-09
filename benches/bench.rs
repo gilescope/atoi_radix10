@@ -7,7 +7,7 @@ use paste::paste;
 use parseint::*;
 
 macro_rules! ok_bench {
-    ($target_type:ty, $meth:expr, $baseline_method:expr, $values:expr) => {
+    ($target_type:ty, $meth:expr, $baseline_method:expr, $best_meth:expr, $values:expr) => {
         paste! {
             fn [<bench_parse_ $target_type>](c: &mut Criterion) {
                 let mut group = c.benchmark_group(stringify!([<$meth>]));
@@ -20,6 +20,9 @@ macro_rules! ok_bench {
                     group.throughput(Throughput::Bytes(num_str.len() as u64));
                     group.bench_with_input(BenchmarkId::new("std", num), &num_str, |b, &val| {
                         b.iter(|| $baseline_method(&val));
+                    });
+                    group.bench_with_input(BenchmarkId::new("best", num), &num_str, |b, &val| {
+                        b.iter(|| $best_meth(&val));
                     });
                     group.bench_with_input(BenchmarkId::new("new", num), &num_str, |b, &val| {
                         b.iter(|| $meth(&val));
@@ -35,20 +38,21 @@ ok_bench!(
     u8,
     parse_u8,
     std_parse_u8,
-    ["0", "10", "100", "+200", &u8::MAX.to_string()]
+    std_parse_u8,
+    ["1", "12", "123", "+200", &u8::MAX.to_string()]
 );
 
 ok_bench!(
     u16,
     parse_u16,
     std_parse_u16,
+    std_parse_u16,
     [
-        "0",
-        "10",
-        &u8::MAX.to_string(),
+        "1",
+        "12",
+        "123",
         "1234",
-        "54321",
-        &u16::MAX.to_string()
+        "12345",
     ]
 );
 
@@ -56,15 +60,16 @@ ok_bench!(
     u32,
     parse_u32,
     std_parse_u32,
+    cluatoi_parse_u32,
     [
-        "0",
-        "10",
-        &u8::MAX.to_string(),
+        "1",
+        "12",
+        "123",
         "1234",
-        "54321",
-        &u16::MAX.to_string(),
+        "12345",
+        "123456",
         "1234567",
-        "87654321",
+        "12345678",
         "123456789",
         &u32::MAX.to_string()
     ]
@@ -74,15 +79,16 @@ ok_bench!(
     u64,
     parse_u64,
     std_parse_u64,
+    std_parse_u64,
     [
-        "0",
-        "10",
-        "255",
+        "1",
+        "12",
+        "123",
         "1234",
-        "54321",
-        "987654",
+        "12345",
+        "123456",
         "1234567",
-        "87654321",
+        "12345678",
         "123456789",
         "1234567890",
         "12345678901",
