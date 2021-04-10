@@ -13,7 +13,7 @@ btoi = "0.4"
 cluatoi = "0.2"
 
 [dev-dependencies]
-criterion = "0.3"
+criterion = {version="0.3", features=["html_reports"]}
 itoa = "0.4"
 
 [[bench]]
