@@ -7,7 +7,7 @@ use paste::paste;
 use parseint::*;
 
 macro_rules! ok_bench {
-    ($target_type:ty, $meth:expr, $baseline_method:expr, $best_meth:expr, $values:expr) => {
+    ($target_type:ty, $meth:expr, $std_method:expr, $best_meth:expr, $values:expr) => {
         paste! {
             fn [<bench_parse_ $target_type>](c: &mut Criterion) {
                 let mut group = c.benchmark_group(stringify!([<$meth>]));
@@ -19,7 +19,7 @@ macro_rules! ok_bench {
                     assert_eq!($meth(&num_str), Ok(num));
                     group.throughput(Throughput::Bytes(num_str.len() as u64));
                     group.bench_with_input(BenchmarkId::new("std", num), &num_str, |b, &val| {
-                        b.iter(|| $baseline_method(&val));
+                        b.iter(|| $std_method(&val));
                     });
                     group.bench_with_input(BenchmarkId::new("best", num), &num_str, |b, &val| {
                         b.iter(|| $best_meth(&val));
@@ -38,7 +38,8 @@ ok_bench!(
     u8,
     parse_u8,
     std_parse_u8,
-    std_parse_u8,
+    //cluatoi_parse_u8,
+    parse_u8_best,
     ["1", "12", "123", "+200", &u8::MAX.to_string()]
 );
 
@@ -46,14 +47,8 @@ ok_bench!(
     u16,
     parse_u16,
     std_parse_u16,
-    std_parse_u16,
-    [
-        "1",
-        "12",
-        "123",
-        "1234",
-        "12345",
-    ]
+    cluatoi_parse_u16,
+    ["1", "12", "123", "1234", "12345",]
 );
 
 ok_bench!(

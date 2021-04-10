@@ -24,6 +24,15 @@ pub fn cluatoi_parse_u32(s: &str) -> u32 {
     u32::atoi(s.as_bytes()).unwrap()
 }
 
+pub fn cluatoi_parse_u16(s: &str) -> u16 {
+    use cluatoi::Atoi;
+    u16::atoi(s.as_bytes()).unwrap()
+}
+
+pub fn cluatoi_parse_u8(s: &str) -> u8 {
+    use cluatoi::Atoi;
+    u8::atoi(s.as_bytes()).unwrap()
+}
 
 //bit faster than std
 pub fn btoi_parse_u32(s: &str) -> u32 {
@@ -31,8 +40,8 @@ pub fn btoi_parse_u32(s: &str) -> u32 {
 }
 
 //atoi crate about the same speed as std.
- pub fn atoi_parse_u32(s: &str) -> u32 {
-     atoi::atoi::<u32>(s.as_bytes()).unwrap()
+pub fn atoi_parse_u32(s: &str) -> u32 {
+    atoi::atoi::<u32>(s.as_bytes()).unwrap()
 }
 
 pub fn naive_chars(s: &str) -> u64 {
@@ -84,8 +93,124 @@ pub fn trick_with_checks(s: &str) -> u64 {
     parse_u64(s).unwrap()
 }
 
+
+
 /// Parse from "0" to "+255"
 pub fn parse_u8(s: &str) -> Result<u8, ()> {
+    let mut iter = s.as_bytes().iter();
+    match iter.next() {
+        Some(mut val) => {
+            if *val == b'+' {
+                match iter.next() {
+                    Some(alt_val) => {
+                        val = alt_val;
+                    }
+                    None => { return Err(()) }
+                }
+            }
+            let val = val.wrapping_sub(b'0');
+            match iter.next() {
+                Some(val2) => {
+                    let val2 = val2.wrapping_sub(b'0');
+                    if val2 > 9 {
+                        return Err(())
+                    }
+                    match iter.next() {
+                        Some(val3) => {
+                            let val3 = val3.wrapping_sub(b'0');
+                            let val2 = val2 * 10;
+                            match val {
+                                0 => { Ok(val2 + val3) },
+                                1 => { Ok(100 + val2 + val3) }
+                                2 => {
+                                    let two = val2 + val3;
+                                    if two <= 55 {
+                                        Ok(200 + two)
+                                    } else {
+                                        Err(())
+                                    }
+                                }
+                                _ => Err(())
+                            }
+                        }
+                        None => {
+                            if val <= 9 {
+                                Ok(val * 10 + val2)
+                            } else {
+                                Err(())
+                            }
+                        }
+                    }
+                }
+                None => {
+                    if val <= 9 {
+                        Ok(val)
+                    } else {
+                        Err(())
+                    }
+                }
+            }
+        }
+        _ => Err(()),
+    }
+}
+
+
+/// Parse from "0" to "+255"
+pub fn parse_u8_match(ss: &str) -> Result<u8, ()> {
+    let s = ss.as_bytes();
+    let first = s.get(0);
+    match first {
+        Some(val) if *val == b'+' => {
+            if s.len() == 0 || s[1] == b'+' {
+                return Err(());
+            }
+            parse_u8(&ss[1..])
+        }
+        Some(val) => {
+            let val = val.wrapping_sub(b'0');
+            match s.get(1) {
+                Some(val2) => {
+                    let val2 = val2.wrapping_sub(b'0');
+                    if val2 > 9 {
+                        return Err(())
+                    }
+                    match s.get(2) {
+                        Some(val3) => {
+                            let val3 = val3.wrapping_sub(b'0');
+                            if val <= 2 && val3 <= 9 {
+                                match (val * 100).checked_add(val2 * 10 + val3) {
+                                    Some(val) => Ok(val),
+                                    None => Err(()),
+                                }
+                            } else {
+                                Err(())
+                            }
+                        }
+                        None => {
+                            if val <= 9 {
+                                Ok(val * 10 + val2)
+                            } else {
+                                Err(())
+                            }
+                        }
+                    }
+                }
+                None => {
+                    if val <= 9 {
+                        Ok(val)
+                    } else {
+                        Err(())
+                    }
+                }
+            }
+        }
+        _ => Err(()),
+    }
+}
+
+/// Parse from "0" to "+255"
+pub fn parse_u8_best(s: &str) -> Result<u8, ()> {
     let mut s = s.as_bytes();
     let first = s.get(0);
     match first {
@@ -141,7 +266,7 @@ pub fn parse_u16(s: &str) -> Result<u16, ()> {
     }
 
     match l {
-        2 => { parse_2_chars(s).map(|val| val as u16) }
+        2 => parse_2_chars(s).map(|val| val as u16),
         3 => {
             let val = match s.get(0).map(|v| v.wrapping_sub(b'0')) {
                 Some(val) if val <= 9 => val as u16,
@@ -149,12 +274,10 @@ pub fn parse_u16(s: &str) -> Result<u16, ()> {
             };
             Ok(val * 100 + parse_2_chars(&s[1..])? as u16)
         }
-        4 => {
-            parse_4_chars(s).map(|val| val as u16)
-        }
+        4 => parse_4_chars(s).map(|val| val as u16),
         5 => {
             let val = match s.get(0).map(|v| v.wrapping_sub(b'0')) {
-                Some(val) if val <= 6 => val as u16  * 10_000,
+                Some(val) if val <= 6 => val as u16 * 10_000,
                 _ => return Err(()),
             };
             match val.checked_add(parse_4_chars(&s[1..])? as u16) {
@@ -162,10 +285,9 @@ pub fn parse_u16(s: &str) -> Result<u16, ()> {
                 None => return Err(()),
             }
         }
-        _ => Err(())
+        _ => Err(()),
     }
 }
-
 
 //Bit slower odd bit:
 // pub fn parse_u16(s: &str) -> Result<u16, ()> {
@@ -213,23 +335,22 @@ pub fn parse_u16(s: &str) -> Result<u16, ()> {
 pub fn parse_u32(s: &str) -> Result<u32, ()> {
     let mut s = s.as_bytes();
     let val = match s.get(0) {
-            Some(val) if *val == b'+' => {
-                s = &s[1..];
-                val
-            }
-            Some(val) => {
-                val
-            }
-            None => return Err(()),
-        };
+        Some(val) if *val == b'+' => {
+            s = &s[1..];
+            val
+        }
+        Some(val) => val,
+        None => return Err(()),
+    };
     if s.len() < 10 {
         let mut result = 0;
         for c in s {
             let val = c.wrapping_sub(b'0');
             if val <= 9 {
                 result = result * 10 + val as u32;
-            }
-            else { return Err(()) };
+            } else {
+                return Err(());
+            };
         }
         return Ok(result);
     } else {
@@ -238,8 +359,9 @@ pub fn parse_u32(s: &str) -> Result<u32, ()> {
             let val = c.wrapping_sub(b'0');
             if val <= 9 {
                 result = result * 10 + val as u32;
-            }
-            else { return Err(()) };
+            } else {
+                return Err(());
+            };
         }
         return Ok(result);
     }
@@ -349,11 +471,11 @@ pub fn parse_u64(ss: &str) -> Result<u64, ()> {
         // 20 chars comes here so we need to checked math.
         result = match result.checked_mul(10_000) {
             Some(val) => val,
-            None => return Err(())
+            None => return Err(()),
         };
         result = match result.checked_add(parse_4_chars(&s[..4])? as u64) {
             Some(val) => val,
-            None => return Err(())
+            None => return Err(()),
         };
         s = &s[4..];
         l -= 4;
@@ -365,10 +487,12 @@ pub fn parse_u64(ss: &str) -> Result<u64, ()> {
     }
     if l == 1 {
         let val = s[0].wrapping_sub(b'0');
-        if val > 9 { return Err(()) }
-        result  = result * 10 + val as u64;
+        if val > 9 {
+            return Err(());
+        }
+        result = result * 10 + val as u64;
     }
-    return Ok(result)
+    return Ok(result);
 }
 
 // u128: 0 to 340282366920938463463374607431768211455
@@ -469,21 +593,20 @@ fn parse_8_chars(s: &[u8]) -> Result<u64, ()> {
     const ASCII_ZEROS: u64 = 0x3030303030303030u64;
     //let mut chunk = 0;
 
-    let mut chunk:u64 = 0u64;// [u8; 8] = [0, 0, 0, 0, 0, 0, 0, 0];
-    //chunk[..l].copy_from_slice(s);
-    //let mut chunk = u64::from_ne_bytes(chunk);
-    unsafe
-    {
+    let mut chunk: u64 = 0u64; // [u8; 8] = [0, 0, 0, 0, 0, 0, 0, 0];
+                               //chunk[..l].copy_from_slice(s);
+                               //let mut chunk = u64::from_ne_bytes(chunk);
+    unsafe {
         std::ptr::copy_nonoverlapping(
             s.as_ptr() as *const u64,
             &mut chunk,
-            1//s.len(), //std::mem::size_of_val(&chunk),
+            1, //s.len(), //std::mem::size_of_val(&chunk),
         );
 
         //cast_ref::<[u8; 4], u32> will fail if the reference isn't already aligned to 4).
 
         // SAFETY: Unknown memory due to < 8 len replaced with with b'0's:
-      //  let r = 0x3030303030303030u64.wrapping_shr(l as u32 * 8);
+        //  let r = 0x3030303030303030u64.wrapping_shr(l as u32 * 8);
         //chunk = chunk << ((8 - l) * 8) | r;
     }
 
@@ -538,12 +661,10 @@ fn parse_2_chars(s: &[u8]) -> Result<u16, ()> {
     //    std::ptr::copy_nonoverlapping(s.as_ptr() as *const u8, &mut r as *mut u8, l);
     // }
     unsafe {
-       
         std::ptr::copy_nonoverlapping(
             s.as_ptr() as *const u16,
             &mut chunk,
-            1
-            //std::mem::size_of_val(&chunk), //s.len(), //std::mem::size_of_val(&s),
+            1, //std::mem::size_of_val(&chunk), //s.len(), //std::mem::size_of_val(&s),
         );
 
         // std::ptr::copy_nonoverlapping(
@@ -581,7 +702,7 @@ fn parse_4_chars(s: &[u8]) -> Result<u32, ()> {
     const MASK_HI: u32 = 0xf0f0f0f0u32;
     const MASK_LOW: u32 = 0x0f0f0f0fu32;
     const ASCII_ZEROS: u32 = 0x30303030u32;
-   // let mut r: [u8; 4] = [0, 0, 0, 0];
+    // let mut r: [u8; 4] = [0, 0, 0, 0];
     let mut chunk: u32 = 0;
     // println!("size:{}", std::mem::size_of_val(&s));
     // println!("size:{}", s.len());
@@ -616,10 +737,10 @@ fn parse_4_chars(s: &[u8]) -> Result<u32, ()> {
 
     //println!("hm");
     //println!("h");
-   // let mut chunk = u32::from_ne_bytes(r);
+    // let mut chunk = u32::from_ne_bytes(r);
 
     // SAFETY: Unknown memory due to < 8 len replaced with with b'0's:
-  //  chunk = chunk << ((4 - l) * 8) | ASCII_ZEROS.wrapping_shr((l * 8) as u32);
+    //  chunk = chunk << ((4 - l) * 8) | ASCII_ZEROS.wrapping_shr((l * 8) as u32);
 
     //println!("size:{}", std::mem::size_of_val(&chunk));
     // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
