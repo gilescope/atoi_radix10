@@ -558,7 +558,7 @@ pub fn parse_u64(ss: &str) -> Result<u64, ()> {
             if (val > 9) | (val2 > 9) | (val3 > 9) {
                 return Err(());
             };
-            Ok(val as u64 * 100 + (val2 * 10 + val3) as u64)
+            Ok((val as u16 * 100 + (val2 as u16 * 10 + val3 as u16)) as u64)
         }
         4 => Ok(parse_4_chars(s)? as u64),
         5 => {
