@@ -515,86 +515,82 @@ pub fn parse_u32(s: &str) -> Result<u32, ()> {
 }
 
 /// Parses 0 to 18_446_744_073_709_551_615
-pub fn parse_u64(ss: &str) -> Result<u64, ()> {
+pub fn parse_u64(s: &str) -> Result<u64, ()> {
     unsafe {
-    let mut s = ss.as_bytes();
-    let (val, val2) = match s.get(0) {
-        Some(val) => {
-            let val = if *val == b'+' {
-                s = &s[1..];
-                match s.get(0) {
-                    Some(val) => val,
-                    None => return Err(()),
-                }
-            } else {
-                val
-            };
-
-            let val2 = match s.get(1) {
-                Some(val2) => val2,
-                None => {
-                    let val = val.wrapping_sub(b'0');
-                    return if val <= 9 { Ok(val as u64) } else { Err(()) };
-                }
-            };
-
-            (val, val2)
-        }
-        None => return Err(()),
-    };
-
-    let l = s.len();
-    let mut res = 0;
-    if l & 2 != 0 {
-        let val = val.wrapping_sub(b'0');
-        let val2 = val2.wrapping_sub(b'0');
-        if (val > 9) | (val2 > 9) {
-            return Err(());
-        };
-        res += (val * 10 + val2) as u64 * TENS_U64.get_unchecked(s.len() - 2);
-
-        //res += parse_2_chars(&s)? as u64 * TENS_U64[s.len() - 2];
-        s = &s[2..];
-    }
-    if l & 1 != 0 {
-        let val = s.get_unchecked(0).wrapping_sub(b'0');
-        if val > 9 {
-            return Err(());
-        };
-        res += val as u64 * TENS_U64.get_unchecked(s.len() - 1);
-        s = &s[1..];
-    }
-    if l & 16 != 0 {
-        let val16 = parse_16_chars(&s)?;
-        if l >= 20 {
-            // Treat checked case separately
-            if l == 20 {
-                let val = match val16.checked_mul(10_000) {
-                    Some(val) => val,
-                    None => return Err(())
+        let mut s = s.as_bytes();
+        let (val, val2) = match s.get(0) {
+            Some(val) => {
+                let val = if *val == b'+' {
+                    s = &s.get_unchecked(1..);
+                    match s.get(0) {
+                        Some(val) => val,
+                        None => return Err(()),
+                    }
+                } else {
+                    val
                 };
-                return match val
-                    .checked_add(parse_4_chars(&s[16..])? as u64)
-                {
-                    Some(val) => Ok(val),
-                    None => Err(()),
-                }
+
+                let val2 = match s.get(1) {
+                    Some(val2) => val2,
+                    None => {
+                        let val = val.wrapping_sub(b'0');
+                        return if val <= 9 { Ok(val as u64) } else { Err(()) };
+                    }
+                };
+
+                (val, val2)
             }
-            return Err(());
+            None => return Err(()),
+        };
+
+        let l = s.len();
+        let mut res = 0;
+        if l & 2 != 0 {
+            let val = val.wrapping_sub(b'0');
+            let val2 = val2.wrapping_sub(b'0');
+            if (val > 9) | (val2 > 9) {
+                return Err(());
+            };
+            res += val as u64 * TENS_U64.get_unchecked(s.len() - 1)
+                + val2 as u64 * TENS_U64.get_unchecked(s.len() - 2);
+            s = &s.get_unchecked(2..);
         }
-        res += val16 * TENS_U64.get_unchecked(s.len() - 16);//TODO always 1
-        s = &s[16..];
+        if l & 1 != 0 {
+            let val = s.get_unchecked(0).wrapping_sub(b'0');
+            if val > 9 {
+                return Err(());
+            };
+            res += val as u64 * TENS_U64.get_unchecked(s.len() - 1);
+            s = &s.get_unchecked(1..);
+        }
+        if l & 16 != 0 {
+            let val16 = parse_16_chars(&s)?;
+            if l >= 20 {
+                // Treat checked case separately
+                if l == 20 {
+                    let val = match val16.checked_mul(10_000) {
+                        Some(val) => val,
+                        None => return Err(()),
+                    };
+                    return match val.checked_add(parse_4_chars(&s[16..])? as u64) {
+                        Some(val) => Ok(val),
+                        None => Err(()),
+                    };
+                }
+                return Err(());
+            }
+            res += val16 * TENS_U64.get_unchecked(s.len() - 16); //TODO always 1
+            s = &s.get_unchecked(16..);
+        }
+        if l & 8 != 0 {
+            res += parse_8_chars(&s)? as u64 * TENS_U64.get_unchecked(s.len() - 8);
+            s = &s.get_unchecked(8..);
+        }
+        if l & 4 != 0 {
+            res += parse_4_chars(&s)? as u64;
+        }
+        Ok(res)
     }
-    if l & 8 != 0 {
-        res += parse_8_chars(&s)? as u64 * TENS_U64.get_unchecked(s.len() - 8);
-        s = &s[8..];
-    }
-    if l & 4 != 0 {
-        res += parse_4_chars(&s)? as u64 * TENS_U64.get_unchecked(s.len() - 4);
-      //  s = &s[4..];
-    }
-    Ok(res)
-}
 }
 
 /// Parses 0 to 18_446_744_073_709_551_615
