@@ -55,7 +55,8 @@ ok_bench!(
     u32,
     parse_u32,
     std_parse_u32,
-    cluatoi_parse_u32,
+    parse_u32_best,
+    //cluatoi_parse_u32,
     [
         "1",
         "12",
@@ -74,7 +75,7 @@ ok_bench!(
     u64,
     parse_u64,
     std_parse_u64,
-    std_parse_u64,
+    parse_u64_best,
     [
         "1",
         "12",

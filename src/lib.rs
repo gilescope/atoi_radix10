@@ -192,7 +192,7 @@ pub fn parse_u8_best(s: &str) -> Result<u8, ()> {
 
 pub fn parse_u16(s: &str) -> Result<u16, ()> {
     let mut s = s.as_bytes();
-    let l = s.len();
+    let l:usize;
     let first = s.get(0);
     match first {
         Some(mut val) => {
@@ -203,6 +203,7 @@ pub fn parse_u16(s: &str) -> Result<u16, ()> {
                     None => return Err(())
                 }
             }
+            l = s.len();
             if l == 1 {
                 let val = val.wrapping_sub(b'0');
                 return if val <= 9 {
@@ -282,7 +283,7 @@ pub fn parse_u16(s: &str) -> Result<u16, ()> {
 // }
 
 /// Parses from 0 -> 4_294_967_295 (10 digits and optionally +)
-pub fn parse_u32_best(s: &str) -> Result<u32, ()> {
+pub fn parse_u32_old_best(s: &str) -> Result<u32, ()> {
     let mut s = s.as_bytes();
     match s.get(0) {
         Some(val) if *val == b'+' => {
@@ -317,7 +318,7 @@ pub fn parse_u32_best(s: &str) -> Result<u32, ()> {
     }
 }
 
-pub fn parse_u32(s: &str) -> Result<u32, ()> {
+pub fn parse_u32_best(s: &str) -> Result<u32, ()> {
     let mut s = s.as_bytes();
     let val = match s.get(0) {
         Some(val) => {
@@ -408,8 +409,161 @@ pub fn parse_u32(s: &str) -> Result<u32, ()> {
     }
 }
 
+pub fn parse_u32(s: &str) -> Result<u32, ()> {
+    let mut s = s.as_bytes();
+    let (val,val2) = match s.get(0) {
+        Some(val) => {
+            let val = if *val == b'+' {
+                s = &s[1..];
+                match s.get(0) {
+                    Some(val) => val,
+                    None => return Err(())
+                }
+            }
+            else { val };
+
+            let val2 = match s.get(1) {
+                Some(val2) => val2,
+                None => {
+                    let val = val.wrapping_sub(b'0');
+                    return if val <= 9 {
+                        Ok(val as u32)
+                    } else {
+                        Err(())
+                    }
+                }
+            };
+
+            (val,val2)
+        }
+        None => return Err(()),
+    };
+    let l = s.len();
+    match l {
+        2 => {
+            let val = val.wrapping_sub(b'0');
+            let val2 = val2.wrapping_sub(b'0');
+            if (val > 9) | (val2 > 9) { return Err(()) };
+            Ok((val * 10 + val2) as u32)
+        }
+        3 => {
+            let val = val.wrapping_sub(b'0');
+            let val2 = val2.wrapping_sub(b'0');
+            let val3 = s[2].wrapping_sub(b'0');
+            if (val > 9) | (val2 > 9) | (val3 > 9) { return Err(()) };
+            Ok(val as u32 * 100 + (val2 * 10 + val3) as u32)
+        }
+        4 => {
+            Ok(parse_4_chars(s)? as u32)
+        }
+        5 => {
+            let result = parse_4_chars(&s[1..])? as u32;
+            let val = val.wrapping_sub(b'0');
+            if val > 9 { return Err(()) }
+            Ok(result + (val as u32 * 10_000))
+        }
+        6 => {
+            let mut result = parse_4_chars(s)? as u32;
+            result *= 100;
+            let val = parse_2_chars(&s[4..])?;
+            result += val as u32;
+            Ok(result)
+        }
+        7 => {
+            let result = parse_4_chars(&s[1..])? as u32;
+            let loose_change = parse_2_chars(&s[5..])? as u32;
+            let val = val.wrapping_sub(b'0') as u32;
+            if val > 9 { return Err(()) }
+            Ok(val * 1_000_000 + result * 100 + loose_change)
+        }
+        8 => {
+            parse_8_chars(&s)
+        },
+        9 => {
+            let val = val.wrapping_sub(b'0') as u32;
+            let result = parse_8_chars(&s[1..])?;
+            if val > 9 { return Err(()) }
+            Ok(result + (val as u32 * 100_000_000))
+        },
+        10 => {
+            let mut val = val.wrapping_sub(b'0') as u32;
+            let mut val2 = val2.wrapping_sub(b'0') as u32;
+            if (val > 4) | (val2 > 9) { return Err(()) }
+            let mut result = parse_8_chars(&s[2..])?;
+            val *= 1_000_000_000;
+            val2 *= 100_000_000;
+            result += val;
+            match result.checked_add(val2) {
+                Some(val) => Ok(val),
+                None => { Err(()) }
+            }
+        },
+        _ => { Err(()) }
+    }
+}
+
 /// Parses 0 to 18_446_744_073_709_551_615
 pub fn parse_u64(ss: &str) -> Result<u64, ()> {
+
+    let mut l = ss.len();
+    if l < 10 {
+        return parse_u32(ss).map(|val| val as u64);
+    }
+    let mut s = ss.as_bytes();
+
+    match s.get(0) {
+        None => return Err(()),
+        Some(val) if *val == b'+' => {
+            s = &s[1..];
+            l -= 1;
+        }
+        Some(_) => {}
+    }
+
+    if l > 20 {
+        return Err(());
+    }
+
+    if l == 16 {
+        return parse_16_chars(s);
+    }
+    let mut result: u64 = 0;
+    while l >= 8 {
+        result = 100_000_000 * result + parse_8_chars(&s[..8])? as u64;
+        s = &s[8..];
+        l -= 8;
+    }
+    if l >= 4 {
+        // 20 chars comes here so we need to checked math.
+        result = match result.checked_mul(10_000) {
+            Some(val) => val,
+            None => return Err(()),
+        };
+        result = match result.checked_add(parse_4_chars(&s[..4])? as u64) {
+            Some(val) => val,
+            None => return Err(()),
+        };
+        s = &s[4..];
+        l -= 4;
+    }
+    if l >= 2 {
+        result = result * 100 + parse_2_chars(&s[..2])? as u64;
+        s = &s[2..];
+        l -= 2;
+    }
+    if l == 1 {
+        let val = s[0].wrapping_sub(b'0');
+        if val > 9 {
+            return Err(());
+        }
+        result = result * 10 + val as u64;
+    }
+    return Ok(result);
+}
+
+
+/// Parses 0 to 18_446_744_073_709_551_615
+pub fn parse_u64_best(ss: &str) -> Result<u64, ()> {
     let mut l = ss.len();
     if l < 10 {
         return parse_u32(ss).map(|val| val as u64);
@@ -548,10 +702,57 @@ pub fn trick_simd(s: &str) -> u64 {
     }
 }
 
-// pub fn trick_simd_8(s: &str) -> u64 {
-//     let (upper_digits, lower_digits) = s.split_at(8);
-//     parse_8_chars_simd(lower_digits)
-// }
+fn parse_16_chars(s: &[u8]) -> Result<u64, ()> {
+    debug_assert!(s.len() >= 16);
+    const MASK_HI: u128 = 0xf0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0u128;
+    const MASK_LOW: u128 = 0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0fu128;
+    const ASCII_ZEROS: u128 = 0x30303030303030303030303030303030u128;
+
+    let mut chunk: u128 = 0u128;
+    unsafe {
+        std::ptr::copy_nonoverlapping(
+            s.as_ptr() as *const u128,
+            &mut chunk,
+            1, //s.len(), //std::mem::size_of_val(&chunk),
+        );
+        //cast_ref::<[u8; 4], u32> will fail if the reference isn't already aligned to 4).
+
+        // SAFETY: Unknown memory due to < 8 len replaced with with b'0's:
+        //  let r = 0x3030303030303030u64.wrapping_shr(l as u32 * 8);
+        //chunk = chunk << ((8 - l) * 8) | r;
+    }
+
+    // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
+    let x = chunk & MASK_LOW;
+    const RESULT_MASK: u128 = !0u128 / 255 * 128;
+    const N: u128 = 9;
+    const N_MASK: u128 = !0u128 / 255 * (127 - N);
+    if (chunk & MASK_HI) - ASCII_ZEROS | ((x + N_MASK | x) & RESULT_MASK) != 0 {
+        // _mm_cmpgt_epi8 would also work nicely here if available on target.
+        return Err(());
+    }
+
+    // 1-byte mask trick (works on 8 pairs of single digits)
+    let lower_digits = (chunk & 0x0f000f000f000f000f000f000f000f00) >> 8;
+    let upper_digits = (chunk & 0x000f000f000f000f000f000f000f000f) * 10;
+    let chunk = lower_digits + upper_digits;
+
+    // 2-byte mask trick (works on 4 pairs of two digits)
+    let lower_digits = (chunk & 0x00ff000000ff000000ff000000ff0000) >> 16;
+    let upper_digits = (chunk & 0x000000ff000000ff000000ff000000ff) * 100;
+    let chunk = lower_digits + upper_digits;
+
+    // 4-byte mask trick (works on 2 pair of four digits)
+    let lower_digits = (chunk & 0x0000ffff000000000000ffff00000000) >> 32;
+    let upper_digits = (chunk & 0x000000000000ffff000000000000ffff) * 100_00;
+    let chunk = lower_digits + upper_digits;
+
+    // 8-byte mask trick (works on a pair of eight digits)
+    let lower_digits = (chunk & 0x00000000ffffffff0000000000000000) >> 64;
+    let upper_digits = (chunk & 0x000000000000000000000000ffffffff) * 100_00_00_00;
+    let chunk = lower_digits + upper_digits;
+    Ok(chunk as u64) //u64 can guarantee to contain 19 digits.
+}
 
 fn parse_8_chars(s: &[u8]) -> Result<u32, ()> {
     debug_assert!(s.len() >= 8);
@@ -603,6 +804,8 @@ fn parse_8_chars(s: &[u8]) -> Result<u32, ()> {
     let chunk = lower_digits + upper_digits;
     Ok(chunk as u32) //u32 can guarantee to contain 9 digits.
 }
+
+
 
 
 fn parse_4_chars(s: &[u8]) -> Result<u16, ()> {
@@ -835,6 +1038,61 @@ mod tests {
         let mut s = String::new();
         for i in (u64::MIN..u64::MAX).step_by(10_301_000_000_000) {
             s.clear();
+            itoa::fmt(&mut s, i).unwrap();
+            let p: Result<u64, ()> = s.parse().map_err(|_| ());
+            assert_eq!(p, parse_u64(&s), "fail to parse: '{}'", &s);
+        }
+    }
+
+
+
+
+
+
+
+    #[test]
+    fn test_u8_plus() {
+        let mut s = String::new();
+        for i in u8::MIN..u8::MAX {
+            s.clear();
+            s.push('+');
+            itoa::fmt(&mut s, i).unwrap();
+            let p: Result<u8, ()> = s.parse().map_err(|_| ());
+            assert_eq!(p, parse_u8(&s), "fail to parse: '{}'", &s);
+        }
+    }
+
+    #[test]
+    fn test_u16_plus() {
+        let mut s = String::new();
+        for i in u16::MIN..u16::MAX {
+            s.clear();
+            s.push('+');
+            itoa::fmt(&mut s, i).unwrap();
+            let p: Result<u16, ()> = s.parse().map_err(|_| ());
+            assert_eq!(p, parse_u16(&s), "fail to parse: '{}'", &s);
+        }
+    }
+
+    #[test]
+    fn test_u32_plus() {
+        let mut s = String::new();
+        for i in (u32::MIN..u32::MAX).step_by(10_301) {
+            s.clear();
+            s.push('+');
+            itoa::fmt(&mut s, i).unwrap();
+            let p: Result<u32, ()> = s.parse().map_err(|_| ());
+            assert_eq!(p, parse_u32(&s), "fail to parse: '{}'", &s);
+        }
+    }
+
+
+    #[test]
+    fn test_u64_plus() {
+        let mut s = String::new();
+        for i in (u64::MIN..u64::MAX).step_by(10_301_000_000_000) {
+            s.clear();
+            s.push('+');
             itoa::fmt(&mut s, i).unwrap();
             let p: Result<u64, ()> = s.parse().map_err(|_| ());
             assert_eq!(p, parse_u64(&s), "fail to parse: '{}'", &s);
