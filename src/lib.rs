@@ -543,23 +543,6 @@ pub fn parse_u64(ss: &str) -> Result<u64, ()> {
     };
 
     let l = s.len();
-    if l >= 20 {
-        // Treat checked case separately
-        if l == 20 {
-            let val = val.wrapping_sub(b'0') as u64;
-            if val > 1 {
-                return Err(());
-            }
-            return match (parse_4_chars(&s)? as u64 * 10_000_000_000_000_000)
-                .checked_add(parse_16_chars(&s[4..])? as u64)
-            {
-                Some(val) => Ok(val),
-                None => Err(()),
-            }
-        }
-        return Err(());
-    }
-
     let mut res = 0;
     if l & 2 != 0 {
         let val = val.wrapping_sub(b'0');
@@ -568,27 +551,45 @@ pub fn parse_u64(ss: &str) -> Result<u64, ()> {
             return Err(());
         };
         res += (val * 10 + val2) as u64 * TENS_U64[s.len() - 2];
+
+        //res += parse_2_chars(&s)? as u64 * TENS_U64[s.len() - 2];
         s = &s[2..];
-    }
-    if l & 4 != 0 {
-        res += parse_4_chars(&s)? as u64 * TENS_U64[s.len() - 4];
-        s = &s[4..];
-    }
-    if l & 8 != 0 {
-        res += parse_8_chars(&s)? as u64 * TENS_U64[s.len() - 8];
-        s = &s[8..];
-    }
-    if l & 16 != 0 {
-        res += parse_16_chars(&s)? * TENS_U64[s.len() - 16];
-        s = &s[16..];
     }
     if l & 1 != 0 {
         let val = s[0].wrapping_sub(b'0');
         if val > 9 {
             return Err(());
         };
-        res += val as u64;// * TENS_U64[s.len() - 1];
-        //s = &s[1..];
+        res += val as u64 * TENS_U64[s.len() - 1];
+        s = &s[1..];
+    }
+    if l & 16 != 0 {
+        if l >= 20 {
+            // Treat checked case separately
+            if l == 20 {
+                let val = val.wrapping_sub(b'0') as u64;
+                if val > 1 {
+                    return Err(());
+                }
+                return match (parse_4_chars(&s)? as u64 * 10_000_000_000_000_000)
+                    .checked_add(parse_16_chars(&s[4..])? as u64)
+                {
+                    Some(val) => Ok(val),
+                    None => Err(()),
+                }
+            }
+            return Err(());
+        }
+        res += parse_16_chars(&s)? * TENS_U64[s.len() - 16];//TODO always 1
+        s = &s[16..];
+    }
+    if l & 8 != 0 {
+        res += parse_8_chars(&s)? as u64 * TENS_U64[s.len() - 8];
+        s = &s[8..];
+    }
+    if l & 4 != 0 {
+        res += parse_4_chars(&s)? as u64 * TENS_U64[s.len() - 4];
+        s = &s[4..];
     }
     Ok(res)
 }
