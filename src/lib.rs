@@ -516,6 +516,7 @@ pub fn parse_u32(s: &str) -> Result<u32, ()> {
 
 /// Parses 0 to 18_446_744_073_709_551_615
 pub fn parse_u64(ss: &str) -> Result<u64, ()> {
+    unsafe {
     let mut s = ss.as_bytes();
     let (val, val2) = match s.get(0) {
         Some(val) => {
@@ -550,29 +551,30 @@ pub fn parse_u64(ss: &str) -> Result<u64, ()> {
         if (val > 9) | (val2 > 9) {
             return Err(());
         };
-        res += (val * 10 + val2) as u64 * TENS_U64[s.len() - 2];
+        res += (val * 10 + val2) as u64 * TENS_U64.get_unchecked(s.len() - 2);
 
         //res += parse_2_chars(&s)? as u64 * TENS_U64[s.len() - 2];
         s = &s[2..];
     }
     if l & 1 != 0 {
-        let val = s[0].wrapping_sub(b'0');
+        let val = s.get_unchecked(0).wrapping_sub(b'0');
         if val > 9 {
             return Err(());
         };
-        res += val as u64 * TENS_U64[s.len() - 1];
+        res += val as u64 * TENS_U64.get_unchecked(s.len() - 1);
         s = &s[1..];
     }
     if l & 16 != 0 {
+        let val16 = parse_16_chars(&s)?;
         if l >= 20 {
             // Treat checked case separately
             if l == 20 {
-                let val = val.wrapping_sub(b'0') as u64;
-                if val > 1 {
-                    return Err(());
-                }
-                return match (parse_4_chars(&s)? as u64 * 10_000_000_000_000_000)
-                    .checked_add(parse_16_chars(&s[4..])? as u64)
+                let val = match val16.checked_mul(10_000) {
+                    Some(val) => val,
+                    None => return Err(())
+                };
+                return match val
+                    .checked_add(parse_4_chars(&s[16..])? as u64)
                 {
                     Some(val) => Ok(val),
                     None => Err(()),
@@ -580,18 +582,19 @@ pub fn parse_u64(ss: &str) -> Result<u64, ()> {
             }
             return Err(());
         }
-        res += parse_16_chars(&s)? * TENS_U64[s.len() - 16];//TODO always 1
+        res += val16 * TENS_U64.get_unchecked(s.len() - 16);//TODO always 1
         s = &s[16..];
     }
     if l & 8 != 0 {
-        res += parse_8_chars(&s)? as u64 * TENS_U64[s.len() - 8];
+        res += parse_8_chars(&s)? as u64 * TENS_U64.get_unchecked(s.len() - 8);
         s = &s[8..];
     }
     if l & 4 != 0 {
-        res += parse_4_chars(&s)? as u64 * TENS_U64[s.len() - 4];
-        s = &s[4..];
+        res += parse_4_chars(&s)? as u64 * TENS_U64.get_unchecked(s.len() - 4);
+      //  s = &s[4..];
     }
     Ok(res)
+}
 }
 
 /// Parses 0 to 18_446_744_073_709_551_615
@@ -944,6 +947,7 @@ pub fn trick_simd(s: &str) -> u64 {
     }
 }
 
+#[inline]
 fn parse_16_chars(s: &[u8]) -> Result<u64, ()> {
     debug_assert!(s.len() >= 16);
     const MASK_HI: u128 = 0xf0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0u128;
@@ -996,6 +1000,7 @@ fn parse_16_chars(s: &[u8]) -> Result<u64, ()> {
     Ok(chunk as u64) //u64 can guarantee to contain 19 digits.
 }
 
+#[inline]
 fn parse_8_chars(s: &[u8]) -> Result<u32, ()> {
     debug_assert!(s.len() >= 8);
     const MASK_HI: u64 = 0xf0f0f0f0f0f0f0f0u64;
@@ -1047,6 +1052,7 @@ fn parse_8_chars(s: &[u8]) -> Result<u32, ()> {
     Ok(chunk as u32) //u32 can guarantee to contain 9 digits.
 }
 
+#[inline]
 fn parse_4_chars(s: &[u8]) -> Result<u16, ()> {
     //SAFETY:
     debug_assert!(s.len() >= 4);
@@ -1100,6 +1106,7 @@ fn parse_4_chars(s: &[u8]) -> Result<u16, ()> {
     Ok(chunk as u16) //u16 can guarantee to hold 4 digits
 }
 
+#[inline]
 fn parse_2_chars(s: &[u8]) -> Result<u8, ()> {
     //SAFETY:
     debug_assert!(s.len() >= 2);
