@@ -3,9 +3,7 @@ use core::arch::x86_64::{
     _mm_cvtsi128_si64, _mm_lddqu_si128, _mm_madd_epi16, _mm_maddubs_epi16, _mm_packus_epi32,
     _mm_set1_epi8, _mm_set_epi16, _mm_set_epi8, _mm_sub_epi16,
 };
-pub fn std_parse_u64(s: &str) -> u64 {
-    s.parse().unwrap()
-}
+
 
 pub fn std_parse_u8(s: &str) -> Result<u8, ()> {
     s.parse().map_err(|_| ())
@@ -16,6 +14,14 @@ pub fn std_parse_u16(s: &str) -> Result<u16, ()> {
 }
 
 pub fn std_parse_u32(s: &str) -> u32 {
+    s.parse().unwrap()
+}
+
+pub fn std_parse_u64(s: &str) -> u64 {
+    s.parse().unwrap()
+}
+
+pub fn std_parse_u128(s: &str) -> u128 {
     s.parse().unwrap()
 }
 
@@ -93,8 +99,63 @@ pub fn trick_with_checks(s: &str) -> u64 {
     parse_u64(s).unwrap()
 }
 
+const PLUS : u8 = b'+'.wrapping_sub(b'0');
+
 /// Parse from "0" to "+255"
 pub fn parse_u8(s: &str) -> Result<u8, ()> {
+    let mut iter = s.as_bytes().iter();
+    match iter.next() {
+        Some(val) => {
+            let mut val = val.wrapping_sub(b'0');
+            if val > 9 {
+                if val == PLUS { // '+' - '0' = 251
+                    match iter.next() {
+                        Some(alt_val) => {
+                            val = alt_val.wrapping_sub(b'0');
+                            if val > 9 {
+                                return Err(());
+                            }
+                        }
+                        None => return Err(()),
+                    }
+                }
+            }
+            match iter.next() {
+                Some(val2) => {
+                    let val2 = val2.wrapping_sub(b'0');
+                    if val2 > 9 {
+                        return Err(());
+                    }
+                    match iter.next() {
+                        Some(val3) => {
+                            let val3 = val3.wrapping_sub(b'0');
+                            let val2 = val2 * 10;
+                            match val {
+                                0 => Ok(val2 + val3),
+                                1 => Ok(100 + val2 + val3),
+                                2 => {
+                                    let two = val2 + val3;
+                                    if two <= 55 {
+                                        Ok(200 + two)
+                                    } else {
+                                        Err(())
+                                    }
+                                }
+                                _ => Err(()),
+                            }
+                        }
+                        None => Ok(val * 10 + val2)
+                    }
+                }
+                None => Ok(val)
+            }
+        }
+        _ => Err(()),
+    }
+}
+
+/// Parse from "0" to "+255"
+pub fn parse_u8_best(s: &str) -> Result<u8, ()> {
     let mut iter = s.as_bytes().iter();
     match iter.next() {
         Some(mut val) => {
@@ -154,7 +215,7 @@ pub fn parse_u8(s: &str) -> Result<u8, ()> {
 }
 
 /// Parse from "0" to "+255"
-pub fn parse_u8_best(s: &str) -> Result<u8, ()> {
+pub fn parse_u8_old_best(s: &str) -> Result<u8, ()> {
     let mut s = s.as_bytes();
     let first = s.get(0);
     match first {
@@ -188,7 +249,69 @@ pub fn parse_u8_best(s: &str) -> Result<u8, ()> {
     };
 }
 
+
 pub fn parse_u16(s: &str) -> Result<u16, ()> {
+    let mut s = s.as_bytes();
+    let (val, val2, val3) = match s.get(0) {
+        Some(val) => {
+            let mut val = val.wrapping_sub(b'0');
+            if val > 9 {
+                if val == PLUS {
+                    s = &s[1..];
+                    val = match s.get(0) {
+                        Some(val) => {
+                            let val = val.wrapping_sub(b'0');
+                            if val > 9 { return Err(()) };
+                            val
+                        },
+                        None => return Err(()),
+                    }
+                } else { return Err(()); }
+            }
+            let val2 = match s.get(1) {
+                None => {
+                    return Ok(val as u16);
+                },
+                Some(val2) => {
+                    val2
+                }
+            };
+            let val3 = match s.get(2) {
+                None => {
+                    let val2 = val2.wrapping_sub(b'0');
+                    if val2 > 9 { return Err(()); }
+                    return Ok((val * 10 + val2) as u16);
+                },
+                Some(val3) => {
+                    val3
+                }
+            };
+            (val, val2, val3)
+        }
+        None => return Err(()),
+    };
+    let l = s.len();
+    // 111
+    match l {
+        3 => {
+            let val2 = val2.wrapping_sub(b'0');
+            let val3 = val3.wrapping_sub(b'0');
+            if (val2 > 9) | (val3 > 9) { return Err(()) }
+            Ok(val as u16 * 100 + val2 as u16 * 10 + val3 as u16)
+        }
+        4 => parse_4_chars(s),
+        5 => {
+            if val > 6 { return Err(()); }
+            match (val as u16 * 10_000).checked_add(parse_4_chars(&s[1..])?) {
+                Some(val) => Ok(val),
+                None => return Err(()),
+            }
+        }
+        _ => Err(()),
+    }
+}
+
+pub fn parse_u16_best(s: &str) -> Result<u16, ()> {
     let mut s = s.as_bytes();
     let l: usize;
     let first = s.get(0);
@@ -560,14 +683,14 @@ pub fn parse_u64(s: &str) -> Result<u64, ()> {
             if val > 9 {
                 return Err(());
             };
-            res += val as u64 * TENS_U64.get_unchecked(s.len() - 1);
             s = &s.get_unchecked(1..);
+            res += val as u64 * TENS_U64.get_unchecked(s.len());
         }
         if l & 16 != 0 {
             let val16 = parse_16_chars(&s)?;
             if l >= 20 {
                 // Treat checked case separately
-                if l == 20 {
+                if l == 20 {//TODO what if l & 32 but not 16?
                     let val = match val16.checked_mul(10_000) {
                         Some(val) => val,
                         None => return Err(()),
@@ -579,12 +702,13 @@ pub fn parse_u64(s: &str) -> Result<u64, ()> {
                 }
                 return Err(());
             }
-            res += val16 * TENS_U64.get_unchecked(s.len() - 16); //TODO always 1
             s = &s.get_unchecked(16..);
+            res += val16 * TENS_U64.get_unchecked(s.len()); //TODO always 1
         }
         if l & 8 != 0 {
-            res += parse_8_chars(&s)? as u64 * TENS_U64.get_unchecked(s.len() - 8);
+            let val = parse_8_chars(&s)? as u64;
             s = &s.get_unchecked(8..);
+            res += val * TENS_U64.get_unchecked(s.len());
         }
         if l & 4 != 0 {
             res += parse_4_chars(&s)? as u64;
@@ -858,7 +982,124 @@ pub fn parse_u64_old_best(ss: &str) -> Result<u64, ()> {
     return Ok(result);
 }
 
-// u128: 0 to 340282366920938463463374607431768211455
+/// u128: 0 to 340_282_366_920_938_463_463_374_607_431_768_211_455
+/// (39 digits!)
+pub fn parse_u128(s: &str) -> Result<u128, ()> {
+    unsafe {
+        let mut s = s.as_bytes();
+        let (val, val2) = match s.get(0) {
+            Some(val) => {
+                let val = if *val == b'+' {
+                    s = &s.get_unchecked(1..);
+                    match s.get(0) {
+                        Some(val) => val,
+                        None => return Err(()),
+                    }
+                } else {
+                    val
+                };
+
+                let val2 = match s.get(1) {
+                    Some(val2) => val2,
+                    None => {
+                        let val = val.wrapping_sub(b'0');
+                        return if val <= 9 { Ok(val as u128) } else { Err(()) };
+                    }
+                };
+
+                (val, val2)
+            }
+            None => return Err(()),
+        };
+
+        let l = s.len();
+        if l >= 39 {
+            if l > 39 {
+                return Err(());
+            }
+            //39 = 32 + 4 + 2 + 1
+            let val = val.wrapping_sub(b'0');
+            if val > 3 { return Err(()) }
+            let val = val as u128 * TENS_U128[38];
+
+            let val2 = val2.wrapping_sub(b'0');
+            let val3 = s[2].wrapping_sub(b'0');
+            if (val2 > 9) | (val3 > 9) {
+                return Err(());
+            };
+            let mut res = val2 as u128 * TENS_U128.get_unchecked(37)
+                + val3 as u128 * TENS_U128.get_unchecked(36);
+            s = &s.get_unchecked(3..);
+
+            let val16 = parse_16_chars(&s)? as u128;
+            s = &s.get_unchecked(16..);
+            res += val16 * TENS_U128.get_unchecked(20);
+
+            // Do the same thing again as a parse_32_chars fn would need 256bits.
+            let val16 = parse_16_chars(&s)? as u128;
+            s = &s.get_unchecked(16..);
+            res += val16 * TENS_U128.get_unchecked(4);
+
+            res += parse_4_chars(&s)? as u128;
+
+            return match val.checked_add(res) {
+                Some(val) => Ok(val),
+                None => Err(()),
+            };
+        }
+        let mut res = 0u128;
+        if l & 2 != 0 {
+            let val = val.wrapping_sub(b'0');
+            let val2 = val2.wrapping_sub(b'0');
+            if (val > 9) | (val2 > 9) {
+                return Err(());
+            };
+            res += val as u128 * TENS_U128.get_unchecked(s.len() - 1)
+                + val2 as u128 * TENS_U128.get_unchecked(s.len() - 2);
+            s = &s.get_unchecked(2..);
+        }
+        if l & 1 != 0 {
+            let val = s.get_unchecked(0).wrapping_sub(b'0');
+            if val > 9 {
+                return Err(());
+            };
+            s = &s.get_unchecked(1..);
+            res += val as u128 * TENS_U128.get_unchecked(s.len());
+        }
+        if l & 16 != 0 {
+            let val16 = parse_16_chars(&s)? as u128;
+            s = &s.get_unchecked(16..);
+            res += val16 * TENS_U128.get_unchecked(s.len());
+        }
+        if l & 8 != 0 {
+            let val = parse_8_chars(&s)? as u128;
+            s = &s.get_unchecked(8..);
+            res += val * TENS_U128.get_unchecked(s.len());
+        }
+        if l & 32 != 0 {
+            let val16 = parse_16_chars(&s)? as u128;
+            s = &s.get_unchecked(16..);
+            res += val16 * TENS_U128.get_unchecked(s.len());
+
+            // Do the same thing again as a parse_32_chars fn would need 256bits.
+            let val16 = parse_16_chars(&s)? as u128;
+            s = &s.get_unchecked(16..);
+            res += val16 * TENS_U128.get_unchecked(s.len());
+        }
+        if l & 4 != 0 {
+            res += parse_4_chars(&s)? as u128;
+        }
+
+        Ok(res)
+    }
+}
+
+
+/// u128: 0 to 340_282_366_920_938_463_463_374_607_431_768_211_455
+/// (39 digits!)
+pub fn parse_u128_best(s: &str) -> Result<u128, ()> {
+  parse_u128(s)
+}
 
 pub fn trick_with_checks_i64(src: &str) -> i64 {
     parse_signed64(src).unwrap()
@@ -1176,6 +1417,7 @@ pub fn trick_simd_c16(s: &str) -> u64 {
     }
 }
 
+// Baby christmas tree:
 const TENS_U32: &[u32] = &[
     1,
     10,
@@ -1189,6 +1431,7 @@ const TENS_U32: &[u32] = &[
     1_000_000_000,
 ];
 
+// Good sized christmas tree:
 const TENS_U64: &[u64] = &[
     1,
     10,
@@ -1212,6 +1455,49 @@ const TENS_U64: &[u64] = &[
     10_000_000_000_000_000_000,
 ];
 
+// Biggest christmas tree:
+const TENS_U128: &[u128] = &[
+    1,
+    10,
+    100,
+    1_000,
+    10_000,
+    100_000,
+    1_000_000,
+    10_000_000,
+    100_000_000,
+    1_000_000_000,
+    10_000_000_000,
+    100_000_000_000,
+    1_000_000_000_000,
+    10_000_000_000_000,
+    100_000_000_000_000,
+    1_000_000_000_000_000,
+    10_000_000_000_000_000,
+    100_000_000_000_000_000,
+    1_000_000_000_000_000_000,
+    10_000_000_000_000_000_000,
+    100_000_000_000_000_000_000,
+    1_000_000_000_000_000_000_000,
+    10_000_000_000_000_000_000_000,
+    100_000_000_000_000_000_000_000,
+    1_000_000_000_000_000_000_000_000,
+    10_000_000_000_000_000_000_000_000,
+    100_000_000_000_000_000_000_000_000,
+    1_000_000_000_000_000_000_000_000_000,
+    10_000_000_000_000_000_000_000_000_000,
+    100_000_000_000_000_000_000_000_000_000,
+    1_000_000_000_000_000_000_000_000_000_000,
+    10_000_000_000_000_000_000_000_000_000_000,
+    100_000_000_000_000_000_000_000_000_000_000,
+    1_000_000_000_000_000_000_000_000_000_000_000,
+    10_000_000_000_000_000_000_000_000_000_000_000,
+    100_000_000_000_000_000_000_000_000_000_000_000,
+    1_000_000_000_000_000_000_000_000_000_000_000_000,
+    10_000_000_000_000_000_000_000_000_000_000_000_000,
+    100_000_000_000_000_000_000_000_000_000_000_000_000,
+];
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1222,6 +1508,7 @@ mod tests {
         assert_eq!(Err(()), parse_u16(""));
         assert_eq!(Err(()), parse_u32(""));
         assert_eq!(Err(()), parse_u64(""));
+        assert_eq!(Err(()), parse_u128(""));
     }
 
     #[test]
@@ -1230,6 +1517,7 @@ mod tests {
         assert_eq!(Err(()), parse_u16("1/4"));
         assert_eq!(Err(()), parse_u32("1/4"));
         assert_eq!(Err(()), parse_u64("1/4"));
+        assert_eq!(Err(()), parse_u128("1/4"));
     }
 
     #[test]
@@ -1238,6 +1526,7 @@ mod tests {
         assert_eq!(Err(()), parse_u16("1:4"));
         assert_eq!(Err(()), parse_u32("1:4"));
         assert_eq!(Err(()), parse_u64("1:4"));
+        assert_eq!(Err(()), parse_u128("1:4"));
     }
 
     #[test]
@@ -1246,6 +1535,10 @@ mod tests {
         assert_eq!(Err(()), parse_u16(&(u16::MAX as u128 + 1).to_string()));
         assert_eq!(Err(()), parse_u32(&(u32::MAX as u128 + 1).to_string()));
         assert_eq!(Err(()), parse_u64(&(u64::MAX as u128 + 1).to_string()));
+
+        let mut s = (u128::MAX as u128).to_string();
+        s.push('1');
+        assert_eq!(Err(()), parse_u128(&s));
     }
 
     #[test]
@@ -1282,6 +1575,13 @@ mod tests {
     }
 
     #[test]
+    fn test_u16_specific() {
+        let s = "12";
+        let p: Result<u16, ()> = s.parse().map_err(|_| ());
+        assert_eq!(p, parse_u16(&s), "fail to parse: '{}'", &s);
+    }
+
+    #[test]
     fn test_u32_specific() {
         let s = "100002108";
         let p: Result<u32, ()> = s.parse().map_err(|_| ());
@@ -1293,6 +1593,15 @@ mod tests {
         let p: Result<u64, ()> = s.parse().map_err(|_| ());
         assert_eq!(p, parse_u64(&s), "fail to parse: '{}'", &s);
     }
+    
+
+    #[test]
+    fn test_u128_specific() {
+        let s = "123456789012345678901234567890123456789";
+        let p: Result<u128, ()> = s.parse().map_err(|_| ());
+        assert_eq!(p, parse_u128(&s), "fail to parse: '{}'", &s);
+    }
+
     #[test]
     fn test_u64() {
         let mut s = String::new();
@@ -1301,6 +1610,18 @@ mod tests {
             itoa::fmt(&mut s, i).unwrap();
             let p: Result<u64, ()> = s.parse().map_err(|_| ());
             assert_eq!(p, parse_u64(&s), "fail to parse: '{}'", &s);
+        }
+    }
+
+    #[test]
+    fn test_u128() {
+     //   let mut s = String::new();
+        for i in (u128::MIN..u64::MAX as u128).step_by(usize::MAX) {
+   //         s.clear();
+            let s = i.to_string();
+//            itoa::fmt(&mut s, i).unwrap();
+            let p: Result<u128, ()> = s.parse().map_err(|_| ());
+            assert_eq!(p, parse_u128(&s), "fail to parse: '{}'", &s);
         }
     }
 
