@@ -1,10 +1,3 @@
-//#![feature(unchecked_math)]
-use core::arch::x86_64::{
-    _mm_cvtsi128_si64, _mm_lddqu_si128, _mm_madd_epi16, _mm_maddubs_epi16, _mm_packus_epi32,
-    _mm_set1_epi8, _mm_set_epi16, _mm_set_epi8, _mm_sub_epi16,
-};
-use std::mem::MaybeUninit;
-
 pub fn std_parse_u8(s: &str) -> Result<u8, ()> {
     s.parse().map_err(|_| ())
 }
@@ -542,95 +535,107 @@ pub fn parse_u32_best(s: &str) -> Result<u32, ()> {
     }
 }
 
+
 pub fn parse_u32(s: &str) -> Result<u32, ()> {
-    let s = s.as_bytes();
+    let mut s = s.as_bytes();
+    let val = match s.get(0) {
+        Some(val) => {
+            if *val != b'+' {
+                val
+            } else {
+                s = &s[1..];
+                match s.get(0) {
+                    Some(val) => val,
+                    None => return Err(()),
+                }
+            }
+        }
+        None => return Err(()),
+    };
     let l = s.len();
-    unsafe {
     match l {
         1 => {
-            let val = s.get_unchecked(0).wrapping_sub(b'0');
-            return if val < 10 {
+            let val = val.wrapping_sub(b'0');
+            if val <= 9 {
                 Ok(val as u32)
             } else {
                 Err(())
-            };
+            }
         }
         2 => {
-            let val = s.get_unchecked(0).wrapping_sub(b'0');
-            let val2 = s.get_unchecked(1).wrapping_sub(b'0');
-            if (val < 10) & (val2 < 10) {
-                return Ok((val * 10 + val2) as u32);
+            let val = val.wrapping_sub(b'0');
+            let val2 = s[1].wrapping_sub(b'0');
+            if (val <= 9) & (val2 <= 9) {
+                Ok((val * 10 + val2) as u32)
+            } else {
+                Err(())
             }
-            if (val == PLUS) & (val2 < 10) {
-                return Ok(val2 as u32)
-            }
-            return Err(());
         }
         3 => {
-            let val = s.get_unchecked(0).wrapping_sub(b'0');
-            let val2 = s.get_unchecked(1).wrapping_sub(b'0');
-            let val3 = s.get_unchecked(2).wrapping_sub(b'0');
-            if (val < 10 ) & (val2 < 10) & (val3 < 10) {
-                return Ok(val as u32 * 100 + (val2 * 10 + val3) as u32)
-            };
-            if (val == PLUS) & (val2 < 10) & (val3 < 10) {
-                return Ok((val2 * 10 + val3) as u32);
+            let val = val.wrapping_sub(b'0');
+            let val2 = s[1].wrapping_sub(b'0');
+            let val3 = s[2].wrapping_sub(b'0');
+            if (val <= 9) & (val2 <= 9) & (val3 <= 9) {
+                Ok(val as u32 * 100 + (val2 * 10 + val3) as u32)
+            } else {
+                Err(())
             }
-            return Err(());
         }
         4 => Ok(parse_4_chars(s)? as u32),
         5 => {
-            let result = parse_4_chars(&s)? as u32 * 10;
-            let val = s.get_unchecked(4).wrapping_sub(b'0');
-            if val < 10 {
-                return Ok(result + (val as u32));
+            let result = parse_4_chars(s)? as u32 * 10;
+            let val = s[4].wrapping_sub(b'0');
+            if val <= 9 {
+                Ok(result + val as u32)
             } else {
-                return Err(());
-            };
+                Err(())
+            }
         }
         6 => {
             let result = parse_4_chars(s)? as u32 * 100;
-            let val = parse_2_chars(&s.get_unchecked(4..))?;
+            let val = parse_2_chars(&s[4..])?;
             Ok(result + val as u32)
         }
         7 => {
-            let result = parse_4_chars(&s)? as u32 * 1000;
-            let loose_change = parse_2_chars(&s.get_unchecked(4..))? as u32 * 10;
-            let val = s.get_unchecked(6).wrapping_sub(b'0');
-            if val < 10 {
-                return Ok(result + loose_change + (val as u32))
+            let mut result = parse_4_chars(s)? as u32 * 100;
+            let val = parse_2_chars(&s[4..])?;
+            result += val as u32;
+            result *= 10;
+            let val = s[6].wrapping_sub(b'0');
+            if val <= 9 {
+                Ok(result + val as u32)
             } else {
-                return Err(());
-            };
+                Err(())
+            }
         }
         8 => parse_8_chars(&s),
         9 => {
-            let result = parse_8_chars(&s)? * 10;
-            let val = s.get_unchecked(8).wrapping_sub(b'0');
-            if val < 10 {
-                return Ok(result + (val as u32))
+            let val = val.wrapping_sub(b'0') as u32;
+            let result = parse_8_chars(&s[1..])?;
+            if val <= 9 {
+                Ok(result + (val * 100_000_000))
             } else {
-                return Err(());
-            };
+                Err(())
+            }
         }
         10 => {
-            let val = s.get_unchecked(0).wrapping_sub(b'0');
-            let mut val2 = s.get_unchecked(1).wrapping_sub(b'0') as u32;
-            if (val > 4) | (val2 > 9) {
+            let mut val = val.wrapping_sub(b'0') as u32;
+            let mut val2 = s[1].wrapping_sub(b'0') as u32;
+            if (val <= 4) & (val2 <= 9) {
+                let mut result = parse_8_chars(&s[2..])?;
+                val *= 1_000_000_000;
+                val2 *= 100_000_000;
+                result += val;
+                match result.checked_add(val2) {
+                    Some(val) => Ok(val),
+                    None => Err(()),
+                }
+            } else {
                 return Err(());
-            }
-            let mut result = parse_8_chars(&s.get_unchecked(2..))?;
-            let val = val as u32 * 1_000_000_000;
-            val2 *= 100_000_000;
-            result += val;
-            match result.checked_add(val2) {
-                Some(val) => Ok(val),
-                None => Err(()),
             }
         }
         _ => Err(()),
     }
-}
 }
 
 
@@ -714,7 +719,7 @@ pub fn parse_u32(s: &str) -> Result<u32, ()> {
 //         }
 //         7 => {
 //             let val = s.get_unchecked(0).wrapping_sub(b'0');
-//             if val <= 9 { 
+//             if val <= 9 {
 //                 let result = parse_4_chars(&s.get_unchecked(1..))? as u32 * 100;
 //                 let loose_change = parse_2_chars(&s.get_unchecked(5..))? as u32;
 //                 Ok(result + loose_change + (val as u32 * 1000_000))
@@ -1391,7 +1396,7 @@ pub fn parse_u128(s: &str) -> Result<u128, ()> {
                 let val16 = parse_16_chars(&s)? as u128;
                 s = &s.get_unchecked(16..);
                 res += val16 * TENS_U128.get_unchecked(s.len());
-    
+
                 // Do the same thing again as a parse_32_chars fn would need 256bits.
                 let val16 = parse_16_chars(&s)? as u128;
                 s = &s.get_unchecked(16..);
@@ -1400,7 +1405,7 @@ pub fn parse_u128(s: &str) -> Result<u128, ()> {
             if l & 4 != 0 {
                 res += parse_4_chars(&s)? as u128;
             }
-    
+
             Ok(res)
         } else {
             if l == 39 {
@@ -1586,57 +1591,6 @@ pub fn parse_signed64(src: &str) -> Result<i64, ()> {
     }
 }
 
-pub fn trick_128(s: &str) -> u64 {
-    let s = s.as_ptr() as *const _;
-    let mut chunk = 0_u128;
-    unsafe {
-        std::ptr::copy_nonoverlapping(s, &mut chunk, std::mem::size_of_val(&chunk));
-    }
-
-    // 1-byte mask trick (works on 8 pairs of single digits)
-    let lower_digits = (chunk & 0x0f000f000f000f000f000f000f000f00) >> 8;
-    let upper_digits = (chunk & 0x000f000f000f000f000f000f000f000f) * 10;
-    let chunk = lower_digits + upper_digits;
-
-    // 2-byte mask trick (works on 4 pairs of two digits)
-    let lower_digits = (chunk & 0x00ff000000ff000000ff000000ff0000) >> 16;
-    let upper_digits = (chunk & 0x000000ff000000ff000000ff000000ff) * 100;
-    let chunk = lower_digits + upper_digits;
-
-    // 4-byte mask trick (works on 2 pairs of four digits)
-    let lower_digits = (chunk & 0x0000ffff000000000000ffff00000000) >> 32;
-    let upper_digits = (chunk & 0x000000000000ffff000000000000ffff) * 10000;
-    let chunk = lower_digits + upper_digits;
-
-    // 8-byte mask trick (works on a pair of eight digits)
-    let lower_digits = (chunk & 0x00000000ffffffff0000000000000000) >> 64;
-    let upper_digits = (chunk & 0x000000000000000000000000ffffffff) * 100000000;
-    let chunk = lower_digits + upper_digits;
-
-    chunk as u64
-}
-
-pub fn trick_simd(s: &str) -> u64 {
-    unsafe {
-        let chunk = _mm_lddqu_si128(std::mem::transmute_copy(&s));
-        let zeros = _mm_set1_epi8(b'0' as i8);
-        let chunk = _mm_sub_epi16(chunk, zeros);
-
-        let mult = _mm_set_epi8(1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10);
-        let chunk = _mm_maddubs_epi16(chunk, mult);
-
-        let mult = _mm_set_epi16(1, 100, 1, 100, 1, 100, 1, 100);
-        let chunk = _mm_madd_epi16(chunk, mult);
-
-        let chunk = _mm_packus_epi32(chunk, chunk);
-        let mult = _mm_set_epi16(0, 0, 0, 0, 1, 10000, 1, 10000);
-        let chunk = _mm_madd_epi16(chunk, mult);
-
-        let chunk = _mm_cvtsi128_si64(chunk) as u64;
-        ((chunk & 0xffffffff) * 100000000) + (chunk >> 32)
-    }
-}
-
 #[inline]
 fn parse_16_chars(s: &[u8]) -> Result<u64, ()> {
     debug_assert!(s.len() >= 16);
@@ -1649,13 +1603,8 @@ fn parse_16_chars(s: &[u8]) -> Result<u64, ()> {
         std::ptr::copy_nonoverlapping(
             s.as_ptr() as *const u128,
             &mut chunk,
-            1, //s.len(), //std::mem::size_of_val(&chunk),
+            1,
         );
-        //cast_ref::<[u8; 4], u32> will fail if the reference isn't already aligned to 4).
-
-        // SAFETY: Unknown memory due to < 8 len replaced with with b'0's:
-        //  let r = 0x3030303030303030u64.wrapping_shr(l as u32 * 8);
-        //chunk = chunk << ((8 - l) * 8) | r;
     }
 
     // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
@@ -1742,31 +1691,12 @@ fn parse_4_chars(s: &[u8]) -> Result<u16, ()> {
     const MASK_HI: u32 = 0xf0f0f0f0u32;
     const MASK_LOW: u32 = 0x0f0f0f0fu32;
     const ASCII_ZEROS: u32 = 0x30303030u32;
-    // let mut r: [u8; 4] = [0, 0, 0, 0];
     let mut chunk: u32 = 0;
 
-    //SAFETY:
-    //debug_assert!(s.len() <= 4); //todo make fn unsafe in case of larger inputs?
-    // let mut chars4 : [u8; 4] =[0,0,0,0];// s.try_into().unwrap();//[0,0,0,0];
-    //    let r = &mut chunk[..l];
-    // let mut r = chunk;
-    //r.copy_from_slice(s);
-    // for (i, ch) in s.iter().enumerate() {
-    //     r[i] = *ch;
-    // }
-    // unsafe {
-    //    std::ptr::copy_nonoverlapping(s.as_ptr() as *const u8, &mut r as *mut u8, l);
-    // }
     unsafe {
         std::ptr::copy_nonoverlapping(s.as_ptr() as *const u32, &mut chunk, 1);
     }
 
-    // let mut chunk = u32::from_ne_bytes(r);
-
-    // SAFETY: Unknown memory due to < 8 len replaced with with b'0's:
-    //  chunk = chunk << ((4 - l) * 8) | ASCII_ZEROS.wrapping_shr((l * 8) as u32);
-
-    //println!("size:{}", std::mem::size_of_val(&chunk));
     // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
     let x = chunk & MASK_LOW;
     const RESULT_MASK: u32 = !0u32 / 255 * 128;
@@ -1816,65 +1746,6 @@ fn parse_2_chars(s: &[u8]) -> Result<u8, ()> {
     let chunk = lower_digits + upper_digits;
     Ok(chunk as u8) // u8 can guarantee to hold 2 chars.
 }
-
-// fn parse_8_chars_simd(s: &str) -> u64 {
-//     unsafe {
-//         let chunk = _mm_loadu_si64(std::mem::transmute_copy(&s));
-//         let zeros = _mm_set1_epi8(b'0' as i8);
-//         let chunk = _mm_sub_epi16(chunk, zeros);
-
-//         let mult = _mm_set_epi8(10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1);
-//         let chunk = _mm_maddubs_epi16(chunk, mult);
-
-//         let mult = _mm_set_epi16(100, 1, 100, 1, 100, 1, 100, 1);
-//         let chunk = _mm_madd_epi16(chunk, mult);
-
-//         let chunk = _mm_packus_epi32(chunk, chunk);
-//         let mult = _mm_set_epi16(10000, 1, 10000, 1, 10000, 1, 10000, 1);
-//         let chunk = _mm_madd_epi16(chunk, mult);
-
-//         _mm_cvtsi128_si32(chunk) as u64
-//     }
-// }
-
-pub fn trick_simd_c16(s: &str) -> u64 {
-    let d: &mut [u8; 16] = &mut b"0000000000000000".clone();
-    let b: &[u8] = s.as_bytes();
-    d.copy_from_slice(b);
-
-    unsafe {
-        let chunk = _mm_lddqu_si128(std::mem::transmute_copy(&d));
-        let zeros = _mm_set1_epi8(b'0' as i8);
-        let chunk = _mm_sub_epi16(chunk, zeros);
-
-        let mult = _mm_set_epi8(1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10);
-        let chunk = _mm_maddubs_epi16(chunk, mult);
-
-        let mult = _mm_set_epi16(1, 100, 1, 100, 1, 100, 1, 100);
-        let chunk = _mm_madd_epi16(chunk, mult);
-
-        let chunk = _mm_packus_epi32(chunk, chunk);
-        let mult = _mm_set_epi16(0, 0, 0, 0, 1, 10000, 1, 10000);
-        let chunk = _mm_madd_epi16(chunk, mult);
-
-        let chunk = _mm_cvtsi128_si64(chunk) as u64;
-        ((chunk & 0xffffffff) * 100000000) + (chunk >> 32)
-    }
-}
-
-// Baby christmas tree:
-const TENS_U32: &[u32] = &[
-    1,
-    10,
-    100,
-    1_000,
-    10_000,
-    100_000,
-    1_000_000,
-    10_000_000,
-    100_000_000,
-    1_000_000_000,
-];
 
 // Good sized christmas tree:
 const TENS_U64: &[u64] = &[
@@ -2038,7 +1909,6 @@ mod tests {
         let p: Result<u64, ()> = s.parse().map_err(|_| ());
         assert_eq!(p, parse_u64(&s), "fail to parse: '{}'", &s);
     }
-    
 
     #[test]
     fn test_u128_specific() {
