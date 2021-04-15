@@ -3,7 +3,7 @@ use core::arch::x86_64::{
     _mm_cvtsi128_si64, _mm_lddqu_si128, _mm_madd_epi16, _mm_maddubs_epi16, _mm_packus_epi32,
     _mm_set1_epi8, _mm_set_epi16, _mm_set_epi8, _mm_sub_epi16,
 };
-
+use std::mem::MaybeUninit;
 
 pub fn std_parse_u8(s: &str) -> Result<u8, ()> {
     s.parse().map_err(|_| ())
@@ -469,18 +469,20 @@ pub fn parse_u32_best(s: &str) -> Result<u32, ()> {
             let val = val.wrapping_sub(b'0');
             let val2 = s[1].wrapping_sub(b'0');
             if (val > 9) | (val2 > 9) {
-                return Err(());
-            };
-            Ok((val * 10 + val2) as u32)
+                Err(())
+            } else {
+                Ok((val * 10 + val2) as u32)
+            }
         }
         3 => {
             let val = val.wrapping_sub(b'0');
             let val2 = s[1].wrapping_sub(b'0');
             let val3 = s[2].wrapping_sub(b'0');
             if (val > 9) | (val2 > 9) | (val3 > 9) {
-                return Err(());
-            };
-            Ok(val as u32 * 100 + (val2 * 10 + val3) as u32)
+                Err(())
+            } else {
+                Ok(val as u32 * 100 + (val2 * 10 + val3) as u32)
+            }
         }
         4 => Ok(parse_4_chars(s)? as u32),
         5 => {
@@ -488,9 +490,10 @@ pub fn parse_u32_best(s: &str) -> Result<u32, ()> {
             result *= 10;
             let val = s[4].wrapping_sub(b'0');
             if val > 9 {
-                return Err(());
+                Err(())
+            } else {
+                Ok(result + val as u32)
             }
-            Ok(result + val as u32)
         }
         6 => {
             let mut result = parse_4_chars(s)? as u32;
@@ -540,6 +543,346 @@ pub fn parse_u32_best(s: &str) -> Result<u32, ()> {
 }
 
 pub fn parse_u32(s: &str) -> Result<u32, ()> {
+    let s = s.as_bytes();
+    let l = s.len();
+    unsafe {
+    match l {
+        1 => {
+            let val = s.get_unchecked(0).wrapping_sub(b'0');
+            return if val < 10 {
+                Ok(val as u32)
+            } else {
+                Err(())
+            };
+        }
+        2 => {
+            let val = s.get_unchecked(0).wrapping_sub(b'0');
+            let val2 = s.get_unchecked(1).wrapping_sub(b'0');
+            if (val < 10) & (val2 < 10) {
+                return Ok((val * 10 + val2) as u32);
+            }
+            if (val == PLUS) & (val2 < 10) {
+                return Ok(val2 as u32)
+            }
+            return Err(());
+        }
+        3 => {
+            let val = s.get_unchecked(0).wrapping_sub(b'0');
+            let val2 = s.get_unchecked(1).wrapping_sub(b'0');
+            let val3 = s.get_unchecked(2).wrapping_sub(b'0');
+            if (val < 10 ) & (val2 < 10) & (val3 < 10) {
+                return Ok(val as u32 * 100 + (val2 * 10 + val3) as u32)
+            };
+            if (val == PLUS) & (val2 < 10) & (val3 < 10) {
+                return Ok((val2 * 10 + val3) as u32);
+            }
+            return Err(());
+        }
+        4 => Ok(parse_4_chars(s)? as u32),
+        5 => {
+            let result = parse_4_chars(&s)? as u32 * 10;
+            let val = s.get_unchecked(4).wrapping_sub(b'0');
+            if val < 10 {
+                return Ok(result + (val as u32));
+            } else {
+                return Err(());
+            };
+        }
+        6 => {
+            let result = parse_4_chars(s)? as u32 * 100;
+            let val = parse_2_chars(&s.get_unchecked(4..))?;
+            Ok(result + val as u32)
+        }
+        7 => {
+            let result = parse_4_chars(&s)? as u32 * 1000;
+            let loose_change = parse_2_chars(&s.get_unchecked(4..))? as u32 * 10;
+            let val = s.get_unchecked(6).wrapping_sub(b'0');
+            if val < 10 {
+                return Ok(result + loose_change + (val as u32))
+            } else {
+                return Err(());
+            };
+        }
+        8 => parse_8_chars(&s),
+        9 => {
+            let result = parse_8_chars(&s)? * 10;
+            let val = s.get_unchecked(8).wrapping_sub(b'0');
+            if val < 10 {
+                return Ok(result + (val as u32))
+            } else {
+                return Err(());
+            };
+        }
+        10 => {
+            let val = s.get_unchecked(0).wrapping_sub(b'0');
+            let mut val2 = s.get_unchecked(1).wrapping_sub(b'0') as u32;
+            if (val > 4) | (val2 > 9) {
+                return Err(());
+            }
+            let mut result = parse_8_chars(&s.get_unchecked(2..))?;
+            let val = val as u32 * 1_000_000_000;
+            val2 *= 100_000_000;
+            result += val;
+            match result.checked_add(val2) {
+                Some(val) => Ok(val),
+                None => Err(()),
+            }
+        }
+        _ => Err(()),
+    }
+}
+}
+
+
+// DEAD END: Tried to fold in the check of '+' but not fast enough.
+// pub fn parse_u32(s: &str) -> Result<u32, ()> {
+//     let s = s.as_bytes();
+//     let l = s.len();
+//     unsafe {
+//     match l {
+//         1 => {
+//             let val = s.get_unchecked(0).wrapping_sub(b'0');
+//             return if val < 10 {
+//                 Ok(val as u32)
+//             } else {
+//                 Err(())
+//             };
+//         }
+//         2 => {
+//             let val = s.get_unchecked(0).wrapping_sub(b'0');
+//             let val2 = s.get_unchecked(1).wrapping_sub(b'0');
+//             if (val < 10) & (val2 < 10) {
+//                 return Ok((val * 10 + val2) as u32);
+//             }
+//             if (val == PLUS) & (val2 < 10) {
+//                 return Ok(val2 as u32)
+//             }
+//             return Err(());
+//         }
+//         3 => {
+//             let val = s.get_unchecked(0).wrapping_sub(b'0');
+//             let val2 = s.get_unchecked(1).wrapping_sub(b'0');
+//             let val3 = s.get_unchecked(2).wrapping_sub(b'0');
+//             if (val < 10 ) & (val2 < 10) & (val3 < 10) {
+//                 return Ok(val as u32 * 100 + (val2 * 10 + val3) as u32)
+//             };
+//             if (val == PLUS) & (val2 < 10) & (val3 < 10) {
+//                 return Ok((val2 * 10 + val3) as u32);
+//             }
+//             return Err(());
+//         }
+//         4 => match parse_4_chars(s) {
+//             Ok(val) => return Ok(val as u32),
+//             Err(_) => {
+//                 let val = s.get_unchecked(0).wrapping_sub(b'0');
+//                 let val2 = s.get_unchecked(1).wrapping_sub(b'0');
+//                 let val3 = s.get_unchecked(2).wrapping_sub(b'0');
+//                 if (val < 10 ) & (val2 < 10) & (val3 < 10) {
+//                     return Ok(val as u32 * 100 + (val2 * 10 + val3) as u32)
+//                 };
+//                 return Err(());
+//             }
+//         }
+//         5 => {
+//             let val = s.get_unchecked(0).wrapping_sub(b'0');
+//             if val <= 9 {
+//                 Ok(val as u32 * 10_000 + parse_4_chars(&s.get_unchecked(1..))? as u32)
+//             } else {
+//                  if val == PLUS {
+//                     return parse_4_chars(&s.get_unchecked(1..)).map(|val| val as u32);
+//                 }
+//                 Err(())
+//             }
+//         }
+//         6 => {
+//             match parse_2_chars(&s) {
+//                 Ok(val) => {
+//                     let result = parse_4_chars(s.get_unchecked(2..))? as u32;
+//                     Ok(result + val as u32 * 10_000)
+//                 },
+//                 Err(_) => {
+//                     let val = s.get_unchecked(0);
+//                     if *val == b'+' {
+//                         let val2 = s.get_unchecked(1).wrapping_sub(b'0');
+//                         if val2 < 10 {
+//                             return Ok(val2 as u32 * 10_000 + parse_4_chars(s.get_unchecked(2..))? as u32)
+//                         }
+//                     }
+//                     Err(())
+//                 }
+//             }
+//         }
+//         7 => {
+//             let val = s.get_unchecked(0).wrapping_sub(b'0');
+//             if val <= 9 { 
+//                 let result = parse_4_chars(&s.get_unchecked(1..))? as u32 * 100;
+//                 let loose_change = parse_2_chars(&s.get_unchecked(5..))? as u32;
+//                 Ok(result + loose_change + (val as u32 * 1000_000))
+//             } else {
+//                 if val == PLUS {
+//                     let result = parse_4_chars(&s[1..])? as u32 * 100;
+//                     let loose_change = parse_2_chars(&s.get_unchecked(5..))? as u32;
+//                     return Ok(result + loose_change)
+//                 }
+//                 Err(())
+//             }
+//         }
+//         8 => {
+//             match parse_8_chars(&s) {
+//                 Ok(val) => Ok(val),
+//                 Err(_) => {
+//                     if *s.get_unchecked(0) == b'+' {
+//                         let val = s.get_unchecked(1).wrapping_sub(b'0');
+//                         if val <= 9 {
+//                             let result = parse_4_chars(&s.get_unchecked(2..))? as u32 * 100;
+//                             let loose_change = parse_2_chars(&s.get_unchecked(6..))? as u32;
+//                             return Ok((val as u32 * 100_0000) + result + loose_change)
+//                         }
+//                     }
+//                     Err(())
+//                 }
+//             }
+//         },
+//         9 => {
+//             let val = s.get_unchecked(0).wrapping_sub(b'0');
+//             if val <= 9 {
+//                 let result = parse_8_chars(&s.get_unchecked(1..))?;
+//                 Ok(val as u32 * 1_0000_0000 + result)
+//             } else {
+//                 if val == PLUS {
+//                     return parse_8_chars(&s.get_unchecked(1..));
+//                 }
+//                 Err(())
+//             }
+//         }
+//         10 => {
+//             let val = s.get_unchecked(0).wrapping_sub(b'0');
+//             let mut val2 = s.get_unchecked(1).wrapping_sub(b'0') as u32;
+//             if (val <= 4) & (val2 <= 9) {
+//                 let mut result = parse_8_chars(&s.get_unchecked(2..))?;
+//                 let val = val as u32 * 1_000_000_000;
+//                 val2 *= 100_000_000;
+//                 result += val;
+//                 match result.checked_add(val2) {
+//                     Some(val) => Ok(val),
+//                     None => Err(()),
+//                 }
+//             } else {
+//                 if val == PLUS {
+//                     if val2 > 9 {
+//                         return Err(());
+//                     };
+//                     let result = parse_8_chars(&s.get_unchecked(2..))?;
+//                     return Ok(val2 as u32 * 1_0000_0000 + result)
+//                 }
+//                 Err(())
+//             }
+//         }
+//         11 => {
+//             if *s.get_unchecked(0) != b'+' {
+//                 return Err(())
+//             }
+//             let s = s.get_unchecked(1..);
+//             let val = s.get_unchecked(0).wrapping_sub(b'0');
+//             let mut val2 = s.get_unchecked(1).wrapping_sub(b'0') as u32;
+//             if (val > 4) | (val2 > 9) {
+//                 return Err(());
+//             }
+//             let mut result = parse_8_chars(&s.get_unchecked(2..))?;
+//             let val = val as u32 * 1_000_000_000;
+//             val2 *= 100_000_000;
+//             result += val;
+//             match result.checked_add(val2) {
+//                 Some(val) => Ok(val),
+//                 None => Err(()),
+//             }
+//          }
+//         _ => Err(()),
+//     }
+// }
+// }
+
+// pub fn parse_u32(s: &str) -> Result<u32, ()> {
+//     unsafe {
+//         let mut s = s.as_bytes();
+//         let (val, val2) = match s.get(0) {
+//             Some(val) => {
+//                 let val = if *val == b'+' {
+//                     s = &s.get_unchecked(1..);
+//                     match s.get(0) {
+//                         Some(val) => val,
+//                         None => return Err(()),
+//                     }
+//                 } else {
+//                     val
+//                 };
+
+//                 let val2 = match s.get(1) {
+//                     Some(val2) => val2,
+//                     None => {
+//                         let val = val.wrapping_sub(b'0');
+//                         return if val <= 9 { Ok(val as u32) } else { Err(()) };
+//                     }
+//                 };
+
+//                 (val, val2)
+//             }
+//             None => return Err(()),
+//         };
+
+//         let l = s.len();
+//         let mut res = 0;
+//         if l >= 10 {
+//             if l > 10 {
+//                 return Err(());
+//             }
+//             let val = val.wrapping_sub(b'0');
+//             let val2 = val2.wrapping_sub(b'0');
+//             if (val > 4) | (val2 > 9) {
+//                 return Err(());
+//             };
+//             let val = val as u32 * TENS_U32.get_unchecked(9);
+//             let val2 = val2 as u32 * TENS_U32.get_unchecked(8);
+//             s = &s.get_unchecked(2..);
+
+//             match val.checked_add(val2 + parse_8_chars(&s)?) {
+//                 Some(val) => return Ok(val),
+//                 None => return Err(())
+//             };
+//         }
+//         if l & 2 != 0 {
+//             let val = val.wrapping_sub(b'0');
+//             let val2 = val2.wrapping_sub(b'0');
+//             if (val > 9) | (val2 > 9) {
+//                 return Err(());
+//             };
+//             res += val as u32 * TENS_U32.get_unchecked(s.len() - 1)
+//                 + val2 as u32 * TENS_U32.get_unchecked(s.len() - 2);
+//             s = &s.get_unchecked(2..);
+//         }
+//         if l & 8 != 0 {
+//             let val = parse_8_chars(&s)?;
+//             s = &s.get_unchecked(8..);
+//             res += val * TENS_U32.get_unchecked(s.len());
+//         }
+//         if l & 4 != 0 {
+//             let val = parse_4_chars(&s)? as u32;
+//             s = &s.get_unchecked(4..);
+//             res += val * TENS_U32.get_unchecked(s.len());
+//         }
+//         if l & 1 != 0 {
+//             let val = s.get_unchecked(0).wrapping_sub(b'0');
+//             if val > 9 {
+//                 return Err(());
+//             };
+//             res += val as u32;
+//         }
+//         Ok(res)
+//     }
+// }
+
+
+pub fn parse_u32_old(s: &str) -> Result<u32, ()> {
     let mut s = s.as_bytes();
     let (val, val2) = match s.get(0) {
         Some(val) => {
@@ -1011,6 +1354,123 @@ pub fn parse_u128(s: &str) -> Result<u128, ()> {
             }
             None => return Err(()),
         };
+        let l = s.len();
+        if l < 39 {
+            let mut res = 0u128;
+            if l & 2 != 0 {
+                let val = val.wrapping_sub(b'0');
+                let val2 = val2.wrapping_sub(b'0');
+                if (val <= 9) & (val2 <= 9) {
+                    res += val as u128 * TENS_U128.get_unchecked(s.len() - 1)
+                    + val2 as u128 * TENS_U128.get_unchecked(s.len() - 2);
+                    s = &s.get_unchecked(2..);
+                } else {
+                    return Err(());
+                };
+            }
+            if l & 1 != 0 {
+                let val = s.get_unchecked(0).wrapping_sub(b'0');
+                if val <= 9 {
+                    s = &s.get_unchecked(1..);
+                    res += val as u128 * TENS_U128.get_unchecked(s.len());
+                } else {
+                    return Err(());
+                };
+            }
+            if l & 16 != 0 {
+                let val16 = parse_16_chars(&s)? as u128;
+                s = &s.get_unchecked(16..);
+                res += val16 * TENS_U128.get_unchecked(s.len());
+            }
+            if l & 8 != 0 {
+                let val = parse_8_chars(&s)? as u128;
+                s = &s.get_unchecked(8..);
+                res += val * TENS_U128.get_unchecked(s.len());
+            }
+            if l & 32 != 0 {
+                let val16 = parse_16_chars(&s)? as u128;
+                s = &s.get_unchecked(16..);
+                res += val16 * TENS_U128.get_unchecked(s.len());
+    
+                // Do the same thing again as a parse_32_chars fn would need 256bits.
+                let val16 = parse_16_chars(&s)? as u128;
+                s = &s.get_unchecked(16..);
+                res += val16 * TENS_U128.get_unchecked(s.len());
+            }
+            if l & 4 != 0 {
+                res += parse_4_chars(&s)? as u128;
+            }
+    
+            Ok(res)
+        } else {
+            if l == 39 {
+                //39 = 32 + 4 + 2 + 1
+                let val = val.wrapping_sub(b'0');
+                if val > 3 { return Err(()) }
+                let val = val as u128 * TENS_U128[38];
+
+                let val2 = val2.wrapping_sub(b'0');
+                let val3 = s[2].wrapping_sub(b'0');
+                if (val2 <= 9) & (val3 <= 9) {
+                    let mut res = val2 as u128 * TENS_U128.get_unchecked(37)
+                    + val3 as u128 * TENS_U128.get_unchecked(36);
+                    s = &s.get_unchecked(3..);
+
+                    let val16 = parse_16_chars(&s)? as u128;
+                    s = &s.get_unchecked(16..);
+                    res += val16 * TENS_U128.get_unchecked(20);
+
+                    // Do the same thing again as a parse_32_chars fn would need 256bits.
+                    let val16 = parse_16_chars(&s)? as u128;
+                    s = &s.get_unchecked(16..);
+                    res += val16 * TENS_U128.get_unchecked(4);
+
+                    res += parse_4_chars(&s)? as u128;
+
+                    match val.checked_add(res) {
+                        Some(val) => Ok(val),
+                        None => Err(()),
+                    }
+                } else {
+                    Err(())
+                }
+            } else {
+                Err(())
+            }
+        }
+    }
+}
+
+
+/// u128: 0 to 340_282_366_920_938_463_463_374_607_431_768_211_455
+/// (39 digits!)
+pub fn parse_u128_best(s: &str) -> Result<u128, ()> {
+    unsafe {
+        let mut s = s.as_bytes();
+        let (val, val2) = match s.get(0) {
+            Some(val) => {
+                let val = if *val == b'+' {
+                    s = &s.get_unchecked(1..);
+                    match s.get(0) {
+                        Some(val) => val,
+                        None => return Err(()),
+                    }
+                } else {
+                    val
+                };
+
+                let val2 = match s.get(1) {
+                    Some(val2) => val2,
+                    None => {
+                        let val = val.wrapping_sub(b'0');
+                        return if val <= 9 { Ok(val as u128) } else { Err(()) };
+                    }
+                };
+
+                (val, val2)
+            }
+            None => return Err(()),
+        };
 
         let l = s.len();
         if l >= 39 {
@@ -1092,13 +1552,6 @@ pub fn parse_u128(s: &str) -> Result<u128, ()> {
 
         Ok(res)
     }
-}
-
-
-/// u128: 0 to 340_282_366_920_938_463_463_374_607_431_768_211_455
-/// (39 digits!)
-pub fn parse_u128_best(s: &str) -> Result<u128, ()> {
-  parse_u128(s)
 }
 
 pub fn trick_with_checks_i64(src: &str) -> i64 {
@@ -1243,50 +1696,42 @@ fn parse_8_chars(s: &[u8]) -> Result<u32, ()> {
     const MASK_HI: u64 = 0xf0f0f0f0f0f0f0f0u64;
     const MASK_LOW: u64 = 0x0f0f0f0f0f0f0f0fu64;
     const ASCII_ZEROS: u64 = 0x3030303030303030u64;
-    //let mut chunk = 0;
 
-    let mut chunk: u64 = 0u64; // [u8; 8] = [0, 0, 0, 0, 0, 0, 0, 0];
-                               //chunk[..l].copy_from_slice(s);
-                               //let mut chunk = u64::from_ne_bytes(chunk);
     unsafe {
+        let chunk = core::mem::MaybeUninit::<u64>::uninit();
+        let mut chunk: u64 = std::mem::transmute(chunk);
         std::ptr::copy_nonoverlapping(
             s.as_ptr() as *const u64,
             &mut chunk,
-            1, //s.len(), //std::mem::size_of_val(&chunk),
+            1,
         );
 
-        //cast_ref::<[u8; 4], u32> will fail if the reference isn't already aligned to 4).
+        // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
+        let x = chunk & MASK_LOW;
+        const RESULT_MASK: u64 = !0u64 / 255 * 128;
+        const N: u64 = 9;
+        const N_MASK: u64 = !0u64 / 255 * (127 - N);
+        if (chunk & MASK_HI) - ASCII_ZEROS | ((x + N_MASK | x) & RESULT_MASK) != 0 {
+            // _mm_cmpgt_epi8 would also work nicely here if available on target.
+            return Err(());
+        }
 
-        // SAFETY: Unknown memory due to < 8 len replaced with with b'0's:
-        //  let r = 0x3030303030303030u64.wrapping_shr(l as u32 * 8);
-        //chunk = chunk << ((8 - l) * 8) | r;
+        // 1-byte mask trick (works on 4 pairs of single digits)
+        let lower_digits = (chunk & 0x0f000f000f000f00) >> 8;
+        let upper_digits = (chunk & 0x000f000f000f000f) * 10;
+        let chunk = lower_digits + upper_digits;
+
+        // 2-byte mask trick (works on 2 pairs of two digits)
+        let lower_digits = (chunk & 0x00ff000000ff0000) >> 16;
+        let upper_digits = (chunk & 0x000000ff000000ff) * 100;
+        let chunk = lower_digits + upper_digits;
+
+        // 4-byte mask trick (works on a pair of four digits)
+        let lower_digits = (chunk & 0x0000ffff00000000) >> 32;
+        let upper_digits = (chunk & 0x000000000000ffff) * 10000;
+        let chunk = lower_digits + upper_digits;
+        Ok(chunk as u32) //u32 can guarantee to contain 9 digits.
     }
-
-    // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
-    let x = chunk & MASK_LOW;
-    const RESULT_MASK: u64 = !0u64 / 255 * 128;
-    const N: u64 = 9;
-    const N_MASK: u64 = !0u64 / 255 * (127 - N);
-    if (chunk & MASK_HI) - ASCII_ZEROS | ((x + N_MASK | x) & RESULT_MASK) != 0 {
-        // _mm_cmpgt_epi8 would also work nicely here if available on target.
-        return Err(());
-    }
-
-    // 1-byte mask trick (works on 4 pairs of single digits)
-    let lower_digits = (chunk & 0x0f000f000f000f00) >> 8;
-    let upper_digits = (chunk & 0x000f000f000f000f) * 10;
-    let chunk = lower_digits + upper_digits;
-
-    // 2-byte mask trick (works on 2 pairs of two digits)
-    let lower_digits = (chunk & 0x00ff000000ff0000) >> 16;
-    let upper_digits = (chunk & 0x000000ff000000ff) * 100;
-    let chunk = lower_digits + upper_digits;
-
-    // 4-byte mask trick (works on a pair of four digits)
-    let lower_digits = (chunk & 0x0000ffff00000000) >> 32;
-    let upper_digits = (chunk & 0x000000000000ffff) * 10000;
-    let chunk = lower_digits + upper_digits;
-    Ok(chunk as u32) //u32 can guarantee to contain 9 digits.
 }
 
 #[inline]
