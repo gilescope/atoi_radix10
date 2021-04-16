@@ -1,22 +1,12 @@
-pub fn std_parse_u8(s: &str) -> Result<u8, ()> {
+use std::str::FromStr;
+
+pub fn std_parse<T>(s: &str) -> Result<T, ()>
+    where T: FromStr
+{
     s.parse().map_err(|_| ())
 }
 
-pub fn std_parse_u16(s: &str) -> Result<u16, ()> {
-    s.parse().map_err(|_| ())
-}
 
-pub fn std_parse_u32(s: &str) -> u32 {
-    s.parse().unwrap()
-}
-
-pub fn std_parse_u64(s: &str) -> u64 {
-    s.parse().unwrap()
-}
-
-pub fn std_parse_u128(s: &str) -> u128 {
-    s.parse().unwrap()
-}
 
 pub fn cluatoi_parse_u32(s: &str) -> u32 {
     use cluatoi::Atoi;
@@ -111,6 +101,8 @@ pub fn parse_u8(s: &str) -> Result<u8, ()> {
                         }
                         None => return Err(()),
                     }
+                } else {
+                    return Err(());
                 }
             }
             match iter.next() {
@@ -123,18 +115,22 @@ pub fn parse_u8(s: &str) -> Result<u8, ()> {
                         Some(val3) => {
                             let val3 = val3.wrapping_sub(b'0');
                             let val2 = val2 * 10;
-                            match val {
-                                0 => Ok(val2 + val3),
-                                1 => Ok(100 + val2 + val3),
-                                2 => {
-                                    let two = val2 + val3;
-                                    if two <= 55 {
-                                        Ok(200 + two)
-                                    } else {
-                                        Err(())
+                            if val3 <= 9 {
+                                match val {
+                                    0 => Ok(val2 + val3),
+                                    1 => Ok(100 + val2 + val3),
+                                    2 => {
+                                        let two = val2 + val3;
+                                        if two <= 55 {
+                                            Ok(200 + two)
+                                        } else {
+                                            Err(())
+                                        }
                                     }
+                                    _ => Err(()),
                                 }
-                                _ => Err(()),
+                            } else {
+                                return Err(())
                             }
                         }
                         None => Ok(val * 10 + val2)
@@ -171,19 +167,21 @@ pub fn parse_u8_best(s: &str) -> Result<u8, ()> {
                         Some(val3) => {
                             let val3 = val3.wrapping_sub(b'0');
                             let val2 = val2 * 10;
-                            match val {
-                                0 => Ok(val2 + val3),
-                                1 => Ok(100 + val2 + val3),
-                                2 => {
-                                    let two = val2 + val3;
-                                    if two <= 55 {
-                                        Ok(200 + two)
-                                    } else {
-                                        Err(())
+                            if val3 <= 9 {
+                                match val {
+                                    1 => Ok(100 + val2 + val3),
+                                    2 => {
+                                        let two = val2 + val3;
+                                        if two <= 55 {
+                                            Ok(200 + two)
+                                        } else {
+                                            Err(())
+                                        }
                                     }
+                                    0 => Ok(val2 + val3),
+                                    _ => Err(()),
                                 }
-                                _ => Err(()),
-                            }
+                            } else { return Err(());}
                         }
                         None => {
                             if val <= 9 {
@@ -354,48 +352,6 @@ pub fn parse_u16_best(s: &str) -> Result<u16, ()> {
     }
 }
 
-//Bit slower odd bit:
-// pub fn parse_u16(s: &str) -> Result<u16, ()> {
-//     let mut s = s.as_bytes();
-//     let l = s.len();
-//     let odd: u8 = match s.get(0) {
-//         Some(val) => {
-//             if *val == b'+' {
-//                 s = &s[1..];
-//             }
-//             let odd = val.wrapping_sub(b'0');
-//             if odd > 9 {
-//                 return Err(());
-//             } else if l == 1 {
-//                 return Ok(odd as u16);
-//             }
-//             odd
-//         }
-//         None => return Err(()),
-//     };
-
-//     match l {
-//         2 => { parse_2_chars(s).map(|val| val as u16) }
-//         3 => {
-//             Ok(odd as u16 * 100 + parse_2_chars(&s[1..])? as u16)
-//         }
-//         4 => {
-//             Ok(parse_2_chars(&s[..2])? * 100 + parse_2_chars(&s[2..])?)
-//         }
-//         5 => {
-//             let val = match (odd as u16).checked_mul(10_000) {
-//                 Some(val) => val,
-//                 None => return Err(()),
-//             };
-//             match val.checked_add(parse_4_chars(&s[1..])? as u16) {
-//                 Some(val) => Ok(val),
-//                 None => return Err(()),
-//             }
-//         }
-//         _ => Err(())
-//     }
-// }
-
 /// Parses from 0 -> 4_294_967_295 (10 digits and optionally +)
 pub fn parse_u32_old_best(s: &str) -> Result<u32, ()> {
     let mut s = s.as_bytes();
@@ -432,7 +388,7 @@ pub fn parse_u32_old_best(s: &str) -> Result<u32, ()> {
     }
 }
 
-pub fn parse_u32_best(s: &str) -> Result<u32, ()> {
+pub fn parse_u32_best_15_Apr_2021(s: &str) -> Result<u32, ()> {
     let mut s = s.as_bytes();
     let val = match s.get(0) {
         Some(val) => {
@@ -536,7 +492,7 @@ pub fn parse_u32_best(s: &str) -> Result<u32, ()> {
 }
 
 
-pub fn parse_u32(s: &str) -> Result<u32, ()> {
+pub fn parse_u32_best(s: &str) -> Result<u32, ()> {
     let mut s = s.as_bytes();
     let val = match s.get(0) {
         Some(val) => {
@@ -583,10 +539,9 @@ pub fn parse_u32(s: &str) -> Result<u32, ()> {
         }
         4 => Ok(parse_4_chars(s)? as u32),
         5 => {
-            let result = parse_4_chars(s)? as u32 * 10;
-            let val = s[4].wrapping_sub(b'0');
+            let val = val.wrapping_sub(b'0');
             if val <= 9 {
-                Ok(result + val as u32)
+                Ok(val as u32 * 1_0000 + parse_4_chars(&s[1..])? as u32)
             } else {
                 Err(())
             }
@@ -635,6 +590,100 @@ pub fn parse_u32(s: &str) -> Result<u32, ()> {
             }
         }
         _ => Err(()),
+    }
+}
+
+
+
+pub fn parse_u32(s: &str) -> Result<u32, ()> {
+    let mut s = s.as_bytes();
+    let val = match s.get(0) {
+        Some(val) => {
+            let val = val.wrapping_sub(b'0');
+            if val <= 9 {
+                val
+            } else {
+                if val == PLUS {
+                    s = &s[1..];
+                    match s.get(0) {
+                        Some(val2) => {
+                            let val2 = (*val2).wrapping_sub(b'0');
+                            if val2 <= 9 {
+                                val2
+                            } else {
+                                return Err(());
+                            }
+                        },
+                        None => return Err(()),
+                    }
+                } else {
+                    return Err(());
+                }
+            }
+        }
+        None => return Err(()),
+    };
+    let l = s.len();
+    unsafe {
+        match l {
+            1 => { Ok(val as u32) }
+            2 => {
+                let val2 = s.get_unchecked(1).wrapping_sub(b'0');
+                if val2 <= 9 {
+                    Ok((val * 10 + val2) as u32)
+                } else {
+                    Err(())
+                }
+            }
+            3 => {
+                let val2 = s.get_unchecked(1).wrapping_sub(b'0');
+                let val3 = s.get_unchecked(2).wrapping_sub(b'0');
+                if (val2 <= 9) & (val3 <= 9) {
+                    Ok(val as u32 * 100 + (val2 * 10 + val3) as u32)
+                } else {
+                    Err(())
+                }
+            }
+            4 => Ok(parse_4_chars(s)? as u32),
+            5 => {
+                Ok(val as u32 * 1_0000 + parse_4_chars(&s[1..])? as u32)
+            }
+            6 => {
+                let val2 = s.get_unchecked(1).wrapping_sub(b'0');
+                if val2 <= 9 {
+                    let result = parse_4_chars(&s[2..])? as u32;
+                    Ok(val as u32 * 10_0000 + val2 as u32 * 1_0000 + result)
+                } else {
+                    Err(())
+                }
+            }
+            7 => {
+                let val2 = parse_4_chars(&s[1..])? as u32 * 100;
+                let val3 = parse_2_chars(&s[5..])? as u32;
+                Ok(val as u32 * 1_000_000 + val2 + val3)
+            }
+            8 => parse_8_chars(&s),
+            9 => {
+                let result = parse_8_chars(&s[1..])?;
+                Ok(result + (val as u32 * 100_000_000))
+            }
+            10 => {
+                let mut val2 = s.get_unchecked(1).wrapping_sub(b'0') as u32;
+                if (val <= 4) & (val2 <= 9) {
+                    let mut result = parse_8_chars(&s[2..])?;
+                    let val = val as u32 * 1_000_000_000;
+                    val2 *= 100_000_000;
+                    result += val;
+                    match result.checked_add(val2) {
+                        Some(val) => Ok(val),
+                        None => Err(()),
+                    }
+                } else {
+                    return Err(());
+                }
+            }
+            _ => Err(()),
+        }
     }
 }
 
@@ -1563,6 +1612,267 @@ pub fn trick_with_checks_i64(src: &str) -> i64 {
     parse_signed64(src).unwrap()
 }
 
+
+pub fn parse_i8(s: &str) -> Result<i8, ()> {
+    let mut is_positive = 1;
+    let mut iter = s.as_bytes().iter();
+    match iter.next() {
+        Some(mut val) => {
+            if *val == b'-' {
+                is_positive = -1;
+                match iter.next() {
+                    Some(alt_val) => {
+                        val = alt_val;
+                    }
+                    None => return Err(()),
+                }
+            } else if *val == b'+' {
+                match iter.next() {
+                    Some(alt_val) => {
+                        val = alt_val;
+                    }
+                    None => return Err(()),
+                }
+            }
+            let val = val.wrapping_sub(b'0');
+            match iter.next() {
+                None => {
+                    if val <= 9 {
+                        Ok(is_positive * val as i8)
+                    } else {
+                        Err(())
+                    }
+                },
+                Some(val2) => {
+                    let val2 = val2.wrapping_sub(b'0');
+                    if val2 <= 9 {
+                        match iter.next() {
+                            None => {
+                                if val <= 9 {
+                                    Ok(is_positive * (val * 10 + val2) as i8)
+                                } else {
+                                    Err(())
+                                }
+                            }
+                            Some(val3) => {
+                                let val3 = val3.wrapping_sub(b'0');
+                                let val2 = val2 * 10;
+                                if val3 <= 9 {
+                                    if val <= 1 {
+                                        let result = val * 100 + val2 + val3;
+                                        if result < 128 {
+                                            Ok(is_positive * (result as i8))
+                                        } else if result == 128 && is_positive == -1 {
+                                            Ok(i8::MIN)
+                                        } else {
+                                            Err(())
+                                        }
+                                    } else { return Err(()); }
+                                    // match val {
+                                    //     1 => {
+                                    //         let result = 100 + val2 + val3;
+                                    //         if result < 128 {
+                                    //             Ok(is_positive * (result as i8))
+                                    //         } else if result == 128 && is_positive == -1 {
+                                    //             Ok(i8::MIN)
+                                    //         } else {
+                                    //             Err(())
+                                    //         }
+                                    //     },
+                                    //     0 => {
+                                    //         Ok(is_positive * ((val2 + val3) as i8))
+                                    //     },
+                                    //     _ => Err(()),
+                                    // }
+                                } else { return Err(()) }
+                            }
+                        }
+                    } else {return Err(());}
+                }
+            }
+        }
+        _ => Err(()),
+    }
+}
+
+
+pub fn parse_i8_best(s: &str) -> Result<i8, ()> {
+    let mut is_positive = 1;
+    let mut iter = s.as_bytes().iter();
+    match iter.next() {
+        Some(mut val) => {
+            if *val == b'-' {
+                is_positive = -1;
+                match iter.next() {
+                    Some(alt_val) => {
+                        val = alt_val;
+                    }
+                    None => return Err(()),
+                }
+            } else if *val == b'+' {
+                match iter.next() {
+                    Some(alt_val) => {
+                        val = alt_val;
+                    }
+                    None => return Err(()),
+                }
+            }
+            let val = val.wrapping_sub(b'0');
+            match iter.next() {
+                None => {
+                    if val <= 9 {
+                        Ok(is_positive * val as i8)
+                    } else {
+                        Err(())
+                    }
+                },
+                Some(val2) => {
+                    let val2 = val2.wrapping_sub(b'0');
+                    if val2 <= 9 {
+                        match iter.next() {
+                            None => {
+                                if val <= 9 {
+                                    Ok(is_positive * (val * 10 + val2) as i8)
+                                } else {
+                                    Err(())
+                                }
+                            }
+                            Some(val3) => {
+                                let val3 = val3.wrapping_sub(b'0');
+                                let val2 = val2 * 10;
+                                if val3 <= 9 {
+                                      match val {
+                                        1 => {
+                                            let result = 100 + val2 + val3;
+                                            if result < 128 {
+                                                Ok(is_positive * (result as i8))
+                                            } else if result == 128 && is_positive == -1 {
+                                                Ok(i8::MIN)
+                                            } else {
+                                                Err(())
+                                            }
+                                        },
+                                        0 => {
+                                            Ok(is_positive * ((val2 + val3) as i8))
+                                        },
+                                        _ => Err(()),
+                                    }
+                                } else { return Err(()) }
+                            }
+                        }
+                    } else {return Err(());}
+                }
+            }
+        }
+        _ => Err(()),
+    }
+}
+
+pub fn parse_i8_best_old1(s: &str) -> Result<i8, ()> {
+    let mut is_positive = 1;//tODO try * -1 / 1
+    let mut iter = s.as_bytes().iter();
+    match iter.next() {
+        Some(mut val) => {
+            if *val == b'+' {
+                match iter.next() {
+                    Some(alt_val) => {
+                        val = alt_val;
+                    }
+                    None => return Err(()),
+                }
+            } else if *val == b'-' {
+                is_positive = -1;
+                match iter.next() {
+                    Some(alt_val) => {
+                        val = alt_val;
+                    }
+                    None => return Err(()),
+                }
+            }
+            let val = val.wrapping_sub(b'0');
+            match iter.next() {
+                Some(val2) => {
+                    let val2 = val2.wrapping_sub(b'0');
+                    if val2 > 9 {
+                        return Err(());
+                    }
+                    match iter.next() {
+                        Some(val3) => {
+                            let val3 = val3.wrapping_sub(b'0');
+                            let val2 = val2 * 10;
+                            match val {
+                                1 => {
+                                    let result = 100 + val2 + val3;
+                                    if is_positive == 1 {
+                                        if result <= i8::MAX as u8 {
+                                            Ok(result as i8)
+                                        } else {
+                                            Err(())
+                                        }
+                                    } else {
+                                        if result <= 128 {
+                                            Ok(-(result as i8))
+                                        } else {
+                                            Err(())
+                                        }
+                                    }
+                                },
+                                0 => {
+                                    Ok(is_positive * ((val2 + val3) as i8))
+                                },
+                                _ => Err(()),
+                            }
+                        }
+                        None => {
+                            if val <= 9 {
+                                Ok(is_positive * (val * 10 + val2) as i8)
+                            } else {
+                                Err(())
+                            }
+                        }
+                    }
+                }
+                None => {
+                    if val <= 9 {
+                        Ok(is_positive * val as i8)
+                    } else {
+                        Err(())
+                    }
+                }
+            }
+        }
+        _ => Err(()),
+    }
+}
+
+pub fn parse_i8_best_old(src: &str) -> Result<i8, ()> {
+    let (is_positive, digits) = match src.as_bytes().get(0) {
+        None => {
+            return Err(());
+        }
+        Some(b'-') => (false, &src[1..]),
+        Some(_) => (true, src),
+    };
+    let i = parse_u8(digits)?;
+    if is_positive {
+        if i > i8::MAX as u8 {
+            Err(())
+        } else {
+            Ok(i as i8)
+        }
+    } else {
+        // Negative
+        if i > i8::MAX as u8 + 1 {
+            Err(())
+        } else {
+            match 0_i8.checked_sub(i as i8) {
+                Some(res) => Ok(res),
+                None => Err(()),
+            }
+        }
+    }
+}
+
 pub fn parse_signed64(src: &str) -> Result<i64, ()> {
     let (is_positive, digits) = match src.as_bytes().get(0) {
         None => {
@@ -1820,6 +2130,7 @@ mod tests {
 
     #[test]
     fn test_empty() {
+        assert_eq!(Err(()), parse_i8(""));
         assert_eq!(Err(()), parse_u8(""));
         assert_eq!(Err(()), parse_u16(""));
         assert_eq!(Err(()), parse_u32(""));
@@ -1829,7 +2140,10 @@ mod tests {
 
     #[test]
     fn test_invalid_ascii_low() {
-        assert_eq!(Err(()), parse_u8("1/4"));
+        for s in vec!["/", "/1", "1/", "11/", "1/1", "/11"] {
+            assert_eq!(Err(()), parse_i8(s), "parsing `{}`", s);
+            assert_eq!(Err(()), parse_u8(s), "parsing `{}`", s);
+        }
         assert_eq!(Err(()), parse_u16("1/4"));
         assert_eq!(Err(()), parse_u32("1/4"));
         assert_eq!(Err(()), parse_u64("1/4"));
@@ -1838,7 +2152,10 @@ mod tests {
 
     #[test]
     fn test_invalid_ascii_hi() {
-        assert_eq!(Err(()), parse_u8("1:4"));
+        for s in vec![":", ":1", "1:", "11:", "1:1", ":11"] {
+            assert_eq!(Err(()), parse_i8(s), "parsing `{}`", s);
+            assert_eq!(Err(()), parse_u8(s), "parsing `{}`", s);
+        }
         assert_eq!(Err(()), parse_u16("1:4"));
         assert_eq!(Err(()), parse_u32("1:4"));
         assert_eq!(Err(()), parse_u64("1:4"));
@@ -1847,6 +2164,8 @@ mod tests {
 
     #[test]
     fn test_invalid_too_big() {
+        assert_eq!(Err(()), parse_i8(&(i8::MAX as u128 + 1).to_string()));
+
         assert_eq!(Err(()), parse_u8(&(u8::MAX as u128 + 1).to_string()));
         assert_eq!(Err(()), parse_u16(&(u16::MAX as u128 + 1).to_string()));
         assert_eq!(Err(()), parse_u32(&(u32::MAX as u128 + 1).to_string()));
@@ -1855,6 +2174,17 @@ mod tests {
         let mut s = (u128::MAX as u128).to_string();
         s.push('1');
         assert_eq!(Err(()), parse_u128(&s));
+    }
+
+    #[test]
+    fn test_i8() {
+        let mut s = String::new();
+        for i in i8::MIN..i8::MAX {
+            s.clear();
+            itoa::fmt(&mut s, i).unwrap();
+            let p: Result<i8, ()> = s.parse().map_err(|_| ());
+            assert_eq!(p, parse_i8(&s), "fail to parse: '{}'", &s);
+        }
     }
 
     #[test]
@@ -1888,6 +2218,13 @@ mod tests {
             let p: Result<u32, ()> = s.parse().map_err(|_| ());
             assert_eq!(p, parse_u32(&s), "fail to parse: '{}'", &s);
         }
+    }
+
+    #[test]
+    fn test_i8_specific() {
+        let s = "-128";
+        let p: Result<i8, ()> = s.parse().map_err(|_| ());
+        assert_eq!(p, parse_i8(&s), "fail to parse: '{}'", &s);
     }
 
     #[test]

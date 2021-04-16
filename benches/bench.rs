@@ -37,16 +37,25 @@ macro_rules! ok_bench {
 ok_bench!(
     u8,
     parse_u8,
-    std_parse_u8,
+    std_parse::<u8>,
     //cluatoi_parse_u8,
     parse_u8_best,
     ["1", "12", "123", "+200", &u8::MAX.to_string()]
 );
 
 ok_bench!(
+    i8,
+    parse_i8,
+    std_parse::<i8>,
+    //cluatoi_parse_u8,
+    parse_i8_best,
+    [&i8::MIN.to_string(), "-12", "-1", "1", "12", "123", "+100", &i8::MAX.to_string()]
+);
+
+ok_bench!(
     u16,
     parse_u16,
-    std_parse_u16,
+    std_parse::<u16>,
     parse_u16_best,
     //cluatoi_parse_u16,
     ["1", "12", "123", "1234", "12345",]
@@ -55,7 +64,7 @@ ok_bench!(
 ok_bench!(
     u32,
     parse_u32,
-    std_parse_u32,
+    std_parse::<u32>,
     parse_u32_best,
     //cluatoi_parse_u32,
     [
@@ -75,7 +84,7 @@ ok_bench!(
 ok_bench!(
     u64,
     parse_u64,
-    std_parse_u64,
+    std_parse::<u64>,
     parse_u64_best,
     [
         "1",
@@ -104,7 +113,7 @@ ok_bench!(
 ok_bench!(
     u128,
     parse_u128,
-    std_parse_u128,
+    std_parse::<u128>,
     parse_u128_best,
     [
         "1",
@@ -138,7 +147,8 @@ criterion_group!(
     bench_parse_u16,
     bench_parse_u32,
     bench_parse_u64,
-    bench_parse_u128
+    bench_parse_u128,
+    bench_parse_i8,
 );
 
 criterion_main!(benches);
