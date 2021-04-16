@@ -1922,7 +1922,7 @@ fn parse_16_chars(s: &[u8]) -> Result<u64, ()> {
     const RESULT_MASK: u128 = !0u128 / 255 * 128;
     const N: u128 = 9;
     const N_MASK: u128 = !0u128 / 255 * (127 - N);
-    if (chunk & MASK_HI) - ASCII_ZEROS | ((x + N_MASK | x) & RESULT_MASK) != 0 {
+    if (chunk & MASK_HI) != ASCII_ZEROS || ((x + N_MASK | x) & RESULT_MASK) != 0 {
         // _mm_cmpgt_epi8 would also work nicely here if available on target.
         return Err(());
     }
@@ -1970,7 +1970,7 @@ fn parse_8_chars(s: &[u8]) -> Result<u32, ()> {
         const RESULT_MASK: u64 = !0u64 / 255 * 128;
         const N: u64 = 9;
         const N_MASK: u64 = !0u64 / 255 * (127 - N);
-        if (chunk & MASK_HI) - ASCII_ZEROS | ((x + N_MASK | x) & RESULT_MASK) != 0 {
+        if (chunk & MASK_HI) != ASCII_ZEROS || ((x + N_MASK | x) & RESULT_MASK) != 0 {
             // _mm_cmpgt_epi8 would also work nicely here if available on target.
             return Err(());
         }
@@ -2012,7 +2012,7 @@ fn parse_4_chars(s: &[u8]) -> Result<u16, ()> {
     const RESULT_MASK: u32 = !0u32 / 255 * 128;
     const N: u32 = 9;
     const N_MASK: u32 = !0u32 / 255 * (127 - N);
-    if (chunk & MASK_HI - ASCII_ZEROS) + ((x + N_MASK | x) & RESULT_MASK) != 0 {
+    if (chunk & MASK_HI != ASCII_ZEROS) || ((x + N_MASK | x) & RESULT_MASK) != 0 {
         return Err(());
     }
 
@@ -2046,7 +2046,7 @@ fn parse_2_chars(s: &[u8]) -> Result<u8, ()> {
     const RESULT_MASK: u16 = !0u16 / 255 * 128;
     const N: u16 = 9;
     const N_MASK: u16 = !0u16 / 255 * (127 - N);
-    if (chunk & MASK_HI - ASCII_ZEROS) + ((x + N_MASK | x) & RESULT_MASK) != 0 {
+    if (chunk & MASK_HI != ASCII_ZEROS) || ((x + N_MASK | x) & RESULT_MASK) != 0 {
         return Err(());
     }
 
@@ -2139,27 +2139,55 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_ascii_low() {
-        for s in vec!["/", "/1", "1/", "11/", "1/1", "/11"] {
-            assert_eq!(Err(()), parse_i8(s), "parsing `{}`", s);
-            assert_eq!(Err(()), parse_u8(s), "parsing `{}`", s);
+    fn test_invalid_ascii() {
+        for &ascii in [b':', b'/'].iter() {
+            for i in 1..3 {
+                let vec = vec![b'1'; i];
+                for j in 1..i {
+                    let mut v = vec.clone();
+                    v[j] = ascii;
+                    let s = String::from_utf8_lossy(&v[..]);
+                    assert_eq!(Err(()), parse_i8(&s), "parsing `{}`", s);
+                    assert_eq!(Err(()), parse_u8(&s), "parsing `{}`", s);
+                }
+            }
+            for i in 1..5 {
+                let vec = vec![b'1'; i];
+                for j in 1..i {
+                    let mut v = vec.clone();
+                    v[j] = ascii;
+                    let s = String::from_utf8_lossy(&v[..]);
+                    assert_eq!(Err(()), parse_u16(&s), "parsing `{}`", s);
+                }
+            }
+            for i in 1..10 {
+                let vec = vec![b'1'; i];
+                for j in 1..i {
+                    let mut v = vec.clone();
+                    v[j] = ascii;
+                    let s = String::from_utf8_lossy(&v[..]);
+                    assert_eq!(Err(()), parse_u32(&s), "parsing `{}`", s);
+                }
+            }
+            for i in 1..20 {
+                let vec = vec![b'1'; i];
+                for j in 1..i {
+                    let mut v = vec.clone();
+                    v[j] = ascii;
+                    let s = String::from_utf8_lossy(&v[..]);
+                    assert_eq!(Err(()), parse_u64(&s), "parsing `{}`", s);
+                }
+            }
+            for i in 1..39 {
+                let vec = vec![b'1'; i];
+                for j in 1..i {
+                    let mut v = vec.clone();
+                    v[j] = ascii;
+                    let s = String::from_utf8_lossy(&v[..]);
+                    assert_eq!(Err(()), parse_u128(&s), "parsing `{}`", s);
+                }
+            }
         }
-        assert_eq!(Err(()), parse_u16("1/4"));
-        assert_eq!(Err(()), parse_u32("1/4"));
-        assert_eq!(Err(()), parse_u64("1/4"));
-        assert_eq!(Err(()), parse_u128("1/4"));
-    }
-
-    #[test]
-    fn test_invalid_ascii_hi() {
-        for s in vec![":", ":1", "1:", "11:", "1:1", ":11"] {
-            assert_eq!(Err(()), parse_i8(s), "parsing `{}`", s);
-            assert_eq!(Err(()), parse_u8(s), "parsing `{}`", s);
-        }
-        assert_eq!(Err(()), parse_u16("1:4"));
-        assert_eq!(Err(()), parse_u32("1:4"));
-        assert_eq!(Err(()), parse_u64("1:4"));
-        assert_eq!(Err(()), parse_u128("1:4"));
     }
 
     #[test]
