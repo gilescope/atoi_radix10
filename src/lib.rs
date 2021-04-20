@@ -2404,18 +2404,17 @@ pub fn parse_i16(s: &str) -> Result<i16, PIE> {
 
 pub fn parse_i16_challenger(s: &str) -> Result<i16, PIE> {
     let mut s = s.as_bytes();
-    let l = s.len();
+    let mut l = s.len();
     match s.get(0) {
         Some(val) => {
             let mut val = val.wrapping_sub(b'0');
             if val > 9 {
                 if val == MINUS {
-//                    s = &s[1..];
                     val = match s.get(1) {
                         Some(val) => {
                             let val = val.wrapping_sub(b'0');
                             if val <= 9 {
-                                if l != 1 {
+                                if l != 2 {
                                     val
                                 } else { return Ok(-(val as i16))}
                             } else {
@@ -2476,6 +2475,7 @@ pub fn parse_i16_challenger(s: &str) -> Result<i16, PIE> {
                     }
                 } else if val == PLUS {
                     s = &s[1..];
+                    l -= 1;
                     val = match s.get(0) {
                         Some(val) => {
                             let val = val.wrapping_sub(b'0');
@@ -2494,7 +2494,6 @@ pub fn parse_i16_challenger(s: &str) -> Result<i16, PIE> {
                     });
                 }
             }
-            
             if l == 1 {
                     return Ok(val as i16);
             };
@@ -2676,7 +2675,6 @@ pub fn parse_i64(src: &str) -> Result<i64, PIE> {
 fn parse_16_chars(s: &[u8]) -> Result<u64, PIE> {
     debug_assert!(s.len() >= 16);
     const MASK_HI: u128 = 0xf0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0u128;
-    //const MASK_LOW: u128 = 0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0fu128;
     const ASCII_ZEROS: u128 = 0x30303030303030303030303030303030u128;
 
     let mut chunk: u128 = 0u128;
@@ -2684,15 +2682,8 @@ fn parse_16_chars(s: &[u8]) -> Result<u64, PIE> {
         std::ptr::copy_nonoverlapping(s.as_ptr() as *const u128, &mut chunk, 1);
     }
 
-    // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
     let chunk = chunk ^ ASCII_ZEROS;
-    let x = chunk ;//& MASK_LOW;
-    const RESULT_MASK: u128 = !0u128 / 255 * 128;
-    const N: u128 = 9;
-    const N_MASK: u128 = !0u128 / 255 * (127 - N);
-    if (chunk & MASK_HI) | ((x + N_MASK | x) & RESULT_MASK) == 0 {
-
-//    if ((chunk & MASK_HI) == ASCII_ZEROS) & (((x + N_MASK | x) & RESULT_MASK) == 0) {
+    if (chunk & MASK_HI) | (chunk + 0x76767676767676767676767676767676u128 & 0x80808080808080808080808080808080u128) == 0 {
         // 1-byte mask trick (works on 8 pairs of single digits)
         let lower_digits = (chunk & 0x0f000f000f000f000f000f000f000f00) >> 8;
         let upper_digits = (chunk & 0x000f000f000f000f000f000f000f000f) * 10;
@@ -2714,7 +2705,6 @@ fn parse_16_chars(s: &[u8]) -> Result<u64, PIE> {
         let chunk = lower_digits + upper_digits;
         Ok(chunk as u64) //u64 can guarantee to contain 19 digits.
     } else {
-        // _mm_cmpgt_epi8 would also work nicely here if available on target.
         return Err(PIE {
             kind: IntErrorKind::InvalidDigit,
         });
@@ -2725,7 +2715,6 @@ fn parse_16_chars(s: &[u8]) -> Result<u64, PIE> {
 fn parse_8_chars(s: &[u8]) -> Result<u32, PIE> {
     debug_assert!(s.len() >= 8);
     const MASK_HI: u64 = 0xf0f0f0f0f0f0f0f0u64;
-    //const MASK_LOW: u64 = 0x0f0f0f0f0f0f0f0fu64;
     const ASCII_ZEROS: u64 = 0x3030303030303030u64;
 
     unsafe {
@@ -2733,14 +2722,8 @@ fn parse_8_chars(s: &[u8]) -> Result<u32, PIE> {
         let mut chunk: u64 = std::mem::transmute(chunk);
         std::ptr::copy_nonoverlapping(s.as_ptr() as *const u64, &mut chunk, 1);
 
-        // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
         let chunk = chunk ^ ASCII_ZEROS;
-        const RESULT_MASK: u64 = !0u64 / 255 * 128;
-        const N: u64 = 9;
-        const N_MASK: u64 = !0u64 / 255 * (127 - N);
-        if (chunk & MASK_HI) | ((chunk + N_MASK | chunk) & RESULT_MASK) == 0 {
-
-//        if ((chunk & MASK_HI) == ASCII_ZEROS) & (((x + N_MASK | x) & RESULT_MASK) == 0) {
+        if (chunk & MASK_HI) | (chunk + 0x7676767676767676u64 & 0x8080808080808080u64) == 0 {
             // 1-byte mask trick (works on 4 pairs of single digits)
             let lower_digits = (chunk & 0x0f000f000f000f00) >> 8;
             let upper_digits = (chunk & 0x000f000f000f000f) * 10;
@@ -2770,7 +2753,6 @@ fn parse_4_chars(s: &[u8]) -> Result<u16, PIE> {
     debug_assert!(s.len() >= 4);
 
     const MASK_HI: u32 = 0xf0f0f0f0u32;
-    //const MASK_LOW: u32 = 0x0f0f0f0fu32;
     const ASCII_ZEROS: u32 = 0x30303030u32;
     let mut chunk: u32 = 0;
 
@@ -2780,12 +2762,7 @@ fn parse_4_chars(s: &[u8]) -> Result<u16, PIE> {
 
     // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
     let chunk = chunk ^ ASCII_ZEROS;
-    const RESULT_MASK: u32 = !0u32 / 255 * 128;
-    const N: u32 = 9;
-    const N_MASK: u32 = !0u32 / 255 * (127 - N);
-    if (chunk & MASK_HI) | ((chunk + N_MASK | chunk) & RESULT_MASK) == 0 {
-
-//    if (chunk & MASK_HI == ASCII_ZEROS) & (((x + N_MASK | x) & RESULT_MASK) == 0) {
+    if (chunk & MASK_HI) | (chunk + 0x76767676u32 & 0x80808080u32) == 0 {
         // 1-byte mask trick (works on 4 pairs of single digits)
         let lower_digits = (chunk & 0x0f000f00) >> 8;
         let upper_digits = (chunk & 0x000f000f) * 10;
@@ -2808,7 +2785,6 @@ fn parse_2_chars(s: &[u8]) -> Result<u8, PIE> {
     //SAFETY:
     debug_assert!(s.len() >= 2);
     const MASK_HI: u16 = 0xf0f0u16;
-    //const MASK_LOW: u16 = 0x0f0fu16;
     const ASCII_ZEROS: u16 = 0x3030u16;//0b0011__0000_0011_0000
     let mut chunk: u16 = 0;
 
@@ -2816,15 +2792,8 @@ fn parse_2_chars(s: &[u8]) -> Result<u8, PIE> {
         std::ptr::copy_nonoverlapping(s.as_ptr() as *const u16, &mut chunk, 1);
     }
 
-    let chunk = chunk ^ ASCII_ZEROS; //0b0011_0000_0011_0000;
-    // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
-    const RESULT_MASK: u16 = !0u16 / 255 * 128;
-    const N: u16 = 9;
-    const N_MASK: u16 = !0u16 / 255 * (127 - N);
-    if (chunk & MASK_HI) | ((chunk + N_MASK | chunk) & RESULT_MASK) == 0 {
-
-//    if ((chunk & MASK_HI).wrapping_sub(ASCII_ZEROS)) & (((x + N_MASK | x) & RESULT_MASK) == 0) {
-//    if (chunk & MASK_HI == ASCII_ZEROS) & (((x + N_MASK | x) & RESULT_MASK) == 0) {
+    let chunk = chunk ^ ASCII_ZEROS;
+    if (chunk & MASK_HI) | (chunk + 0x7676u16 & 0x8080u16) == 0 {
         // 1-byte mask trick (works on a pair of single digits)
         let lower_digits = (chunk & 0x0f00) >> 8;
         let upper_digits = (chunk & 0x000f) * 10;

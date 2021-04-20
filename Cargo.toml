@@ -1,9 +1,8 @@
 [package]
-name = "parseint"
-version = "0.1.0"
-authors = ["Ivan Tham <pickfire@riseup.net>"]
+name = "atoi_radix10"
+version = "0.2.0"
+authors = ["Ivan Tham <pickfire@riseup.net>", "Giles Cope <gilescope@gmail.com>"]
 edition = "2018"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -15,6 +14,7 @@ cluatoi = "0.2"
 [dev-dependencies]
 criterion = {version="0.3", features=["html_reports"]}
 itoa = "0.4"
+criterion-cycles-per-byte = "0.1"
 
 [[bench]]
 name = "bench"
