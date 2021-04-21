@@ -122,24 +122,29 @@ pub fn parse_u8_challenger(s: &str) -> Result<u8, ParseIntError2> {
                     if val2 <= 9 {
                         match iter.next() {
                             Some(val3) => {
-                                let val3 = val3.wrapping_sub(b'0');
-                                let val2 = val2 * 10;
-                                if val3 <= 9 {
-                                    match val {
-                                        1 => Ok(100 + val2 + val3),
-                                        2 => {
-                                            let two = val2 + val3;
-                                            if two <= 55 {
-                                                Ok(200 + two)
-                                            } else {
-                                                Err(PIE { kind: PosOverflow })
+                                match iter.next() {
+                                    None => {
+                                        let val3 = val3.wrapping_sub(b'0');
+                                        let val2 = val2 * 10;
+                                        if val3 <= 9 {
+                                            match val {
+                                                1 => Ok(100 + val2 + val3),
+                                                2 => {
+                                                    let two = val2 + val3;
+                                                    if two <= 55 {
+                                                        Ok(200 + two)
+                                                    } else {
+                                                        Err(PIE { kind: PosOverflow })
+                                                    }
+                                                }
+                                                0 => Ok(val2 + val3),
+                                                _ => Err(PIE { kind: PosOverflow }),
                                             }
+                                        } else {
+                                            return Err(PIE { kind: InvalidDigit });
                                         }
-                                        0 => Ok(val2 + val3),
-                                        _ => Err(PIE { kind: PosOverflow }),
-                                    }
-                                } else {
-                                    return Err(PIE { kind: InvalidDigit });
+                                    },
+                                    Some(_) => return Err(PIE { kind: PosOverflow }),
                                 }
                             }
                             None => Ok(val * 10 + val2),
@@ -177,24 +182,29 @@ pub fn parse_u8(s: &str) -> Result<u8, ParseIntError2> {
                     }
                     match iter.next() {
                         Some(val3) => {
-                            let val3 = val3.wrapping_sub(b'0');
-                            let val2 = val2 * 10;
-                            if val3 <= 9 {
-                                match val {
-                                    1 => Ok(100 + val2 + val3),
-                                    2 => {
-                                        let two = val2 + val3;
-                                        if two <= 55 {
-                                            Ok(200 + two)
-                                        } else {
-                                            Err(PIE { kind: PosOverflow })
+                            match iter.next() {
+                                None => {
+                                    let val3 = val3.wrapping_sub(b'0');
+                                    let val2 = val2 * 10;
+                                    if val3 <= 9 {
+                                        match val {
+                                            1 => Ok(100 + val2 + val3),
+                                            2 => {
+                                                let two = val2 + val3;
+                                                if two <= 55 {
+                                                    Ok(200 + two)
+                                                } else {
+                                                    Err(PIE { kind: PosOverflow })
+                                                }
+                                            }
+                                            0 => Ok(val2 + val3),
+                                            _ => Err(PIE { kind: PosOverflow }),
                                         }
+                                    } else {
+                                        return Err(PIE { kind: InvalidDigit });
                                     }
-                                    0 => Ok(val2 + val3),
-                                    _ => Err(PIE { kind: PosOverflow }),
-                                }
-                            } else {
-                                return Err(PIE { kind: InvalidDigit });
+                                },
+                                Some(_) => return Err(PIE { kind: PosOverflow }),
                             }
                         }
                         None => {
@@ -524,32 +534,55 @@ pub fn parse_u16_challenger(s: &str) -> Result<u16, PIE> {
 
 pub fn parse_u32_challenger(s: &str) -> Result<u32, PIE> {
     let mut s = s.as_bytes();
+    let mut l = s.len();
     let val = match s.get(0) {
         Some(val) => {
             if *val != b'+' {
+                if l == 1 {
+                    let val = val.wrapping_sub(b'0');
+                    return if val <= 9 {
+                        Ok(val as u32)
+                    } else {
+                        Err(PIE {
+                            kind: IntErrorKind::InvalidDigit,
+                        })
+                    }
+                }
                 val
             } else {
                 s = &s[1..];
                 match s.get(0) {
-                    Some(val) => val,
+                    Some(val) => {
+                        l -= 1;
+                        if l == 1 {
+                            let val = val.wrapping_sub(b'0');
+                            return if val <= 9 {
+                                Ok(val as u32)
+                            } else {
+                                Err(PIE {
+                                    kind: IntErrorKind::InvalidDigit,
+                                })
+                            }
+                        }
+                        val
+                    },
                     None => return Err(PIE { kind: InvalidDigit }),
                 }
             }
         }
         None => return Err(PIE { kind: Empty }),
     };
-    let l = s.len();
     match l {
-        1 => {
-            let val = val.wrapping_sub(b'0');
-            if val <= 9 {
-                Ok(val as u32)
-            } else {
-                Err(PIE {
-                    kind: IntErrorKind::InvalidDigit,
-                })
-            }
-        }
+        // 1 => {
+        //     let val = val.wrapping_sub(b'0');
+        //     if val <= 9 {
+        //         Ok(val as u32)
+        //     } else {
+        //         Err(PIE {
+        //             kind: IntErrorKind::InvalidDigit,
+        //         })
+        //     }
+        // }
         2 => {
             let val = val.wrapping_sub(b'0');
             let val2 = s[1].wrapping_sub(b'0');
@@ -585,18 +618,19 @@ pub fn parse_u32_challenger(s: &str) -> Result<u32, PIE> {
             }
         }
         6 => {
-            let result = parse_4_chars(s)? as u32 * 100;
-            let val = parse_2_chars(&s[4..])?;
-            Ok(result + val as u32)
+            // let result = parse_4_chars(s)? as u32 * 100;
+            // let val = parse_2_chars(&s[4..])?;
+            parse_6_chars(s)
         }
         7 => {
-            let mut result = parse_4_chars(s)? as u32 * 100;
-            let val = parse_2_chars(&s[4..])?;
-            result += val as u32;
-            result *= 10;
-            let val = s[6].wrapping_sub(b'0');
+            let result = parse_6_chars(&s[1..])?;//parse_4_chars(s)? as u32 * 100;
+//            let val = parse_2_chars(&s[4..])?;
+            let val = val.wrapping_sub(b'0');
+            // result += val as u32;
+            // result *= 10;
+            // let val = s[6].wrapping_sub(b'0');
             if val <= 9 {
-                Ok(result + val as u32)
+                Ok((val as u32) * 1000_000 + result)
             } else {
                 Err(PIE {
                     kind: IntErrorKind::InvalidDigit,
@@ -635,6 +669,7 @@ pub fn parse_u32_challenger(s: &str) -> Result<u32, PIE> {
     }
 }
 
+/// Parses from 0 -> 4_294_967_295 (10 digits and optionally +)
 pub fn parse_u32(s: &str) -> Result<u32, PIE> {
     let mut s = s.as_bytes();
     let val = match s.get(0) {
@@ -1171,7 +1206,7 @@ pub fn parse_u64_challenger(s: &str) -> Result<u64, PIE> {
     }
 }
 
-/// Parses 0 to 18_446_744_073_709_551_615
+/// Parses 0 to 18_446_744_073_709_551_615 (up to 20 chars)
 pub fn parse_u64(ss: &str) -> Result<u64, PIE> {
     let mut s = ss.as_bytes();
     let (val, val2) = match s.get(0) {
@@ -1470,6 +1505,7 @@ pub fn parse_u64(ss: &str) -> Result<u64, PIE> {
 
 /// u128: 0 to 340_282_366_920_938_463_463_374_607_431_768_211_455
 /// (39 digits!)
+
 pub fn parse_u128_challenger(s: &str) -> Result<u128, PIE> {
     unsafe {
         let mut s = s.as_bytes();
@@ -1602,6 +1638,7 @@ pub fn parse_u128_challenger(s: &str) -> Result<u128, PIE> {
     }
 }
 
+
 /// u128: 0 to 340_282_366_920_938_463_463_374_607_431_768_211_455
 /// (39 digits!)
 pub fn parse_u128(s: &str) -> Result<u128, PIE> {
@@ -1620,9 +1657,12 @@ pub fn parse_u128(s: &str) -> Result<u128, PIE> {
                 } else {
                     if val == PLUS {
                         s = &s[1..];
-                        let val = val.wrapping_sub(b'0');
+                        let val = s[0].wrapping_sub(b'0');
                         if val <= 9 {
                             l -= 1;
+                            if l == 1 {
+                                return Ok(val as u128)
+                            }
                             val
                         } else {
                             return Err(PIE { kind: InvalidDigit });
@@ -1740,18 +1780,23 @@ pub fn parse_i8(s: &str) -> Result<i8, PIE> {
                                         match iter.next() {
                                             None => Ok(-((val * 10 + val2) as i8)),
                                             Some(val3) => {
-                                                let val3 = val3.wrapping_sub(b'0');
-                                                if (val3 <= 9) & (val <= 1) {
-                                                    let result = val * 100 + val2 * 10 + val3;
-                                                    if result < 128 {
-                                                        Ok(-(result as i8))
-                                                    } else if result == 128 {
-                                                        Ok(i8::MIN)
-                                                    } else {
-                                                        Err(PIE { kind: NegOverflow })
-                                                    }
-                                                } else {
-                                                    Err(PIE { kind: NegOverflow })
+                                                match iter.next() {
+                                                    None => {
+                                                        let val3 = val3.wrapping_sub(b'0');
+                                                        if (val3 <= 9) & (val <= 1) {
+                                                            let result = val * 100 + val2 * 10 + val3;
+                                                            if result < 128 {
+                                                                Ok(-(result as i8))
+                                                            } else if result == 128 {
+                                                                Ok(i8::MIN)
+                                                            } else {
+                                                                Err(PIE { kind: NegOverflow })
+                                                            }
+                                                        } else {
+                                                            Err(PIE { kind: NegOverflow })
+                                                        }
+                                                    },
+                                                    Some(_) => return Err(PIE { kind: PosOverflow }),
                                                 }
                                             }
                                         }
@@ -1801,16 +1846,21 @@ pub fn parse_i8(s: &str) -> Result<i8, PIE> {
                         match iter.next() {
                             None => Ok((val * 10 + val2) as i8),
                             Some(val3) => {
-                                let val3 = val3.wrapping_sub(b'0');
-                                if (val3 <= 9) & (val <= 1) {
-                                    let result = val * 100 + val2 * 10 + val3;
-                                    if result < 128 {
-                                        Ok(result as i8)
-                                    } else {
-                                        Err(PIE { kind: PosOverflow })
+                                match iter.next() {
+                                    None => {
+                                        let val3 = val3.wrapping_sub(b'0');
+                                        if (val3 <= 9) & (val <= 1) {
+                                            let result = val * 100 + val2 * 10 + val3;
+                                            if result < 128 {
+                                                Ok(result as i8)
+                                            } else {
+                                                Err(PIE { kind: PosOverflow })
+                                            }
+                                        } else {
+                                            return Err(PIE { kind: PosOverflow });
+                                        }
                                     }
-                                } else {
-                                    return Err(PIE { kind: PosOverflow });
+                                    Some(_) => return Err(PIE { kind: PosOverflow }),
                                 }
                             }
                         }
@@ -1923,6 +1973,8 @@ pub fn parse_i8_challenger(s: &str) -> Result<i8, PIE> {
                                         match iter.next() {
                                             None => Ok(-((val * 10 + val2) as i8)),
                                             Some(val3) => {
+                                                match iter.next() {
+                                                None => {
                                                 let val3 = val3.wrapping_sub(b'0');
                                                 if (val3 <= 9) & (val <= 1) {
                                                     let result = val * 100 + val2 * 10 + val3;
@@ -1936,6 +1988,9 @@ pub fn parse_i8_challenger(s: &str) -> Result<i8, PIE> {
                                                 } else {
                                                     Err(PIE { kind: PosOverflow })
                                                 }
+                                            },
+                                                Some(_) => return Err(PIE { kind: PosOverflow }),
+                                        }
                                             }
                                         }
                                     } else {
@@ -1990,18 +2045,24 @@ pub fn parse_i8_challenger(s: &str) -> Result<i8, PIE> {
                                 }
                             }
                             Some(val3) => {
-                                let val3 = val3.wrapping_sub(b'0');
-                                let val2 = val2 * 10;
-                                if (val3 <= 9) & (val <= 1) {
-                                    let result = val * 100 + val2 + val3;
-                                    if result < 128 {
-                                        Ok(result as i8)
-                                    } else {
-                                        Err(PIE { kind: PosOverflow })
+                                match iter.next() {
+                                    None => {
+                                        let val3 = val3.wrapping_sub(b'0');
+                                        let val2 = val2 * 10;
+                                        if (val3 <= 9) & (val <= 1) {
+                                            let result = val * 100 + val2 + val3;
+                                            if result < 128 {
+                                                Ok(result as i8)
+                                            } else {
+                                                Err(PIE { kind: PosOverflow })
+                                            }
+                                        } else {
+                                            return Err(PIE { kind: PosOverflow });
+                                        }
                                     }
-                                } else {
-                                    return Err(PIE { kind: PosOverflow });
+                                    Some(_) => return Err(PIE { kind: PosOverflow }),
                                 }
+                                    
                             }
                         }
                     } else {
@@ -2464,13 +2525,13 @@ pub fn parse_i16_challenger(s: &str) -> Result<i16, PIE> {
                                     } else if result == 32768 {
                                         Ok(i16::MIN)
                                     } else {
-                                        return Err(PIE { kind: PosOverflow });
+                                        return Err(PIE { kind: NegOverflow });
                                     }
                                 } else {
-                                    return Err(PIE { kind: PosOverflow });
+                                    return Err(PIE { kind: NegOverflow });
                                 }
                             }
-                            _ => Err(PIE { kind: PosOverflow }),
+                            _ => Err(PIE { kind: NegOverflow }),
                         };
                     }
                 } else if val == PLUS {
@@ -2539,7 +2600,7 @@ pub fn parse_i16_challenger(s: &str) -> Result<i16, PIE> {
                     }
                 }
                 _ => Err(PIE {
-                    kind: IntErrorKind::InvalidDigit,
+                    kind: IntErrorKind::PosOverflow,
                 }),
             }
         }
@@ -2748,6 +2809,48 @@ fn parse_8_chars(s: &[u8]) -> Result<u32, PIE> {
 }
 
 #[inline]
+fn parse_6_chars(s: &[u8]) -> Result<u32, PIE> {
+    //SAFETY:
+    debug_assert!(s.len() >= 6);
+
+    const MASK_HI: u32 = 0xf0f0f0f0u32;
+    const ASCII_ZEROS: u32 = 0x30303030u32;
+    let mut chunk: u32 = 0;
+    const MASK_HI2: u16 = 0xf0f0u16;
+    const ASCII_ZEROS2: u16 = 0x3030u16;//0b0011__0000_0011_0000
+    let mut chunk2: u16 = 0;
+
+    unsafe {
+        std::ptr::copy_nonoverlapping(s.as_ptr() as *const u32, &mut chunk, 1);
+        std::ptr::copy_nonoverlapping(s.get_unchecked(4..).as_ptr() as *const u16, &mut chunk2, 1);
+    }
+
+    // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
+    let chunk = chunk ^ ASCII_ZEROS;
+    let chunk2 = chunk2 ^ ASCII_ZEROS2;
+    if (chunk & MASK_HI) + (chunk + 0x76767676u32 & 0x80808080u32) +
+        (chunk2 & MASK_HI2) as u32 + (chunk2 + 0x7676u16 & 0x8080u16) as u32 == 0 {
+        // 1-byte mask trick (works on 4 pairs of single digits)
+        let lower_digits = (chunk & 0x0f000f00) >> 8;
+        let upper_digits = (chunk & 0x000f000f) * 10;
+        let chunk = lower_digits + upper_digits;
+
+        // 2-byte mask trick (works on 2 pairs of two digits)
+        let lower_digits = (chunk & 0x00ff0000) >> 16;
+        let upper_digits = (chunk & 0x000000ff) * 100;
+        let chunk = lower_digits + upper_digits;
+
+        let lower_digits = (chunk2 & 0x0f00) >> 8;
+        let upper_digits = (chunk2 & 0x000f) * 10;
+        Ok(chunk as u32 * 100 + (lower_digits + upper_digits) as u32) //u16 can guarantee to hold 4 digits
+    } else {
+        Err(PIE {
+            kind: IntErrorKind::InvalidDigit,
+        })
+    }
+}
+
+#[inline]
 fn parse_4_chars(s: &[u8]) -> Result<u16, PIE> {
     //SAFETY:
     debug_assert!(s.len() >= 4);
@@ -2876,332 +2979,96 @@ const TENS_U128: &[u128] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
+    use paste::paste;
 
-    #[test]
-    fn test_empty() {
-        assert_eq!(
-            Err(PIE {
-                kind: IntErrorKind::Empty
-            }),
-            parse_i8("")
-        );
-        assert_eq!(
-            Err(PIE {
-                kind: IntErrorKind::Empty
-            }),
-            parse_u8("")
-        );
-        assert_eq!(
-            Err(PIE {
-                kind: IntErrorKind::Empty
-            }),
-            parse_i16("")
-        );
-        assert_eq!(
-            Err(PIE {
-                kind: IntErrorKind::Empty
-            }),
-            parse_u16("")
-        );
-        assert_eq!(
-            Err(PIE {
-                kind: IntErrorKind::Empty
-            }),
-            parse_u32("")
-        );
-        assert_eq!(
-            Err(PIE {
-                kind: IntErrorKind::Empty
-            }),
-            parse_u64("")
-        );
-        assert_eq!(
-            Err(PIE {
-                kind: IntErrorKind::Empty
-            }),
-            parse_u128("")
-        );
-    }
+    macro_rules! gen_tests {
+        ($target_type:ty, $max:expr, $step: expr, $max_chars: literal,$postfix: literal, $specific: literal) => {
+            paste! {
+                #[test]
+                fn [<test_ $target_type _specific $postfix>]() {
+                    let s = $specific;
+                    let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
+                    assert_eq!(p, [<parse_ $target_type $postfix>](&s).map_err(|_| ()), "fail to parse: '{}'", &s);
+                }
 
-    #[test]
-    fn test_invalid_ascii() {
-        for &ascii in [b':', b'/'].iter() {
-            for i in 1..3 {
-                let vec = vec![b'1'; i];
-                for j in 1..i {
-                    let mut v = vec.clone();
-                    v[j] = ascii;
-                    let s = String::from_utf8_lossy(&v[..]);
-                    assert_eq!(Err(()), parse_i8(&s).map_err(|_| ()), "parsing `{}`", s);
-                    assert_eq!(Err(()), parse_u8(&s).map_err(|_| ()), "parsing `{}`", s);
+                #[test]
+                fn [<test_invalid_ascii_ $target_type $postfix>]() {
+                    for &ascii in [b':', b'/'].iter() {
+                        for i in 1..$max_chars {
+                            let vec = vec![b'1'; i];
+                            for j in 1..i {
+                                let mut v = vec.clone();
+                                v[j] = ascii;
+                                let s = String::from_utf8_lossy(&v[..]);
+                                assert_eq!(Err(()), [<parse_ $target_type $postfix>](&s).map_err(|_| ()), "parsing `{}`", s);
+                            }
+                        }
+                    }
                 }
-            }
-            for i in 1..5 {
-                let vec = vec![b'1'; i];
-                for j in 1..i {
-                    let mut v = vec.clone();
-                    v[j] = ascii;
-                    let s = String::from_utf8_lossy(&v[..]);
-                    assert_eq!(Err(()), parse_i16(&s).map_err(|_| ()), "parsing `{}`", s);
-                    assert_eq!(Err(()), parse_u16(&s).map_err(|_| ()), "parsing `{}`", s);
+
+                #[test]
+                fn [<test_invalid_too_big_ $target_type $postfix>]() {
+                    let mut s = ($target_type::MAX as $target_type).to_string();
+                    s.push('1');
+                    assert_eq!(
+                        Err(PIE {
+                            kind: IntErrorKind::PosOverflow
+                        }),
+                        [<parse_ $target_type $postfix>](&s)
+                    );
                 }
-            }
-            for i in 1..10 {
-                let vec = vec![b'1'; i];
-                for j in 1..i {
-                    let mut v = vec.clone();
-                    v[j] = ascii;
-                    let s = String::from_utf8_lossy(&v[..]);
-                    assert_eq!(Err(()), parse_u32(&s).map_err(|_| ()), "parsing `{}`", s);
+
+                #[test]
+                fn [<test_empty_ $target_type $postfix>]() {
+                    assert_eq!(
+                        Err(PIE {
+                            kind: IntErrorKind::Empty
+                        }),
+                        [<parse_ $target_type $postfix>]("")
+                    );
                 }
-            }
-            for i in 1..20 {
-                let vec = vec![b'1'; i];
-                for j in 1..i {
-                    let mut v = vec.clone();
-                    v[j] = ascii;
-                    let s = String::from_utf8_lossy(&v[..]);
-                    assert_eq!(Err(()), parse_u64(&s).map_err(|_| ()), "parsing `{}`", s);
+
+                #[test]
+                fn [<test_ $target_type $postfix>]() {
+                    for i in ($target_type::MIN..$max as $target_type).step_by($step) {
+                        let s = i.to_string();
+                        let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
+                        assert_eq!(p, [<parse_ $target_type $postfix>](&s).map_err(|_| ()), "fail to parse: '{}'", &s);
+                    }
                 }
-            }
-            for i in 1..39 {
-                let vec = vec![b'1'; i];
-                for j in 1..i {
-                    let mut v = vec.clone();
-                    v[j] = ascii;
-                    let s = String::from_utf8_lossy(&v[..]);
-                    assert_eq!(Err(()), parse_u128(&s).map_err(|_| ()), "parsing `{}`", s);
+
+                #[test]
+                fn [<test_ $target_type _plus $postfix>]() {
+                    for i in ($target_type::MIN..$max as $target_type).step_by($step) {
+                        let mut s = i.to_string();
+                        s.insert(0, '+');
+                        let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
+                        assert_eq!(p, [<parse_ $target_type $postfix>](&s).map_err(|_| ()), "fail to parse: '{}'", &s);
+                    }
                 }
             }
         }
     }
 
-    #[test]
-    fn test_invalid_too_big() {
-        assert_eq!(
-            Err(PIE {
-                kind: IntErrorKind::PosOverflow
-            }),
-            parse_i8(&(i8::MAX as u128 + 1).to_string())
-        );
-        assert_eq!(
-            Err(PIE {
-                kind: IntErrorKind::PosOverflow
-            }),
-            parse_i8(&(i16::MAX as u128 + 1).to_string())
-        );
+    gen_tests!(u8, u8::MAX, 1, 3,"", "1");
+    gen_tests!(u8, u8::MAX, 1, 3,"_challenger", "1");
+    
+    gen_tests!(i8, i8::MAX, 1, 3,"", "1");
+    gen_tests!(i8, i8::MAX, 1, 3,"_challenger", "1");
+    
+    gen_tests!(u16, u16::MAX, 1, 5, "","1");
+    gen_tests!(u16, u16::MAX, 1, 5, "_challenger","1");
 
-        assert_eq!(
-            Err(PIE {
-                kind: IntErrorKind::PosOverflow
-            }),
-            parse_u8(&(u8::MAX as u128 + 1).to_string())
-        );
-        assert_eq!(
-            Err(PIE {
-                kind: IntErrorKind::PosOverflow
-            }),
-            parse_u16(&(u16::MAX as u128 + 1).to_string())
-        );
-        assert_eq!(
-            Err(PIE {
-                kind: IntErrorKind::PosOverflow
-            }),
-            parse_u32(&(u32::MAX as u128 + 1).to_string())
-        );
-        assert_eq!(
-            Err(PIE {
-                kind: IntErrorKind::PosOverflow
-            }),
-            parse_u64(&(u64::MAX as u128 + 1).to_string())
-        );
+    
+    gen_tests!(i16, i64::MAX, 1, 5,"", "1");
+    gen_tests!(i16, i64::MAX, 1, 5,"_challenger", "1");
+    
+    gen_tests!(u32, u32::MAX, 10_301, 10,"", "1");
+    gen_tests!(u32, u32::MAX, 10_301, 10,"_challenger", "1");
 
-        let mut s = (u128::MAX as u128).to_string();
-        s.push('1');
-        assert_eq!(
-            Err(PIE {
-                kind: IntErrorKind::PosOverflow
-            }),
-            parse_u128(&s)
-        );
-    }
+    gen_tests!(u64, u64::MAX, 100_301_000_000_000, 20, "","1");
+    gen_tests!(u64, u64::MAX, 100_301_000_000_000, 20, "_challenger","1");
 
-    #[test]
-    fn test_i8() {
-        let mut s = String::new();
-        for i in i8::MIN..i8::MAX {
-            s.clear();
-            itoa::fmt(&mut s, i).unwrap();
-            let p: Result<i8, ()> = s.parse().map_err(|_| ());
-            assert_eq!(p, parse_i8(&s).map_err(|_| ()), "fail to parse: '{}'", &s);
-        }
-    }
-
-    #[test]
-    fn test_u8() {
-        let mut s = String::new();
-        for i in u8::MIN..u8::MAX {
-            s.clear();
-            itoa::fmt(&mut s, i).unwrap();
-            let p: Result<u8, ()> = s.parse().map_err(|_| ());
-            assert_eq!(p, parse_u8(&s).map_err(|_| ()), "fail to parse: '{}'", &s);
-        }
-    }
-
-    #[test]
-    fn test_u16() {
-        let mut s = String::new();
-        for i in u16::MIN..u16::MAX {
-            s.clear();
-            itoa::fmt(&mut s, i).unwrap();
-            let p: Result<u16, ()> = s.parse().map_err(|_| ());
-            assert_eq!(p, parse_u16(&s).map_err(|_| ()), "fail to parse: '{}'", &s);
-        }
-    }
-
-    #[test]
-    fn test_i16() {
-        let mut s = String::new();
-        for i in i16::MIN..i16::MAX {
-            s.clear();
-            itoa::fmt(&mut s, i).unwrap();
-            let p: Result<i16, ()> = s.parse().map_err(|_| ());
-            assert_eq!(p, parse_i16(&s).map_err(|_| ()), "fail to parse: '{}'", &s);
-        }
-    }
-
-    #[test]
-    fn test_u32() {
-        let mut s = String::new();
-        for i in (u32::MIN..u32::MAX).step_by(10_301) {
-            s.clear();
-            itoa::fmt(&mut s, i).unwrap();
-            let p: Result<u32, ()> = s.parse().map_err(|_| ());
-            assert_eq!(p, parse_u32(&s).map_err(|_| ()), "fail to parse: '{}'", &s);
-        }
-    }
-
-    #[test]
-    fn test_i8_specific() {
-        let s = "-123";
-        let p: Result<i8, ()> = s.parse().map_err(|_| ());
-        assert_eq!(p, parse_i8(&s).map_err(|_| ()), "fail to parse: '{}'", &s);
-    }
-
-    #[test]
-    fn test_u16_specific() {
-        let s = "12";
-        let p: Result<u16, ()> = s.parse().map_err(|_| ());
-        assert_eq!(p, parse_u16(&s).map_err(|_| ()), "fail to parse: '{}'", &s);
-    }
-
-    #[test]
-    fn test_i16_specific() {
-        let s = "-999";
-        let p: Result<i16, ()> = s.parse().map_err(|_| ());
-        assert_eq!(p, parse_i16(&s).map_err(|_| ()), "fail to parse: '{}'", &s);
-    }
-
-    #[test]
-    fn test_u32_specific() {
-        let s = "100002108";
-        let p: Result<u32, ()> = s.parse().map_err(|_| ());
-        assert_eq!(p, parse_u32(&s).map_err(|_| ()), "fail to parse: '{}'", &s);
-    }
-    #[test]
-    fn test_u64_specific() {
-        let s = "100412";
-        let p: Result<u64, ()> = s.parse().map_err(|_| ());
-        assert_eq!(p, parse_u64(&s).map_err(|_| ()), "fail to parse: '{}'", &s);
-    }
-
-    #[test]
-    fn test_u128_specific() {
-        let s = "123456789012345678901234567890123456789";
-        let p: Result<u128, ()> = s.parse().map_err(|_| ());
-        assert_eq!(p, parse_u128(&s).map_err(|_| ()), "fail to parse: '{}'", &s);
-    }
-
-    #[test]
-    fn test_u64() {
-        let mut s = String::new();
-        for i in (u64::MIN..u64::MAX).step_by(10_301_000_000_000) {
-            s.clear();
-            itoa::fmt(&mut s, i).unwrap();
-            let p: Result<u64, ()> = s.parse().map_err(|_| ());
-            assert_eq!(p, parse_u64(&s).map_err(|_| ()), "fail to parse: '{}'", &s);
-        }
-    }
-
-    #[test]
-    fn test_u128() {
-        //   let mut s = String::new();
-        for i in (u128::MIN..u64::MAX as u128).step_by(usize::MAX) {
-            //         s.clear();
-            let s = i.to_string();
-            //            itoa::fmt(&mut s, i).unwrap();
-            let p: Result<u128, ()> = s.parse().map_err(|_| ());
-            assert_eq!(p, parse_u128(&s).map_err(|_| ()), "fail to parse: '{}'", &s);
-        }
-    }
-
-    #[test]
-    fn test_u8_plus() {
-        let mut s = String::new();
-        for i in u8::MIN..u8::MAX {
-            s.clear();
-            s.push('+');
-            itoa::fmt(&mut s, i).unwrap();
-            let p: Result<u8, ()> = s.parse().map_err(|_| ());
-            assert_eq!(p, parse_u8(&s).map_err(|_| ()), "fail to parse: '{}'", &s);
-        }
-    }
-
-    #[test]
-    fn test_u16_plus() {
-        let mut s = String::new();
-        for i in u16::MIN..u16::MAX {
-            s.clear();
-            s.push('+');
-            itoa::fmt(&mut s, i).unwrap();
-            let p: Result<u16, ()> = s.parse().map_err(|_| ());
-            assert_eq!(p, parse_u16(&s).map_err(|_| ()), "fail to parse: '{}'", &s);
-        }
-    }
-
-    #[test]
-    fn test_i16_plus() {
-        let mut s = String::new();
-        for i in i16::MIN..i16::MAX {
-            s.clear();
-            s.push('+');
-            itoa::fmt(&mut s, i).unwrap();
-            let p: Result<i16, ()> = s.parse().map_err(|_| ());
-            assert_eq!(p, parse_i16(&s).map_err(|_| ()), "fail to parse: '{}'", &s);
-        }
-    }
-
-    #[test]
-    fn test_u32_plus() {
-        let mut s = String::new();
-        for i in (u32::MIN..u32::MAX).step_by(10_301) {
-            s.clear();
-            s.push('+');
-            itoa::fmt(&mut s, i).unwrap();
-            let p: Result<u32, ()> = s.parse().map_err(|_| ());
-            assert_eq!(p, parse_u32(&s).map_err(|_| ()), "fail to parse: '{}'", &s);
-        }
-    }
-
-    #[test]
-    fn test_u64_plus() {
-        let mut s = String::new();
-        for i in (u64::MIN..u64::MAX).step_by(10_301_000_000_000) {
-            s.clear();
-            s.push('+');
-            itoa::fmt(&mut s, i).unwrap();
-            let p: Result<u64, ()> = s.parse().map_err(|_| ());
-            assert_eq!(p, parse_u64(&s).map_err(|_| ()), "fail to parse: '{}'", &s);
-        }
-    }
+    gen_tests!(u128, u64::MAX, 100_301_000_000_000, 39,"", "+0");
+    gen_tests!(u128, u64::MAX, 100_301_000_000_000, 39,"_challenger", "123456789012345678901234567890123456789");
 }
