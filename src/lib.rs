@@ -844,13 +844,22 @@ pub fn parse_u32_challenger(s: &str) -> Result<u32, PIE> {
             }
             7 => {
                 let val2 = parse_4_chars(&s[1..])? as u32 * 100;
-                let val3 = parse_2_chars(&s[5..])? as u32;
-                Ok(val as u32 * 1_000_000 + val2 + val3)
+                //let val3 = parse_2_chars(&s[5..])? as u32;
+                let val3 = s.get_unchecked(5).wrapping_sub(b'0');
+                let val4 = s.get_unchecked(6).wrapping_sub(b'0');
+                if (val3 <= 9) & (val4 <= 9) {
+                    Ok(val as u32 * 1_000_000 + val2 + (val3 * 10) as u32 + val4 as u32)
+                } else {
+                    Err(PIE {
+                        kind: IntErrorKind::InvalidDigit,
+                    })
+                }
             }
             8 => parse_8_chars(&s),
             9 => {
-                let result = parse_8_chars(&s[1..])?;
-                Ok(result + (val as u32 * 100_000_000))
+                parse_8_chars(&s[1..]).map(|val2| (val as u32 * 100_000_000) + val2)
+  //              let result = parse_8_chars(&s[1..])?;
+//                Ok(result + (val as u32 * 100_000_000))
             }
             10 => {
                 let mut val2 = s.get_unchecked(1).wrapping_sub(b'0') as u32;
@@ -1347,34 +1356,37 @@ pub fn parse_u64(ss: &str) -> Result<u64, PIE> {
         2 => {
             let val = val.wrapping_sub(b'0');
             let val2 = val2.wrapping_sub(b'0');
-            if (val > 9) | (val2 > 9) {
+            if (val <= 9) & (val2 <= 9) {
+                return Ok((val * 10 + val2) as u64)
+            } else {
                 return Err(PIE {
                     kind: IntErrorKind::InvalidDigit,
                 });
             };
-            Ok((val * 10 + val2) as u64)
         }
         3 => {
             let val = val.wrapping_sub(b'0');
             let val2 = val2.wrapping_sub(b'0');
             let val3 = s[2].wrapping_sub(b'0');
-            if (val > 9) | (val2 > 9) | (val3 > 9) {
+            if (val <= 9) & (val2 <= 9) & (val3 <= 9) {
+                return Ok((val as u16 * 100 + (val2 as u16 * 10 + val3 as u16)) as u64)
+            } else {
                 return Err(PIE {
                     kind: IntErrorKind::InvalidDigit,
                 });
             };
-            Ok((val as u16 * 100 + (val2 as u16 * 10 + val3 as u16)) as u64)
         }
         4 => Ok(parse_4_chars(s)? as u64),
         5 => {
             let result = parse_4_chars(&s[1..])? as u32;
             let val = val.wrapping_sub(b'0');
-            if val > 9 {
+            if val <= 9 {
+                return Ok((result + (val as u32 * 10_000)) as u64)
+            } else {
                 return Err(PIE {
                     kind: IntErrorKind::InvalidDigit,
                 });
             }
-            Ok((result + (val as u32 * 10_000)) as u64)
         }
         6 => {
             let result = parse_4_chars(s)? as u32;
@@ -1385,134 +1397,144 @@ pub fn parse_u64(ss: &str) -> Result<u64, PIE> {
             let result = parse_4_chars(&s[1..])? as u32;
             let loose_change = parse_2_chars(&s[5..])? as u32;
             let val = val.wrapping_sub(b'0') as u32;
-            if val > 9 {
+            if val <= 9 {
+                return Ok((val * 1_000_000 + result * 100 + loose_change) as u64)
+            } else {
                 return Err(PIE {
                     kind: IntErrorKind::InvalidDigit,
                 });
             }
-            Ok((val * 1_000_000 + result * 100 + loose_change) as u64)
         }
         8 => parse_8_chars(&s).map(|val| val as u64),
         9 => {
             let val = val.wrapping_sub(b'0') as u32;
             let result = parse_8_chars(&s[1..])?;
-            if val > 9 {
+            if val <= 9 {
+                return Ok((result + (val as u32 * 100_000_000)) as u64)
+            } else {
                 return Err(PIE {
                     kind: IntErrorKind::InvalidDigit,
                 });
             }
-            Ok((result + (val as u32 * 100_000_000)) as u64)
         }
         10 => {
             let val = val.wrapping_sub(b'0') as u64;
             let val2 = val2.wrapping_sub(b'0') as u64;
-            if (val > 9) | (val2 > 9) {
+            if (val <= 9) & (val2 <= 9) {
+                let result = parse_8_chars(&s[2..])? as u64;
+                return Ok(val * 1_000_000_000 + val2 * 100_000_000 + result)
+            } else {
                 return Err(PIE {
                     kind: IntErrorKind::InvalidDigit,
                 });
             }
-            let result = parse_8_chars(&s[2..])? as u64;
-            Ok(val * 1_000_000_000 + val2 * 100_000_000 + result)
         }
         11 => {
             let val = val.wrapping_sub(b'0') as u64;
             let val2 = val2.wrapping_sub(b'0') as u64;
             let val3 = s[2].wrapping_sub(b'0') as u64;
-            if (val > 9) | (val2 > 9) | (val3 > 9) {
+            if (val <= 9) & (val2 <= 9) & (val3 <= 9) {
+                let result = parse_8_chars(&s[3..])? as u64;
+                return Ok(val * 10_000_000_000 + val2 * 1_000_000_000 + val3 * 100_000_000 + result)
+            } else {
                 return Err(PIE {
                     kind: IntErrorKind::InvalidDigit,
                 });
             }
-            let result = parse_8_chars(&s[3..])? as u64;
-            Ok(val * 10_000_000_000 + val2 * 1_000_000_000 + val3 * 100_000_000 + result)
         }
-        12 => Ok(parse_4_chars(s)? as u64 * 1_0000_0000 + parse_8_chars(&s[4..])? as u64),
+        12 => return Ok(parse_4_chars(s)? as u64 * 1_0000_0000 + parse_8_chars(&s[4..])? as u64),
         13 => {
             let val = val.wrapping_sub(b'0') as u64;
-            if val > 9 {
+            if val <= 9 {
+                return Ok(val as u64 * 1_0000_0000_0000
+                    + parse_4_chars(&s[1..])? as u64 * 1_0000_0000
+                    + parse_8_chars(&s[5..])? as u64)
+            } else { 
                 return Err(PIE {
                     kind: IntErrorKind::InvalidDigit,
                 });
             }
-            Ok(val as u64 * 1_0000_0000_0000
-                + parse_4_chars(&s[1..])? as u64 * 1_0000_0000
-                + parse_8_chars(&s[5..])? as u64)
         }
         14 => {
             let val = val.wrapping_sub(b'0') as u64;
             let val2 = val2.wrapping_sub(b'0') as u64;
-            if (val > 9) | (val2 > 9) {
+            if (val <= 9) & (val2 <= 9) {
+                return Ok(val as u64 * 10_0000_0000_0000
+                    + val2 as u64 * 1_0000_0000_0000
+                    + parse_4_chars(&s[2..])? as u64 * 1_0000_0000
+                    + parse_8_chars(&s[6..])? as u64)
+            } else {
                 return Err(PIE {
                     kind: IntErrorKind::InvalidDigit,
                 });
             }
-            Ok(val as u64 * 10_0000_0000_0000
-                + val2 as u64 * 1_0000_0000_0000
-                + parse_4_chars(&s[2..])? as u64 * 1_0000_0000
-                + parse_8_chars(&s[6..])? as u64)
         }
         15 => {
             let val = val.wrapping_sub(b'0') as u64;
             let val2 = val2.wrapping_sub(b'0') as u64;
             let val3 = s[2].wrapping_sub(b'0') as u64;
-            if (val > 9) | (val2 > 9) | (val3 > 9) {
+            if (val <= 9) & (val2 <= 9) & (val3 <= 9) {
+                return Ok(val as u64 * 100_0000_0000_0000
+                    + val2 as u64 * 10_0000_0000_0000
+                    + val3 as u64 * 1_0000_0000_0000
+                    + parse_4_chars(&s[3..])? as u64 * 1_0000_0000
+                    + parse_8_chars(&s[7..])? as u64)
+            } else {
                 return Err(PIE {
                     kind: IntErrorKind::InvalidDigit,
                 });
             }
-            Ok(val as u64 * 100_0000_0000_0000
-                + val2 as u64 * 10_0000_0000_0000
-                + val3 as u64 * 1_0000_0000_0000
-                + parse_4_chars(&s[3..])? as u64 * 1_0000_0000
-                + parse_8_chars(&s[7..])? as u64)
         }
         16 => parse_16_chars(s),
         17 => {
             let val = val.wrapping_sub(b'0') as u64;
-            if val > 9 {
+            if val <= 9 {
+                return Ok(val * 10_000_000_000_000_000 + parse_16_chars(&s[1..])?)
+            } else {
                 return Err(PIE {
                     kind: IntErrorKind::InvalidDigit,
                 });
             }
-            Ok(val * 10_000_000_000_000_000 + parse_16_chars(&s[1..])?)
         }
         18 => {
             let val = val.wrapping_sub(b'0') as u64;
             let val2 = val2.wrapping_sub(b'0') as u64;
-            if (val > 9) | (val2 > 9) {
+            if (val <= 9) & (val2 <= 9) {
+                return Ok(val * 100_000_000_000_000_000
+                    + val2 * 10_000_000_000_000_000
+                    + parse_16_chars(&s[2..])?)
+            } else {
                 return Err(PIE {
                     kind: IntErrorKind::InvalidDigit,
                 });
             }
-            Ok(val * 100_000_000_000_000_000
-                + val2 * 10_000_000_000_000_000
-                + parse_16_chars(&s[2..])?)
         }
         19 => {
             let val = val.wrapping_sub(b'0') as u64;
             let val2 = val2.wrapping_sub(b'0') as u64;
             let val3 = s[2].wrapping_sub(b'0') as u64;
-            if (val > 9) | (val2 > 9) | (val3 > 9) {
+            if (val <= 9) & (val2 <= 9) & (val3 <= 9) {
+                return Ok(val * 1_000_000_000_000_000_000
+                    + val2 * 100_000_000_000_000_000
+                    + val3 * 10_000_000_000_000_000
+                    + parse_16_chars(&s[3..])?)
+            } else {
                 return Err(PIE {
                     kind: IntErrorKind::InvalidDigit,
                 });
             }
-            Ok(val * 1_000_000_000_000_000_000
-                + val2 * 100_000_000_000_000_000
-                + val3 * 10_000_000_000_000_000
-                + parse_16_chars(&s[3..])?)
         }
         20 => {
             let val = val.wrapping_sub(b'0') as u64;
-            if val > 1 {
-                return Err(PIE { kind: PosOverflow });
-            }
-            match (parse_4_chars(&s)? as u64 * 10_000_000_000_000_000)
+            if val <= 1 {
+                match (parse_4_chars(&s)? as u64 * 10_000_000_000_000_000)
                 .checked_add(parse_16_chars(&s[4..])? as u64)
-            {
-                Some(val) => Ok(val),
-                None => Err(PIE { kind: PosOverflow }),
+                {
+                    Some(val) => return Ok(val),
+                    None => return Err(PIE { kind: PosOverflow }),
+                }
             }
+            return Err(PIE { kind: PosOverflow });
         }
         _ => Err(PIE { kind: PosOverflow }),
     }
@@ -1550,6 +1572,9 @@ pub fn parse_u64(ss: &str) -> Result<u64, PIE> {
     // }
     // return Ok(result);
 }
+
+
+
 
 /// Parses 0 to 18_446_744_073_709_551_615
 // pub fn parse_u64_old_best(ss: &str) -> Result<u64, ()> {

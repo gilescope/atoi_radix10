@@ -14,3 +14,7 @@ http://0x80.pl/articles/simd-parsing-int-sequences.html
 Notes:
 
 This is called SWAR: Simd within a register.
+
+Things that didn't seem to have any effect:
+
+   * casting len from usize to u8.
