@@ -10,7 +10,7 @@ use atoi_radix10::*;
 macro_rules! ok_bench {
     ($target_type:ty, $prefix:literal, $meth:expr, $std_method:expr, $challenger_meth:expr, $values:expr) => {
         paste! {
-            fn [<bench_parse_ $prefix $target_type>](c: &mut Criterion<CyclesPerByte> 
+            fn [<bench_parse_ $prefix $target_type>](c: &mut Criterion//<CyclesPerByte>
                       ) {
                 let mut group = c.benchmark_group(stringify!([<$meth $prefix>]));
                 //group //.sample_size(30)
@@ -21,9 +21,9 @@ macro_rules! ok_bench {
                     assert_eq!($meth(&num_str), Ok(num), " when atoi_radix10 parsing {}", num_str);
                     assert_eq!($challenger_meth(&num_str), Ok(num), " when challenger parsing {}", num_str);
                     group.throughput(Throughput::Bytes(num_str.len() as u64));
-                    // group.bench_with_input(BenchmarkId::new(format!("{}std",$prefix), num), &num_str, |b, &val| {
-                    //     b.iter(|| $std_method(&val));
-                    // });
+                    group.bench_with_input(BenchmarkId::new(format!("{}std",$prefix), num), &num_str, |b, &val| {
+                        b.iter(|| $std_method(&val));
+                    });
                     group.bench_with_input(BenchmarkId::new(format!("{}challenger",$prefix), num), &num_str, |b, &val| {
                         b.iter(|| $challenger_meth(&val));
                     });
@@ -121,6 +121,50 @@ ok_bench!(
     ]
 );
 
+
+ok_bench!(
+    i32,
+    "pos_",
+    parse_i32,
+    std_parse::<i32>,
+    parse_i32_challenger,
+    //cluatoi_parse_i32,
+    [
+        "1",
+        "12",
+        "123",
+        "1234",
+        "12345",
+        "123456",
+        "1234567",
+        "12345678",
+        "123456789",
+        &i32::MAX.to_string()
+    ]
+);
+
+
+ok_bench!(
+    i32,
+    "neg_",
+    parse_i32,
+    std_parse::<i32>,
+    parse_i32_challenger,
+    //cluatoi_parse_i32,
+    [
+        "-1",
+        "-12",
+        "-123",
+        "-1234",
+        "-12345",
+        "-123456",
+        "-1234567",
+        "-12345678",
+        "-123456789",
+        &i32::MIN.to_string()
+    ]
+);
+
 ok_bench!(
     u64,
     "",
@@ -148,6 +192,68 @@ ok_bench!(
         "123456789012345678",
         "1234567890123456789",
         &u64::MAX.to_string()
+    ]
+);
+
+
+ok_bench!(
+    i64,
+    "pos_",
+    parse_i64,
+    std_parse::<i64>,
+    parse_i64_challenger,
+    [
+        "1",
+        "12",
+        "123",
+        "1234",
+        "12345",
+        "123456",
+        "1234567",
+        "12345678",
+        "123456789",
+        "1234567890",
+        "12345678901",
+        "123456789012",
+        "1234567890123",
+        "12345678901234",
+        "123456789012345",
+        "1234567890123456",
+        "12345678901234567",
+        "123456789012345678",
+        "1234567890123456789",
+        &i64::MAX.to_string()
+    ]
+);
+
+
+ok_bench!(
+    i64,
+    "neg_",
+    parse_i64,
+    std_parse::<i64>,
+    parse_i64_challenger,
+    [
+        "-1",
+        "-12",
+        "-123",
+        "-1234",
+        "-12345",
+        "-123456",
+        "-1234567",
+        "-12345678",
+        "-123456789",
+        "-1234567890",
+        "-12345678901",
+        "-123456789012",
+        "-1234567890123",
+        "-12345678901234",
+        "-123456789012345",
+        "-1234567890123456",
+        "-12345678901234567",
+        "-123456789012345678",
+        "-1234567890123456789",
+        &i64::MIN.to_string()
     ]
 );
 
@@ -185,7 +291,7 @@ ok_bench!(
 
 criterion_group!(
     name = benches;
-    config = Criterion::default().with_measurement(CyclesPerByte);
+    config = Criterion::default();//.with_measurement(CyclesPerByte);
     targets = bench_parse_u8,
     bench_parse_u16,
     bench_parse_u32,
@@ -195,6 +301,10 @@ criterion_group!(
     bench_parse_neg_i8,
     bench_parse_pos_i16,
     bench_parse_neg_i16,
+    bench_parse_pos_i32,
+    bench_parse_neg_i32,
+    bench_parse_pos_i64,
+    bench_parse_neg_i64,
 );
 
 criterion_main!(benches);
