@@ -532,142 +532,142 @@ pub fn parse_u16_challenger(s: &str) -> Result<u16, PIE> {
 //     }
 // }
 
-pub fn parse_u32_challenger(s: &str) -> Result<u32, PIE> {
-    let mut s = s.as_bytes();
-    let mut l = s.len();
-    let val = match s.get(0) {
-        Some(val) => {
-            if *val != b'+' {
-                if l == 1 {
-                    let val = val.wrapping_sub(b'0');
-                    return if val <= 9 {
-                        Ok(val as u32)
-                    } else {
-                        Err(PIE {
-                            kind: IntErrorKind::InvalidDigit,
-                        })
-                    }
-                }
-                val
-            } else {
-                s = &s[1..];
-                match s.get(0) {
-                    Some(val) => {
-                        l -= 1;
-                        if l == 1 {
-                            let val = val.wrapping_sub(b'0');
-                            return if val <= 9 {
-                                Ok(val as u32)
-                            } else {
-                                Err(PIE {
-                                    kind: IntErrorKind::InvalidDigit,
-                                })
-                            }
-                        }
-                        val
-                    },
-                    None => return Err(PIE { kind: InvalidDigit }),
-                }
-            }
-        }
-        None => return Err(PIE { kind: Empty }),
-    };
-    match l {
-        // 1 => {
-        //     let val = val.wrapping_sub(b'0');
-        //     if val <= 9 {
-        //         Ok(val as u32)
-        //     } else {
-        //         Err(PIE {
-        //             kind: IntErrorKind::InvalidDigit,
-        //         })
-        //     }
-        // }
-        2 => {
-            let val = val.wrapping_sub(b'0');
-            let val2 = s[1].wrapping_sub(b'0');
-            if (val <= 9) & (val2 <= 9) {
-                Ok((val * 10 + val2) as u32)
-            } else {
-                Err(PIE {
-                    kind: IntErrorKind::InvalidDigit,
-                })
-            }
-        }
-        3 => {
-            let val = val.wrapping_sub(b'0');
-            let val2 = s[1].wrapping_sub(b'0');
-            let val3 = s[2].wrapping_sub(b'0');
-            if (val <= 9) & (val2 <= 9) & (val3 <= 9) {
-                Ok(val as u32 * 100 + (val2 * 10 + val3) as u32)
-            } else {
-                Err(PIE {
-                    kind: IntErrorKind::InvalidDigit,
-                })
-            }
-        }
-        4 => Ok(parse_4_chars(s)? as u32),
-        5 => {
-            let val = val.wrapping_sub(b'0');
-            if val <= 9 {
-                Ok(val as u32 * 1_0000 + parse_4_chars(&s[1..])? as u32)
-            } else {
-                Err(PIE {
-                    kind: IntErrorKind::InvalidDigit,
-                })
-            }
-        }
-        6 => {
-            // let result = parse_4_chars(s)? as u32 * 100;
-            // let val = parse_2_chars(&s[4..])?;
-            parse_6_chars(s)
-        }
-        7 => {
-            let result = parse_6_chars(&s[1..])?;//parse_4_chars(s)? as u32 * 100;
-//            let val = parse_2_chars(&s[4..])?;
-            let val = val.wrapping_sub(b'0');
-            // result += val as u32;
-            // result *= 10;
-            // let val = s[6].wrapping_sub(b'0');
-            if val <= 9 {
-                Ok((val as u32) * 1000_000 + result)
-            } else {
-                Err(PIE {
-                    kind: IntErrorKind::InvalidDigit,
-                })
-            }
-        }
-        8 => parse_8_chars(&s),
-        9 => {
-            let val = val.wrapping_sub(b'0') as u32;
-            let result = parse_8_chars(&s[1..])?;
-            if val <= 9 {
-                Ok(result + (val * 100_000_000))
-            } else {
-                Err(PIE {
-                    kind: IntErrorKind::InvalidDigit,
-                })
-            }
-        }
-        10 => {
-            let mut val = val.wrapping_sub(b'0') as u32;
-            let mut val2 = s[1].wrapping_sub(b'0') as u32;
-            if (val <= 4) & (val2 <= 9) {
-                let mut result = parse_8_chars(&s[2..])?;
-                val *= 1_000_000_000;
-                val2 *= 100_000_000;
-                result += val;
-                match result.checked_add(val2) {
-                    Some(val) => Ok(val),
-                    None => Err(PIE { kind: PosOverflow }),
-                }
-            } else {
-                return Err(PIE { kind: PosOverflow });
-            }
-        }
-        _ => Err(PIE { kind: PosOverflow }),
-    }
-}
+// pub fn parse_u32_challengerXX(s: &str) -> Result<u32, PIE> {
+//     let mut s = s.as_bytes();
+//     let mut l = s.len();
+//     let val = match s.get(0) {
+//         Some(val) => {
+//             if *val != b'+' {
+//                 if l == 1 {
+//                     let val = val.wrapping_sub(b'0');
+//                     return if val <= 9 {
+//                         Ok(val as u32)
+//                     } else {
+//                         Err(PIE {
+//                             kind: IntErrorKind::InvalidDigit,
+//                         })
+//                     }
+//                 }
+//                 val
+//             } else {
+//                 s = &s[1..];
+//                 match s.get(0) {
+//                     Some(val) => {
+//                         l -= 1;
+//                         if l == 1 {
+//                             let val = val.wrapping_sub(b'0');
+//                             return if val <= 9 {
+//                                 Ok(val as u32)
+//                             } else {
+//                                 Err(PIE {
+//                                     kind: IntErrorKind::InvalidDigit,
+//                                 })
+//                             }
+//                         }
+//                         val
+//                     },
+//                     None => return Err(PIE { kind: InvalidDigit }),
+//                 }
+//             }
+//         }
+//         None => return Err(PIE { kind: Empty }),
+//     };
+//     match l {
+//         // 1 => {
+//         //     let val = val.wrapping_sub(b'0');
+//         //     if val <= 9 {
+//         //         Ok(val as u32)
+//         //     } else {
+//         //         Err(PIE {
+//         //             kind: IntErrorKind::InvalidDigit,
+//         //         })
+//         //     }
+//         // }
+//         2 => {
+//             let val = val.wrapping_sub(b'0');
+//             let val2 = s[1].wrapping_sub(b'0');
+//             if (val <= 9) & (val2 <= 9) {
+//                 Ok((val * 10 + val2) as u32)
+//             } else {
+//                 Err(PIE {
+//                     kind: IntErrorKind::InvalidDigit,
+//                 })
+//             }
+//         }
+//         3 => {
+//             let val = val.wrapping_sub(b'0');
+//             let val2 = s[1].wrapping_sub(b'0');
+//             let val3 = s[2].wrapping_sub(b'0');
+//             if (val <= 9) & (val2 <= 9) & (val3 <= 9) {
+//                 Ok(val as u32 * 100 + (val2 * 10 + val3) as u32)
+//             } else {
+//                 Err(PIE {
+//                     kind: IntErrorKind::InvalidDigit,
+//                 })
+//             }
+//         }
+//         4 => Ok(parse_4_chars(s)? as u32),
+//         5 => {
+//             let val = val.wrapping_sub(b'0');
+//             if val <= 9 {
+//                 Ok(val as u32 * 1_0000 + parse_4_chars(&s[1..])? as u32)
+//             } else {
+//                 Err(PIE {
+//                     kind: IntErrorKind::InvalidDigit,
+//                 })
+//             }
+//         }
+//         6 => {
+//             // let result = parse_4_chars(s)? as u32 * 100;
+//             // let val = parse_2_chars(&s[4..])?;
+//             parse_6_chars(s)
+//         }
+//         7 => {
+//             let result = parse_6_chars(&s[1..])?;//parse_4_chars(s)? as u32 * 100;
+// //            let val = parse_2_chars(&s[4..])?;
+//             let val = val.wrapping_sub(b'0');
+//             // result += val as u32;
+//             // result *= 10;
+//             // let val = s[6].wrapping_sub(b'0');
+//             if val <= 9 {
+//                 Ok((val as u32) * 1000_000 + result)
+//             } else {
+//                 Err(PIE {
+//                     kind: IntErrorKind::InvalidDigit,
+//                 })
+//             }
+//         }
+//         8 => parse_8_chars(&s),
+//         9 => {
+//             let val = val.wrapping_sub(b'0') as u32;
+//             let result = parse_8_chars(&s[1..])?;
+//             if val <= 9 {
+//                 Ok(result + (val * 100_000_000))
+//             } else {
+//                 Err(PIE {
+//                     kind: IntErrorKind::InvalidDigit,
+//                 })
+//             }
+//         }
+//         10 => {
+//             let mut val = val.wrapping_sub(b'0') as u32;
+//             let mut val2 = s[1].wrapping_sub(b'0') as u32;
+//             if (val <= 4) & (val2 <= 9) {
+//                 let mut result = parse_8_chars(&s[2..])?;
+//                 val *= 1_000_000_000;
+//                 val2 *= 100_000_000;
+//                 result += val;
+//                 match result.checked_add(val2) {
+//                     Some(val) => Ok(val),
+//                     None => Err(PIE { kind: PosOverflow }),
+//                 }
+//             } else {
+//                 return Err(PIE { kind: PosOverflow });
+//             }
+//         }
+//         _ => Err(PIE { kind: PosOverflow }),
+//     }
+// }
 
 /// Parses from 0 -> 4_294_967_295 (10 digits and optionally +)
 pub fn parse_u32(s: &str) -> Result<u32, PIE> {
@@ -769,6 +769,109 @@ pub fn parse_u32(s: &str) -> Result<u32, PIE> {
         }
     }
 }
+
+
+/// Parses from 0 -> 4_294_967_295 (10 digits and optionally +)
+pub fn parse_u32_challenger(s: &str) -> Result<u32, PIE> {
+    let mut s = s.as_bytes();
+    let val = match s.get(0) {
+        Some(val) => {
+            let val = val.wrapping_sub(b'0');
+            if val <= 9 {
+                val
+            } else {
+                if val == PLUS {
+                    s = &s[1..];
+                    match s.get(0) {
+                        Some(val2) => {
+                            let val2 = (*val2).wrapping_sub(b'0');
+                            if val2 <= 9 {
+                                val2
+                            } else {
+                                return Err(PIE {
+                                    kind: IntErrorKind::InvalidDigit,
+                                });
+                            }
+                        }
+                        None => return Err(PIE { kind: InvalidDigit }),
+                    }
+                } else {
+                    return Err(PIE {
+                        kind: IntErrorKind::InvalidDigit,
+                    });
+                }
+            }
+        }
+        None => return Err(PIE { kind: Empty }),
+    };
+    let l = s.len();
+    unsafe {
+        match l {
+            1 => Ok(val as u32),
+            2 => {
+                let val2 = s.get_unchecked(1).wrapping_sub(b'0');
+                if val2 <= 9 {
+                    Ok((val * 10 + val2) as u32)
+                } else {
+                    Err(PIE {
+                        kind: IntErrorKind::InvalidDigit,
+                    })
+                }
+            }
+            3 => {
+                let val2 = s.get_unchecked(1).wrapping_sub(b'0');
+                let val3 = s.get_unchecked(2).wrapping_sub(b'0');
+                if (val2 <= 9) & (val3 <= 9) {
+                    Ok(val as u32 * 100 + (val2 * 10 + val3) as u32)
+                } else {
+                    Err(PIE {
+                        kind: IntErrorKind::InvalidDigit,
+                    })
+                }
+            }
+            4 => Ok(parse_4_chars(s)? as u32),
+            5 => Ok(val as u32 * 1_0000 + parse_4_chars(&s[1..])? as u32),
+            6 => {
+                let val2 = s.get_unchecked(1).wrapping_sub(b'0');
+                if val2 <= 9 {
+                    let result = parse_4_chars(&s[2..])? as u32;
+                    Ok(val as u32 * 10_0000 + val2 as u32 * 1_0000 + result)
+                } else {
+                    Err(PIE {
+                        kind: IntErrorKind::InvalidDigit,
+                    })
+                }
+            }
+            7 => {
+                let val2 = parse_4_chars(&s[1..])? as u32 * 100;
+                let val3 = parse_2_chars(&s[5..])? as u32;
+                Ok(val as u32 * 1_000_000 + val2 + val3)
+            }
+            8 => parse_8_chars(&s),
+            9 => {
+                let result = parse_8_chars(&s[1..])?;
+                Ok(result + (val as u32 * 100_000_000))
+            }
+            10 => {
+                let mut val2 = s.get_unchecked(1).wrapping_sub(b'0') as u32;
+                if (val <= 4) & (val2 <= 9) {
+                    let mut result = parse_8_chars(&s[2..])?;
+                    let val = val as u32 * 1_000_000_000;
+                    val2 *= 100_000_000;
+                    result += val;
+                    match result.checked_add(val2) {
+                        Some(val) => Ok(val),
+                        None => Err(PIE { kind: PosOverflow }),
+                    }
+                } else {
+                    return Err(PIE { kind: PosOverflow });
+                }
+            }
+            _ => Err(PIE { kind: PosOverflow }),
+        }
+    }
+}
+
 
 // DEAD END: Tried to fold in the check of '+' but not fast enough.
 // pub fn parse_u32(s: &str) -> Result<u32, ()> {
@@ -2738,37 +2841,37 @@ fn parse_16_chars(s: &[u8]) -> Result<u64, PIE> {
     const MASK_HI: u128 = 0xf0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0u128;
     const ASCII_ZEROS: u128 = 0x30303030303030303030303030303030u128;
 
-    let mut chunk: u128 = 0u128;
+    //let mut chunk: u128 = 0u128;
     unsafe {
-        std::ptr::copy_nonoverlapping(s.as_ptr() as *const u128, &mut chunk, 1);
-    }
+        //std::ptr::copy_nonoverlapping(s.as_ptr() as *const u128, &mut chunk, 1);
+    
+        let chunk = *(s.as_ptr() as *const u128) ^ ASCII_ZEROS;
+        if (chunk & MASK_HI) | (chunk + 0x76767676767676767676767676767676u128 & 0x80808080808080808080808080808080u128) == 0 {
+            // 1-byte mask trick (works on 8 pairs of single digits)
+            let lower_digits = (chunk & 0x0f000f000f000f000f000f000f000f00) >> 8;
+            let upper_digits = (chunk & 0x000f000f000f000f000f000f000f000f) * 10;
+            let chunk = lower_digits + upper_digits;
 
-    let chunk = chunk ^ ASCII_ZEROS;
-    if (chunk & MASK_HI) | (chunk + 0x76767676767676767676767676767676u128 & 0x80808080808080808080808080808080u128) == 0 {
-        // 1-byte mask trick (works on 8 pairs of single digits)
-        let lower_digits = (chunk & 0x0f000f000f000f000f000f000f000f00) >> 8;
-        let upper_digits = (chunk & 0x000f000f000f000f000f000f000f000f) * 10;
-        let chunk = lower_digits + upper_digits;
+            // 2-byte mask trick (works on 4 pairs of two digits)
+            let lower_digits = (chunk & 0x00ff000000ff000000ff000000ff0000) >> 16;
+            let upper_digits = (chunk & 0x000000ff000000ff000000ff000000ff) * 100;
+            let chunk = lower_digits + upper_digits;
 
-        // 2-byte mask trick (works on 4 pairs of two digits)
-        let lower_digits = (chunk & 0x00ff000000ff000000ff000000ff0000) >> 16;
-        let upper_digits = (chunk & 0x000000ff000000ff000000ff000000ff) * 100;
-        let chunk = lower_digits + upper_digits;
+            // 4-byte mask trick (works on 2 pair of four digits)
+            let lower_digits = (chunk & 0x0000ffff000000000000ffff00000000) >> 32;
+            let upper_digits = (chunk & 0x000000000000ffff000000000000ffff) * 100_00;
+            let chunk = lower_digits + upper_digits;
 
-        // 4-byte mask trick (works on 2 pair of four digits)
-        let lower_digits = (chunk & 0x0000ffff000000000000ffff00000000) >> 32;
-        let upper_digits = (chunk & 0x000000000000ffff000000000000ffff) * 100_00;
-        let chunk = lower_digits + upper_digits;
-
-        // 8-byte mask trick (works on a pair of eight digits)
-        let lower_digits = (chunk & 0x00000000ffffffff0000000000000000) >> 64;
-        let upper_digits = (chunk & 0x000000000000000000000000ffffffff) * 100_00_00_00;
-        let chunk = lower_digits + upper_digits;
-        Ok(chunk as u64) //u64 can guarantee to contain 19 digits.
-    } else {
-        return Err(PIE {
-            kind: IntErrorKind::InvalidDigit,
-        });
+            // 8-byte mask trick (works on a pair of eight digits)
+            let lower_digits = (chunk & 0x00000000ffffffff0000000000000000) >> 64;
+            let upper_digits = (chunk & 0x000000000000000000000000ffffffff) * 100_00_00_00;
+            let chunk = lower_digits + upper_digits;
+            Ok(chunk as u64) //u64 can guarantee to contain 19 digits.
+        } else {
+            return Err(PIE {
+                kind: IntErrorKind::InvalidDigit,
+            });
+        }
     }
 }
 
@@ -2779,11 +2882,11 @@ fn parse_8_chars(s: &[u8]) -> Result<u32, PIE> {
     const ASCII_ZEROS: u64 = 0x3030303030303030u64;
 
     unsafe {
-        let chunk = core::mem::MaybeUninit::<u64>::uninit();
-        let mut chunk: u64 = std::mem::transmute(chunk);
-        std::ptr::copy_nonoverlapping(s.as_ptr() as *const u64, &mut chunk, 1);
+        //let chunk = core::mem::MaybeUninit::<u64>::uninit();
+        //let mut chunk: u64 = std::mem::transmute(chunk);
+        //std::ptr::copy_nonoverlapping(s.as_ptr() as *const u64, &mut chunk, 1);
 
-        let chunk = chunk ^ ASCII_ZEROS;
+        let chunk = *(s.as_ptr() as *const u64) ^ ASCII_ZEROS;
         if (chunk & MASK_HI) | (chunk + 0x7676767676767676u64 & 0x8080808080808080u64) == 0 {
             // 1-byte mask trick (works on 4 pairs of single digits)
             let lower_digits = (chunk & 0x0f000f000f000f00) >> 8;
@@ -2808,47 +2911,60 @@ fn parse_8_chars(s: &[u8]) -> Result<u32, PIE> {
     }
 }
 
-#[inline]
-fn parse_6_chars(s: &[u8]) -> Result<u32, PIE> {
-    //SAFETY:
-    debug_assert!(s.len() >= 6);
+// //Learned: Expanding to u64 costs too much.
+// #[inline]
+// fn parse_6_chars2(s: &[u8]) -> Result<u32, PIE> {
+//     //SAFETY:
+//     debug_assert!(s.len() >= 6);
 
-    const MASK_HI: u32 = 0xf0f0f0f0u32;
-    const ASCII_ZEROS: u32 = 0x30303030u32;
-    let mut chunk: u32 = 0;
-    const MASK_HI2: u16 = 0xf0f0u16;
-    const ASCII_ZEROS2: u16 = 0x3030u16;//0b0011__0000_0011_0000
-    let mut chunk2: u16 = 0;
+//     const MASK_HI: u32 = 0xf0f0f0f0u32;
+//     const ASCII_ZEROS: u32 = 0x30303030u32;
+//     let mut chunk: u32 = 0;
+//     const MASK_HI2: u16 = 0xf0f0u16;
+//     const ASCII_ZEROS2: u16 = 0x3030u16;//0b0011__0000_0011_0000
+//     let mut chunk2: u16 = 0;
 
-    unsafe {
-        std::ptr::copy_nonoverlapping(s.as_ptr() as *const u32, &mut chunk, 1);
-        std::ptr::copy_nonoverlapping(s.get_unchecked(4..).as_ptr() as *const u16, &mut chunk2, 1);
-    }
+//     unsafe {
+//         std::ptr::copy_nonoverlapping(s.as_ptr() as *const u32, &mut chunk, 1);
+//         std::ptr::copy_nonoverlapping(s.get_unchecked(4..).as_ptr() as *const u16, &mut chunk2, 1);
+//     }
 
-    // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
-    let chunk = chunk ^ ASCII_ZEROS;
-    let chunk2 = chunk2 ^ ASCII_ZEROS2;
-    if (chunk & MASK_HI) + (chunk + 0x76767676u32 & 0x80808080u32) +
-        (chunk2 & MASK_HI2) as u32 + (chunk2 + 0x7676u16 & 0x8080u16) as u32 == 0 {
-        // 1-byte mask trick (works on 4 pairs of single digits)
-        let lower_digits = (chunk & 0x0f000f00) >> 8;
-        let upper_digits = (chunk & 0x000f000f) * 10;
-        let chunk = lower_digits + upper_digits;
+//     // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
+//     let chunk = chunk ^ ASCII_ZEROS;
+//     let chunk2 = chunk2 ^ ASCII_ZEROS2;
+//     if (chunk & MASK_HI) + (chunk + 0x76767676u32 & 0x80808080u32) +
+//         (chunk2 & MASK_HI2) as u32 + (chunk2 + 0x7676u16 & 0x8080u16) as u32 == 0 {
+//         // 1-byte mask trick (works on 4 pairs of single digits)
+//         let lower_digits = (chunk & 0x0f000f00) >> 8;
+//         let upper_digits = (chunk & 0x000f000f) * 10;
+//         let chunk = lower_digits + upper_digits;
 
-        // 2-byte mask trick (works on 2 pairs of two digits)
-        let lower_digits = (chunk & 0x00ff0000) >> 16;
-        let upper_digits = (chunk & 0x000000ff) * 100;
-        let chunk = lower_digits + upper_digits;
+//         // 2-byte mask trick (works on 2 pairs of two digits)
+//         let lower_digits = (chunk & 0x00ff0000) >> 16;
+//         let upper_digits = (chunk & 0x000000ff) * 100;
+//         let chunk = lower_digits + upper_digits;
 
-        let lower_digits = (chunk2 & 0x0f00) >> 8;
-        let upper_digits = (chunk2 & 0x000f) * 10;
-        Ok(chunk as u32 * 100 + (lower_digits + upper_digits) as u32) //u16 can guarantee to hold 4 digits
-    } else {
-        Err(PIE {
-            kind: IntErrorKind::InvalidDigit,
-        })
-    }
-}
+//         let lower_digits = (chunk2 & 0x0f00) >> 8;
+//         let upper_digits = (chunk2 & 0x000f) * 10;
+//         Ok(chunk as u32 * 100 + (lower_digits + upper_digits) as u32) //u16 can guarantee to hold 4 digits
+//     } else {
+//         Err(PIE {
+//             kind: IntErrorKind::InvalidDigit,
+//         })
+//     }
+// }
+
+
+// #[inline]
+// fn check_2_chars(s: &[u8]) -> bool {
+//     //SAFETY:
+//     debug_assert!(s.len() >= 2);
+//     unsafe {
+//         //std::ptr::copy_nonoverlapping(s.get_unchecked(4..).as_ptr() as *const u16, &mut chunk2, 1);
+//         let chunk = *(s.get_unchecked(..2).as_ptr() as *const u16) ^ 0x3030u16;
+//         (chunk & 0xf0f0u16) | (chunk + 0x7676u16 & 0x8080u16) == 0
+//     }
+// }
 
 #[inline]
 fn parse_4_chars(s: &[u8]) -> Result<u16, PIE> {
@@ -2857,29 +2973,30 @@ fn parse_4_chars(s: &[u8]) -> Result<u16, PIE> {
 
     const MASK_HI: u32 = 0xf0f0f0f0u32;
     const ASCII_ZEROS: u32 = 0x30303030u32;
-    let mut chunk: u32 = 0;
+    //let mut chunk: u32 = 0;
 
     unsafe {
-        std::ptr::copy_nonoverlapping(s.as_ptr() as *const u32, &mut chunk, 1);
-    }
+//        std::ptr::copy_nonoverlapping(s.as_ptr() as *const u32, &mut chunk, 1);
+    
 
-    // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
-    let chunk = chunk ^ ASCII_ZEROS;
-    if (chunk & MASK_HI) | (chunk + 0x76767676u32 & 0x80808080u32) == 0 {
-        // 1-byte mask trick (works on 4 pairs of single digits)
-        let lower_digits = (chunk & 0x0f000f00) >> 8;
-        let upper_digits = (chunk & 0x000f000f) * 10;
-        let chunk = lower_digits + upper_digits;
+        // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
+        let chunk = *(s.as_ptr() as *const u32) ^ ASCII_ZEROS;
+        if (chunk & MASK_HI) | (chunk + 0x76767676u32 & 0x80808080u32) == 0 {
+            // 1-byte mask trick (works on 4 pairs of single digits)
+            let lower_digits = (chunk & 0x0f000f00) >> 8;
+            let upper_digits = (chunk & 0x000f000f) * 10;
+            let chunk = lower_digits + upper_digits;
 
-        // 2-byte mask trick (works on 2 pairs of two digits)
-        let lower_digits = (chunk & 0x00ff0000) >> 16;
-        let upper_digits = (chunk & 0x000000ff) * 100;
-        let chunk = lower_digits + upper_digits;
-        Ok(chunk as u16) //u16 can guarantee to hold 4 digits
-    } else {
-        Err(PIE {
-            kind: IntErrorKind::InvalidDigit,
-        })
+            // 2-byte mask trick (works on 2 pairs of two digits)
+            let lower_digits = (chunk & 0x00ff0000) >> 16;
+            let upper_digits = (chunk & 0x000000ff) * 100;
+            let chunk = lower_digits + upper_digits;
+            Ok(chunk as u16) //u16 can guarantee to hold 4 digits
+        } else {
+            Err(PIE {
+                kind: IntErrorKind::InvalidDigit,
+            })
+        }
     }
 }
 
@@ -2889,23 +3006,23 @@ fn parse_2_chars(s: &[u8]) -> Result<u8, PIE> {
     debug_assert!(s.len() >= 2);
     const MASK_HI: u16 = 0xf0f0u16;
     const ASCII_ZEROS: u16 = 0x3030u16;//0b0011__0000_0011_0000
-    let mut chunk: u16 = 0;
 
     unsafe {
-        std::ptr::copy_nonoverlapping(s.as_ptr() as *const u16, &mut chunk, 1);
-    }
-
-    let chunk = chunk ^ ASCII_ZEROS;
-    if (chunk & MASK_HI) | (chunk + 0x7676u16 & 0x8080u16) == 0 {
-        // 1-byte mask trick (works on a pair of single digits)
-        let lower_digits = (chunk & 0x0f00) >> 8;
-        let upper_digits = (chunk & 0x000f) * 10;
-        let chunk = lower_digits + upper_digits;
-        Ok(chunk as u8) // u8 can guarantee to hold 2 chars.
-    } else {
-        return Err(PIE {
-            kind: IntErrorKind::InvalidDigit,
-        });
+        // let mut chunk: u16 = 0;
+        // std::ptr::copy_nonoverlapping(s.as_ptr() as *const u16, &mut chunk, 1);
+        
+        let chunk = *(s.as_ptr() as *const u16) ^ ASCII_ZEROS;
+        if (chunk & MASK_HI) | (chunk + 0x7676u16 & 0x8080u16) == 0 {
+            // 1-byte mask trick (works on a pair of single digits)
+            let lower_digits = (chunk & 0x0f00) >> 8;
+            let upper_digits = (chunk & 0x000f) * 10;
+            let chunk = lower_digits + upper_digits;
+            Ok(chunk as u8) // u8 can guarantee to hold 2 chars.
+        } else {
+            return Err(PIE {
+                kind: IntErrorKind::InvalidDigit,
+            });
+        }
     }
 }
 

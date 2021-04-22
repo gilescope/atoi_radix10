@@ -10,20 +10,20 @@ use atoi_radix10::*;
 macro_rules! ok_bench {
     ($target_type:ty, $prefix:literal, $meth:expr, $std_method:expr, $challenger_meth:expr, $values:expr) => {
         paste! {
-            fn [<bench_parse_ $prefix $target_type>](c: &mut Criterion//<CyclesPerByte> 
+            fn [<bench_parse_ $prefix $target_type>](c: &mut Criterion<CyclesPerByte> 
                       ) {
                 let mut group = c.benchmark_group(stringify!([<$meth $prefix>]));
-                group //.sample_size(30)
-                    .warm_up_time(std::time::Duration::from_millis(1000))
-                    .measurement_time(std::time::Duration::from_millis(1000));
+                //group //.sample_size(30)
+                //    .warm_up_time(std::time::Duration::from_millis(1000))
+                //    .measurement_time(std::time::Duration::from_millis(2000));
                 for num_str in $values.iter() {
                     let num : $target_type = num_str.parse().unwrap();
                     assert_eq!($meth(&num_str), Ok(num), " when atoi_radix10 parsing {}", num_str);
                     assert_eq!($challenger_meth(&num_str), Ok(num), " when challenger parsing {}", num_str);
                     group.throughput(Throughput::Bytes(num_str.len() as u64));
-                    group.bench_with_input(BenchmarkId::new(format!("{}std",$prefix), num), &num_str, |b, &val| {
-                        b.iter(|| $std_method(&val));
-                    });
+                    // group.bench_with_input(BenchmarkId::new(format!("{}std",$prefix), num), &num_str, |b, &val| {
+                    //     b.iter(|| $std_method(&val));
+                    // });
                     group.bench_with_input(BenchmarkId::new(format!("{}challenger",$prefix), num), &num_str, |b, &val| {
                         b.iter(|| $challenger_meth(&val));
                     });
@@ -185,7 +185,7 @@ ok_bench!(
 
 criterion_group!(
     name = benches;
-    config = Criterion::default();// .with_measurement(CyclesPerByte);
+    config = Criterion::default().with_measurement(CyclesPerByte);
     targets = bench_parse_u8,
     bench_parse_u16,
     bench_parse_u32,

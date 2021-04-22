@@ -12,6 +12,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "atoi_radix10"
+version = "0.2.0"
+dependencies = [
+ "atoi",
+ "btoi",
+ "cluatoi",
+ "criterion",
+ "criterion-cycles-per-byte",
+ "itoa",
+ "paste",
+]
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -123,6 +136,15 @@ dependencies = [
  "serde_json",
  "tinytemplate",
  "walkdir",
+]
+
+[[package]]
+name = "criterion-cycles-per-byte"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d34485a578330c7a91ccf064674f3739a7aebbf3b9d7fd498a6d3e8f7473c96"
+dependencies = [
+ "criterion",
 ]
 
 [[package]]
@@ -316,18 +338,6 @@ name = "oorandom"
 version = "11.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ab1bc2a289d34bd04a330323ac98a1b4bc82c9d9fcb1e66b63caa84da26b575"
-
-[[package]]
-name = "parseint"
-version = "0.1.0"
-dependencies = [
- "atoi",
- "btoi",
- "cluatoi",
- "criterion",
- "itoa",
- "paste",
-]
 
 [[package]]
 name = "paste"
