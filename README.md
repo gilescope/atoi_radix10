@@ -25,9 +25,9 @@ We try to obey the rule of small numbers and make sure single digit numbers are 
 | u32  | 14                | 7                     |
 | i32  | 10                | 8                     | (+/-8 chars worst) 
 | u64  | 24                | 12                    |                    
-| i64  | 21                | 11.5                  |
+| i64  | 21                | 12                    |
 | u128 | 96                | 25                    |
-| i128 |                   |                       |
+| i128 | 360               | 25                    |
 
 How this works
 ==============
@@ -38,3 +38,9 @@ Optimisations that didn't
 Things that didn't seem to have any effect:
 
    * casting len from usize to u8.
+
+TODO
+====
+
+   * fuzz
+   * does it work on opposite-endien than x86?

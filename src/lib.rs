@@ -10,7 +10,7 @@ mod parse_i32;
 mod parse_i64;
 mod parse_u128;
 mod parse_u64;
-//mod parse_i128;
+mod parse_i128;
 
 pub use parse_i16::{parse_i16, parse_i16_challenger};
 pub use parse_i8::{parse_i8, parse_i8_challenger};
@@ -21,7 +21,7 @@ pub use parse_i32::{parse_i32, parse_i32_challenger};
 pub use parse_u64::{parse_u64, parse_u64_challenger};
 pub use parse_i64::{parse_i64, parse_i64_challenger};
 pub use parse_u128::{parse_u128, parse_u128_challenger};
-//pub use parse_i128::{parse_i128, parse_i128_challenger};
+pub use parse_i128::{parse_i128, parse_i128_challenger};
 
 pub fn std_parse<T>(s: &str) -> Result<T, ()>
 where
@@ -333,7 +333,7 @@ mod tests {
     use paste::paste;
 
     macro_rules! gen_tests {
-        ($target_type:ty, $max:expr, $step: expr, $max_chars: literal,$postfix: literal, $specific: literal) => {
+        ($target_type:ty, $min:expr, $max:expr, $step: expr, $max_chars: literal,$postfix: literal, $specific: literal) => {
             paste! {
                 #[test]
                 fn [<test_ $target_type _specific $postfix>]() {
@@ -381,7 +381,7 @@ mod tests {
 
                 #[test]
                 fn [<test_ $target_type $postfix>]() {
-                    for i in ($target_type::MIN..$max as $target_type).step_by($step) {
+                    for i in ($min..$max as $target_type).step_by($step) {
                         let s = i.to_string();
                         let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                         assert_eq!(p, [<parse_ $target_type $postfix>](&s).map_err(|_| ()), "fail to parse: '{}'", &s);
@@ -390,7 +390,7 @@ mod tests {
 
                 #[test]
                 fn [<test_ $target_type _plus $postfix>]() {
-                    for i in ($target_type::MIN..$max as $target_type).step_by($step) {
+                    for i in ($min..$max as $target_type).step_by($step) {
                         let mut s = i.to_string();
                         s.insert(0, '+');
                         let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
@@ -401,34 +401,46 @@ mod tests {
         }
     }
 
-    gen_tests!(u8, u8::MAX, 1, 3, "", "1");
-    gen_tests!(u8, u8::MAX, 1, 3, "_challenger", "1");
+    gen_tests!(u8, u8::MIN, u8::MAX, 1, 3, "", "1");
+    gen_tests!(u8, u8::MIN, u8::MAX, 1, 3, "_challenger", "1");
 
-    gen_tests!(i8, i8::MAX, 1, 3, "", "1");
-    gen_tests!(i8, i8::MAX, 1, 3, "_challenger", "1");
+    gen_tests!(i8, i8::MIN, i8::MAX, 1, 3, "", "1");
+    gen_tests!(i8, i8::MIN, i8::MAX, 1, 3, "_challenger", "1");
 
-    gen_tests!(u16, u16::MAX, 1, 5, "", "1");
-    gen_tests!(u16, u16::MAX, 1, 5, "_challenger", "1");
+    gen_tests!(u16, u16::MIN, u16::MAX, 1, 5, "", "1");
+    gen_tests!(u16, u16::MIN, u16::MAX, 1, 5, "_challenger", "1");
 
-    gen_tests!(i16, i64::MAX, 1, 5, "", "1");
-    gen_tests!(i16, i64::MAX, 1, 5, "_challenger", "1");
+    gen_tests!(i16, i16::MIN, i16::MAX, 1, 5, "", "1");
+    gen_tests!(i16, i16::MIN, i16::MAX, 1, 5, "_challenger", "1");
 
-    gen_tests!(u32, u32::MAX, 10_301, 10, "", "1");
-    gen_tests!(u32, u32::MAX, 10_301, 10, "_challenger", "1");
+    gen_tests!(u32, u32::MIN, u32::MAX, 10_301, 10, "", "1");
+    gen_tests!(u32, u32::MIN, u32::MAX, 10_301, 10, "_challenger", "1");
 
-    gen_tests!(i32, i32::MAX, 10_301, 10, "", "1");
-    gen_tests!(i32, i32::MAX, 10_301, 10, "_challenger", "1");
+    gen_tests!(i32, i32::MIN, i32::MAX, 10_301, 10, "", "1");
+    gen_tests!(i32, i32::MIN, i32::MAX, 10_301, 10, "_challenger", "1");
 
-    gen_tests!(u64, u64::MAX, 100_301_000_000_000, 20, "", "1");
-    gen_tests!(u64, u64::MAX, 100_301_000_000_000, 20, "_challenger", "1");
+    gen_tests!(u64, u64::MIN, u64::MAX, 100_301_000_000_000, 20, "", "1");
+    gen_tests!(u64, u64::MIN, u64::MAX, 100_301_000_000_000, 20, "_challenger", "1");
 
-    gen_tests!(i64, i64::MAX, 100_301_000_000_000, 19, "", "-999993949854775808");
-                                                             
-    gen_tests!(i64, i64::MAX, 100_301_000_000_000, 19, "_challenger", "1");
+    gen_tests!(i64, i64::MIN, i64::MAX, 100_301_000_000_000, 19, "", "-999993949854775808");
 
-    gen_tests!(u128, u64::MAX, 100_301_000_000_000, 39, "", "+0");
+    gen_tests!(i64, i64::MIN, i64::MAX, 100_301_000_000_000, 19, "_challenger", "1");
+
+    gen_tests!(u128, u64::MIN as u128, u64::MAX, 100_301_000_000_000, 39, "", "+0");
     gen_tests!(
         u128,
+        u64::MIN as u128,
+        u64::MAX,
+        100_301_000_000_000,
+        39,
+        "_challenger",
+        "123456789012345678901234567890123456789"
+    );
+
+    gen_tests!(i128, u64::MIN as i128, u64::MAX, 100_301_000_000_000, 39, "", "-170141183460469231731687303715884105728");
+    gen_tests!(
+        i128,
+        u64::MIN as i128,
         u64::MAX,
         100_301_000_000_000,
         39,
