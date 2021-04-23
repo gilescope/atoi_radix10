@@ -67,6 +67,7 @@ pub struct ParseIntError2 {
 
 type PIE = ParseIntError2;
 
+#[cfg(target_endian = "little")]
 #[inline]
 fn parse_16_chars(s: &[u8]) -> Result<u64, PIE> {
     debug_assert!(s.len() >= 16);
@@ -111,6 +112,7 @@ fn parse_16_chars(s: &[u8]) -> Result<u64, PIE> {
     }
 }
 
+#[cfg(target_endian = "little")]
 #[inline]
 fn parse_8_chars(s: &[u8]) -> Result<u32, PIE> {
     debug_assert!(s.len() >= 8);
@@ -201,6 +203,7 @@ fn parse_8_chars(s: &[u8]) -> Result<u32, PIE> {
 //     }
 // }
 
+#[cfg(target_endian = "little")]
 #[inline]
 fn parse_4_chars(s: &[u8]) -> Result<u16, PIE> {
     //SAFETY:

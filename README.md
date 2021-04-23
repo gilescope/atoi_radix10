@@ -15,16 +15,19 @@ Notes:
 
 Goals:
 
-We try to obey the rule of small numbers and make sure single digit numbers are especially fast.
+An exploration of the fastest way to parse numbers without reading memory that you don't own. (Once happy with the result we can try and de-unsafe as much as possible
+while keeping the performance.)
 
-| type | std worst time ns | atoi_radix10 worst ns | notes              
+We try to obey the rule of small numbers and make sure single digit numbers are especially fast, and in general all numbers will be parsed faster than std.
+
+| type | std worst time ns | atoi_radix10 worst ns |
 | u8   | 6                 | 3.8                   |
 | i8   | 8.1               | 5                     |
 | u16  | 6.8               | 5.1                   |
 | i16  | 8                 | 5.5                   |
 | u32  | 14                | 7                     |
-| i32  | 10                | 8                     | (+/-8 chars worst) 
-| u64  | 24                | 12                    |                    
+| i32  | 10                | 8                     |
+| u64  | 24                | 12                    |
 | i64  | 21                | 12                    |
 | u128 | 96                | 25                    |
 | i128 | 360               | 25                    |
@@ -43,4 +46,4 @@ TODO
 ====
 
    * fuzz
-   * does it work on opposite-endien than x86?
+   * make work on big-endian
