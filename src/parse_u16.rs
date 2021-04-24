@@ -105,13 +105,13 @@ pub fn parse_u16_challenger(s: &str) -> Result<u16, PIE> {
             };
             Ok(val * 100 + parse_2_chars(&s[1..])? as u16)
         }
-        4 => parse_4_chars(s),
+        4 => parse_4_chars(s).map(|val| val as u16),
         5 => {
             let val = match s.get(0).map(|v| v.wrapping_sub(b'0')) {
                 Some(val) if val <= 6 => val as u16 * 10_000,
                 _ => return Err(PIE { kind: PosOverflow }),
             };
-            match val.checked_add(parse_4_chars(&s[1..])?) {
+            match val.checked_add(parse_4_chars(&s[1..])? as u16) {
                 Some(val) => Ok(val),
                 None => return Err(PIE { kind: PosOverflow }),
             }

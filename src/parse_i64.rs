@@ -1,12 +1,7 @@
-use super::{
-    parse_16_chars, parse_4_chars, parse_8_chars, ParseIntError2,
-    TENS_U64,
-};
+use super::{parse_16_chars, parse_4_chars, parse_8_chars, ParseIntError2, TENS_U64};
 use std::num::IntErrorKind::*;
 
 type PIE = ParseIntError2;
-
-
 
 /// Parses -9_223_372_036_854_775_808 -> 9_223_372_036_854_775_807 (up to 19 chars)
 pub fn parse_i64(s: &str) -> Result<i64, PIE> {
@@ -64,11 +59,13 @@ pub fn parse_i64(s: &str) -> Result<i64, PIE> {
                                 return match val16.checked_add(res) {
                                     Some(val) => Ok(-val),
                                     None => {
-                                        if val16 == 3_372_036_854_775_808 && res == 9220_000_000_000_000_000 {
+                                        if val16 == 3_372_036_854_775_808
+                                            && res == 9220_000_000_000_000_000
+                                        {
                                             return Ok(i64::MIN);
                                         }
                                         Err(PIE { kind: PosOverflow })
-                                    },
+                                    }
                                 };
                             }
                             return Err(PIE { kind: PosOverflow });
@@ -84,7 +81,7 @@ pub fn parse_i64(s: &str) -> Result<i64, PIE> {
                     if l & 4 != 0 {
                         res += parse_4_chars(&s)? as i64;
                     }
-                    return Ok(-res)
+                    return Ok(-res);
                 } else if *val == b'+' {
                     s = &s.get_unchecked(1..);
                     match s.get(0) {
@@ -164,7 +161,6 @@ pub fn parse_i64(s: &str) -> Result<i64, PIE> {
     }
 }
 
-
 /// Parses -9_223_372_036_854_775_808 -> 9_223_372_036_854_775_807 (up to 19 chars)
 pub fn parse_i64_challenger(s: &str) -> Result<i64, PIE> {
     unsafe {
@@ -221,11 +217,13 @@ pub fn parse_i64_challenger(s: &str) -> Result<i64, PIE> {
                                 return match val16.checked_add(res) {
                                     Some(val) => Ok(-val),
                                     None => {
-                                        if val16 == 3_372_036_854_775_808 && res == 9220_000_000_000_000_000 {
+                                        if val16 == 3_372_036_854_775_808
+                                            && res == 9220_000_000_000_000_000
+                                        {
                                             return Ok(i64::MIN);
                                         }
                                         Err(PIE { kind: PosOverflow })
-                                    },
+                                    }
                                 };
                             }
                             return Err(PIE { kind: PosOverflow });
@@ -241,7 +239,7 @@ pub fn parse_i64_challenger(s: &str) -> Result<i64, PIE> {
                     if l & 4 != 0 {
                         res += parse_4_chars(&s)? as i64;
                     }
-                    return Ok(-res)
+                    return Ok(-res);
                 } else if *val == b'+' {
                     s = &s.get_unchecked(1..);
                     match s.get(0) {

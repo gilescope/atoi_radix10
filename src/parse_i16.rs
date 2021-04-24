@@ -49,7 +49,7 @@ pub fn parse_i16(s: &str) -> Result<i16, PIE> {
                         4 => parse_4_chars(s).map(|val| -(val as i16)),
                         5 => {
                             if val <= 3 {
-                                let result = val as u16 * 10_000 + parse_4_chars(&s[1..])?;
+                                let result = val as u16 * 10_000 + parse_4_chars(&s[1..])? as u16;
                                 if result <= 32767 {
                                     Ok(-(result as i16))
                                 } else if result == 32768 {
@@ -108,7 +108,7 @@ pub fn parse_i16(s: &str) -> Result<i16, PIE> {
                 4 => parse_4_chars(s).map(|val| val as i16),
                 5 => {
                     if val <= 3 {
-                        let result = val as u16 * 10_000 + parse_4_chars(&s[1..])?;
+                        let result = val as u16 * 10_000 + parse_4_chars(&s[1..])? as u16;
                         if result <= 32767 {
                             Ok(result as i16)
                         } else {
@@ -251,7 +251,7 @@ pub fn parse_i16_challenger(s: &str) -> Result<i16, PIE> {
                             6 => {
                                 if val <= 3 {
                                     let result =
-                                        val as u16 * 10_000 + parse_4_chars(&s.get_unchecked(2..))?;
+                                        val as u16 * 10_000 + parse_4_chars(&s.get_unchecked(2..))? as u16;
                                     if result <= 32767 {
                                         Ok(-(result as i16))
                                     } else if result == 32768 {
@@ -311,7 +311,7 @@ pub fn parse_i16_challenger(s: &str) -> Result<i16, PIE> {
                 }
                 5 => {
                     if val <= 3 {
-                        let result = val as u16 * 10_000 + parse_4_chars(&s[1..])?;
+                        let result = val as u16 * 10_000 + parse_4_chars(&s[1..])? as u16;
                         if result <= 32767 {
                             Ok(result as i16)
                         } else {

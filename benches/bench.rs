@@ -1,8 +1,8 @@
+use criterion::black_box;
 use criterion::BenchmarkId;
 use criterion::Throughput;
 use criterion::{criterion_group, criterion_main, Criterion};
 use criterion_cycles_per_byte::CyclesPerByte;
-
 use paste::paste;
 
 use atoi_radix10::*;
@@ -35,6 +35,42 @@ macro_rules! ok_bench {
             }
         }
     };
+}
+
+fn parse_chars_bench(c: &mut Criterion) {
+    let mut group = c.benchmark_group("parse_16_chars_bench_group");
+    //group //.sample_size(30)
+    //    .warm_up_time(std::time::Duration::from_millis(1000))
+    //    .measurement_time(std::time::Duration::from_millis(2000));
+    let num_str = "1234567812345678";
+    group.throughput(Throughput::Bytes(num_str.len() as u64));
+    group.bench_with_input(BenchmarkId::new("16", num_str), &num_str, |b, &_val| {
+        b.iter(|| parse_16_chars(black_box(num_str.as_bytes())));
+    });
+    let num_str = "12345678";
+    assert_eq!(parse_8_chars(num_str.as_bytes()), Ok(12345678));
+    group.throughput(Throughput::Bytes(num_str.len() as u64));
+    group.bench_with_input(BenchmarkId::new("8", num_str), &num_str, |b, &_val| {
+        b.iter(|| parse_8_chars(black_box(num_str.as_bytes())));
+    });
+    let num_str = "123456";
+    assert_eq!(parse_6_chars(num_str.as_bytes()), Ok(123456));
+    group.throughput(Throughput::Bytes(num_str.len() as u64));
+    group.bench_with_input(BenchmarkId::new("6", num_str), &num_str, |b, &_val| {
+        b.iter(|| parse_6_chars(black_box(num_str.as_bytes())));
+    });
+    let num_str = "1234";
+    group.throughput(Throughput::Bytes(num_str.len() as u64));
+    group.bench_with_input(BenchmarkId::new("4", num_str), &num_str, |b, &_val| {
+        b.iter(|| parse_4_chars(black_box(num_str.as_bytes())));
+    });
+    let num_str = "12";
+    group.throughput(Throughput::Bytes(num_str.len() as u64));
+    group.bench_with_input(BenchmarkId::new("2", num_str), &num_str, |b, &_val| {
+        b.iter(|| parse_2_chars(black_box(num_str.as_bytes())));
+    });
+   
+    group.finish();
 }
 
 ok_bench!(
@@ -121,7 +157,6 @@ ok_bench!(
     ]
 );
 
-
 ok_bench!(
     i32,
     "pos_",
@@ -142,7 +177,6 @@ ok_bench!(
         &i32::MAX.to_string()
     ]
 );
-
 
 ok_bench!(
     i32,
@@ -195,7 +229,6 @@ ok_bench!(
     ]
 );
 
-
 ok_bench!(
     i64,
     "pos_",
@@ -225,7 +258,6 @@ ok_bench!(
         &i64::MAX.to_string()
     ]
 );
-
 
 ok_bench!(
     i64,
@@ -289,7 +321,6 @@ ok_bench!(
     ]
 );
 
-
 ok_bench!(
     i128,
     "pos_",
@@ -321,7 +352,6 @@ ok_bench!(
         &i128::MAX.to_string()
     ]
 );
-
 
 ok_bench!(
     i128,
@@ -373,6 +403,7 @@ criterion_group!(
     bench_parse_neg_i64,
     bench_parse_pos_i128,
     bench_parse_neg_i128,
+    parse_chars_bench,
 );
 
 criterion_main!(benches);

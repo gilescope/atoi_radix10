@@ -1,6 +1,4 @@
-use super::{
-    parse_16_chars, parse_4_chars, parse_8_chars, ParseIntError2, PLUS, TENS_U128,
-};
+use super::{parse_16_chars, parse_4_chars, parse_8_chars, ParseIntError2, PLUS, TENS_U128};
 use std::num::IntErrorKind::*;
 
 type PIE = ParseIntError2;

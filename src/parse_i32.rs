@@ -1,4 +1,4 @@
-use super::{parse_2_chars, parse_4_chars, parse_8_chars, ParseIntError2, PLUS, MINUS};
+use super::{parse_2_chars, parse_4_chars, parse_8_chars, ParseIntError2, MINUS, PLUS};
 use std::num::IntErrorKind::*;
 
 type PIE = ParseIntError2;
@@ -28,7 +28,7 @@ pub fn parse_i32(s: &str) -> Result<i32, PIE> {
                     let l = s.len();
                     unsafe {
                         return match l {
-                            1 => {Ok(-(val as i32)) },
+                            1 => Ok(-(val as i32)),
                             2 => {
                                 let val2 = s.get_unchecked(1).wrapping_sub(b'0');
                                 if val2 <= 9 {
@@ -87,7 +87,7 @@ pub fn parse_i32(s: &str) -> Result<i32, PIE> {
                                 }
                             }
                             _ => Err(PIE { kind: NegOverflow }),
-                        }
+                        };
                     }
                 }
                 if val == PLUS {
@@ -171,7 +171,6 @@ pub fn parse_i32(s: &str) -> Result<i32, PIE> {
         }
     }
 }
-
 
 pub fn parse_i32_challenger(s: &str) -> Result<i32, PIE> {
     parse_i32(s)

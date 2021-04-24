@@ -1,6 +1,4 @@
-use super::{
-    parse_16_chars, parse_4_chars, parse_8_chars, ParseIntError2, TENS_U128,
-};
+use super::{parse_16_chars, parse_4_chars, parse_8_chars, ParseIntError2, TENS_U128};
 use std::num::IntErrorKind::*;
 
 type PIE = ParseIntError2;
@@ -9,7 +7,7 @@ pub fn parse_i128_challenger(s: &str) -> Result<i128, PIE> {
     parse_i128(s)
 }
 
-/// i128: -170141183460469231731687303715884105728 to 170141183460469231731687303715884105727, 
+/// i128: -170141183460469231731687303715884105728 to 170141183460469231731687303715884105727,
 /// (39 digits!)
 pub fn parse_i128(s: &str) -> Result<i128, PIE> {
     unsafe {
@@ -111,12 +109,14 @@ pub fn parse_i128(s: &str) -> Result<i128, PIE> {
                                 match val.checked_add(res) {
                                     Some(val) => Ok(-val),
                                     None => {
-                                        if val == 100000000000000000000000000000000000000 && res == 70141183460469231731687303715884105728 {
+                                        if val == 100000000000000000000000000000000000000
+                                            && res == 70141183460469231731687303715884105728
+                                        {
                                             Ok(i128::MIN)
                                         } else {
                                             Err(PIE { kind: NegOverflow })
                                         }
-                                    },
+                                    }
                                 }
                             } else {
                                 Err(PIE { kind: InvalidDigit })
@@ -124,7 +124,7 @@ pub fn parse_i128(s: &str) -> Result<i128, PIE> {
                         } else {
                             Err(PIE { kind: NegOverflow })
                         }
-                    }
+                    };
                 } else if *val == b'+' {
                     s = &s.get_unchecked(1..);
                     match s.get(0) {
