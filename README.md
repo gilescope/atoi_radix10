@@ -36,14 +36,24 @@ How this works
 ==============
 This is called SWAR: Simd within a register.
 
+Optimisations that did help
+===========================
+
+   * Moving `+` further up before it was accessed due to latency requirements.
+
 Optimisations that didn't
 =========================
 Things that didn't seem to have any effect:
 
+   * Compiler breaks down *10 to *8 + *2 behind the scenes so we don't have to.
+     (It seems to resort to imul for 100 so replacing shifts for that might make
+     slight gain)
    * casting len from usize to u8.
 
 TODO
 ====
 
    * fuzz
-   * make work on big-endian
+   * no_std (no need for alloc)
+   * github actions CI
+   * make work on big-endian ( See https://github.com/BurntSushi/rust-memchr/commit/059d0c63d30a37783b9a98bef7daf780524a3a6e )
