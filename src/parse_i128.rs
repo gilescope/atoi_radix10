@@ -1,17 +1,17 @@
 use super::{parse_16_chars, parse_4_chars, parse_8_chars, ParseIntError2, TENS_U128};
-use std::num::IntErrorKind::*;
+use core::num::IntErrorKind::*;
 
 type PIE = ParseIntError2;
 
-pub fn parse_i128_challenger(s: &str) -> Result<i128, PIE> {
+pub fn parse_i128_challenger(s: &[u8]) -> Result<i128, PIE> {
     parse_i128(s)
 }
 
 /// i128: -170141183460469231731687303715884105728 to 170141183460469231731687303715884105727,
 /// (39 digits!)
-pub fn parse_i128(s: &str) -> Result<i128, PIE> {
+pub fn parse_i128(s: &[u8]) -> Result<i128, PIE> {
     unsafe {
-        let mut s = s.as_bytes();
+        let mut s = s;//.as_bytes();
         let (val, val2) = match s.get(0) {
             Some(val) => {
                 let val = if *val == b'-' {

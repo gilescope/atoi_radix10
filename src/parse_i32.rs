@@ -1,11 +1,11 @@
 use super::{parse_2_chars, parse_4_chars, parse_8_chars, ParseIntError2, MINUS, PLUS};
-use std::num::IntErrorKind::*;
+use core::num::IntErrorKind::*;
 
 type PIE = ParseIntError2;
 
 /// Parses from -2_147_483_648 to 2_147_483_647 (10 digits and optionally +/-)
-pub fn parse_i32(s: &str) -> Result<i32, PIE> {
-    let mut s = s.as_bytes();
+pub fn parse_i32(s: &[u8]) -> Result<i32, PIE> {
+    let mut s = s;//.as_bytes();
     let val = match s.get(0) {
         Some(val) => {
             let val = val.wrapping_sub(b'0');
@@ -86,7 +86,7 @@ pub fn parse_i32(s: &str) -> Result<i32, PIE> {
                                     return Err(PIE { kind: NegOverflow });
                                 }
                             }
-                            _ => Err(PIE { kind: NegOverflow }),
+                            _ => Err(PIE { kind: InvalidDigit }),
                         };
                     }
                 }
@@ -172,6 +172,6 @@ pub fn parse_i32(s: &str) -> Result<i32, PIE> {
     }
 }
 
-pub fn parse_i32_challenger(s: &str) -> Result<i32, PIE> {
+pub fn parse_i32_challenger(s: &[u8]) -> Result<i32, PIE> {
     parse_i32(s)
 }

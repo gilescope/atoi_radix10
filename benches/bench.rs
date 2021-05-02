@@ -1,3 +1,4 @@
+
 use criterion::black_box;
 use criterion::BenchmarkId;
 use criterion::Throughput;
@@ -7,9 +8,14 @@ use paste::paste;
 
 use atoi_radix10::*;
 
+fn no_op(c: &mut Criterion//<CyclesPerByte>
+) {
+}
+
 macro_rules! ok_bench {
     ($target_type:ty, $prefix:literal, $meth:expr, $std_method:expr, $challenger_meth:expr, $values:expr) => {
         paste! {
+            #[cfg(feature="std")]
             fn [<bench_parse_ $prefix $target_type>](c: &mut Criterion//<CyclesPerByte>
                       ) {
                 let mut group = c.benchmark_group(stringify!([<$meth $prefix>]));
@@ -18,17 +24,17 @@ macro_rules! ok_bench {
                 //    .measurement_time(std::time::Duration::from_millis(2000));
                 for num_str in $values.iter() {
                     let num : $target_type = num_str.parse().unwrap();
-                    assert_eq!($meth(&num_str), Ok(num), " when atoi_radix10 parsing {}", num_str);
-                    assert_eq!($challenger_meth(&num_str), Ok(num), " when challenger parsing {}", num_str);
+                    assert_eq!($meth(num_str.as_bytes()), Ok(num), " when atoi_radix10 parsing {}", num_str);
+                    assert_eq!($challenger_meth(num_str.as_bytes()), Ok(num), " when challenger parsing {}", num_str);
                     group.throughput(Throughput::Bytes(num_str.len() as u64));
                     group.bench_with_input(BenchmarkId::new(format!("{}std",$prefix), num), &num_str, |b, &val| {
                         b.iter(|| $std_method(&val));
                     });
                     group.bench_with_input(BenchmarkId::new(format!("{}challenger",$prefix), num), &num_str, |b, &val| {
-                        b.iter(|| $challenger_meth(&val));
+                        b.iter(|| $challenger_meth(val.as_bytes()));
                     });
                     group.bench_with_input(BenchmarkId::new(format!("{}atoi_radix10",$prefix), num), &num_str, |b, &val| {
-                        b.iter(|| $meth(&val));
+                        b.iter(|| $meth(val.as_bytes()));
                     });
                 }
                 group.finish();
@@ -69,7 +75,7 @@ fn parse_chars_bench(c: &mut Criterion) {
     group.bench_with_input(BenchmarkId::new("2", num_str), &num_str, |b, &_val| {
         b.iter(|| parse_2_chars(black_box(num_str.as_bytes())));
     });
-   
+
     group.finish();
 }
 
@@ -385,6 +391,7 @@ ok_bench!(
     ]
 );
 
+#[cfg(feature="std")]
 criterion_group!(
     name = benches;
     config = Criterion::default();//.with_measurement(CyclesPerByte);
@@ -404,6 +411,13 @@ criterion_group!(
     bench_parse_pos_i128,
     bench_parse_neg_i128,
     parse_chars_bench,
+);
+
+#[cfg(not(feature="std"))]
+criterion_group!(
+    name = benches;
+    config = Criterion::default();//.with_measurement(CyclesPerByte);
+    targets=no_op
 );
 
 criterion_main!(benches);

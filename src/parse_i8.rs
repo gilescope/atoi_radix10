@@ -1,17 +1,25 @@
 use super::{ParseIntError2, PLUS};
-use std::num::IntErrorKind::*;
+use core::num::IntErrorKind::*;
 
 type PIE = ParseIntError2;
 
-pub fn parse_i8(s: &str) -> Result<i8, PIE> {
-    let mut iter = s.as_bytes().iter();
+pub fn parse_i8(s: &[u8]) -> Result<i8, PIE> {
+    let mut iter = s.iter();
     match iter.next() {
         Some(val) => {
             if *val == b'-' {
                 return match iter.next() {
                     Some(val) => {
-                        let val = val.wrapping_sub(b'0');
+                        let mut val = val.wrapping_sub(b'0');
                         if val <= 9 {
+                            while val == 0 {
+                                val = match iter.next() {
+                                    Some(val2) => {
+                                        val2.wrapping_sub(b'0')
+                                    }
+                                    None => { return Ok(0); }
+                                }
+                            }
                             match iter.next() {
                                 None => Ok(-(val as i8)),
                                 Some(val2) => {
@@ -66,6 +74,14 @@ pub fn parse_i8(s: &str) -> Result<i8, PIE> {
                     }
                 } else {
                     return Err(PIE { kind: InvalidDigit });
+                }
+            }
+            while val == 0 {
+                val = match iter.next() {
+                    Some(val2) => {
+                        val2.wrapping_sub(b'0')
+                    }
+                    None => { return Ok(0); }
                 }
             }
             match iter.next() {
@@ -182,8 +198,8 @@ pub fn parse_i8(s: &str) -> Result<i8, PIE> {
 //     }
 // }
 
-pub fn parse_i8_challenger(s: &str) -> Result<i8, PIE> {
-    let mut iter = s.as_bytes().iter();
+pub fn parse_i8_challenger(s: &[u8]) -> Result<i8, PIE> {
+    let mut iter = s.iter();
     match iter.next() {
         Some(mut val) => {
             if *val == b'-' {

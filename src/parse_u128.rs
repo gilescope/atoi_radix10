@@ -1,13 +1,13 @@
 use super::{parse_16_chars, parse_4_chars, parse_8_chars, ParseIntError2, PLUS, TENS_U128};
-use std::num::IntErrorKind::*;
+use core::num::IntErrorKind::*;
 
 type PIE = ParseIntError2;
 
 /// u128: 0 to 340_282_366_920_938_463_463_374_607_431_768_211_455
 /// (39 digits!)
-pub fn parse_u128_challenger(s: &str) -> Result<u128, PIE> {
+pub fn parse_u128_challenger(s: &[u8]) -> Result<u128, PIE> {
     unsafe {
-        let mut s = s.as_bytes();
+        let mut s = s;//.as_bytes();
         let (val, val2) = match s.get(0) {
             Some(val) => {
                 let val = if *val == b'+' {
@@ -119,7 +119,19 @@ pub fn parse_u128_challenger(s: &str) -> Result<u128, PIE> {
                     Err(PIE { kind: InvalidDigit })
                 }
             } else {
-                Err(PIE { kind: PosOverflow })
+                let pos = s.iter().position(|byte| *byte != b'0');
+                if let Some(pos) = pos {
+                    if l - pos <= 39 {
+                        if s[pos] != b'+' {
+                            return parse_u128(&s[pos..])
+                        } else {
+                            return Err(PIE { kind: InvalidDigit });
+                        }
+                    }
+                } else {
+                    return Ok(0);
+                }
+                return Err(PIE { kind: PosOverflow });
             }
         }
     }
@@ -127,9 +139,9 @@ pub fn parse_u128_challenger(s: &str) -> Result<u128, PIE> {
 
 /// u128: 0 to 340_282_366_920_938_463_463_374_607_431_768_211_455
 /// (39 digits!)
-pub fn parse_u128(s: &str) -> Result<u128, PIE> {
+pub fn parse_u128(s: &[u8]) -> Result<u128, PIE> {
     unsafe {
-        let mut s = s.as_bytes();
+        let mut s = s;//.as_bytes();
         let mut l: usize = s.len();
 
         let val = match s.get(0) {

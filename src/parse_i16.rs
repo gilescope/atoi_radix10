@@ -1,10 +1,10 @@
 use super::{parse_4_chars, ParseIntError2, MINUS, PLUS};
-use std::num::IntErrorKind::*;
+use core::num::IntErrorKind::*;
 
 type PIE = ParseIntError2;
 
-pub fn parse_i16(s: &str) -> Result<i16, PIE> {
-    let mut s = s.as_bytes();
+pub fn parse_i16(s: &[u8]) -> Result<i16, PIE> {
+    let mut s = s;//.as_bytes();
     match s.get(0) {
         Some(val) => {
             let mut val = val.wrapping_sub(b'0');
@@ -202,8 +202,8 @@ pub fn parse_i16(s: &str) -> Result<i16, PIE> {
 //     }
 // }
 
-pub fn parse_i16_challenger(s: &str) -> Result<i16, PIE> {
-    let mut s = s.as_bytes();
+pub fn parse_i16_challenger(s: &[u8]) -> Result<i16, PIE> {
+    let mut s = s;//.as_bytes();
     let mut l = s.len();
     match s.get(0) {
         Some(val) => {
@@ -250,8 +250,8 @@ pub fn parse_i16_challenger(s: &str) -> Result<i16, PIE> {
                             5 => parse_4_chars(&s.get_unchecked(1..)).map(|val| -(val as i16)),
                             6 => {
                                 if val <= 3 {
-                                    let result =
-                                        val as u16 * 10_000 + parse_4_chars(&s.get_unchecked(2..))? as u16;
+                                    let result = val as u16 * 10_000
+                                        + parse_4_chars(&s.get_unchecked(2..))? as u16;
                                     if result <= 32767 {
                                         Ok(-(result as i16))
                                     } else if result == 32768 {

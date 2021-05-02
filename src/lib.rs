@@ -1,5 +1,5 @@
+#![cfg_attr(not(feature="std"), no_std)]
 #![feature(int_error_matching)]
-use std::str::FromStr;
 
 mod parse_i128;
 mod parse_i16;
@@ -23,9 +23,10 @@ pub use parse_u32::{parse_u32, parse_u32_challenger};
 pub use parse_u64::{parse_u64, parse_u64_challenger};
 pub use parse_u8::{parse_u8, parse_u8_challenger};
 
+#[cfg(feature="std")]
 pub fn std_parse<T>(s: &str) -> Result<T, ()>
 where
-    T: FromStr,
+    T: std::str::FromStr,
 {
     s.parse().map_err(|_| ())
 }
@@ -80,7 +81,7 @@ pub fn parse_16_chars_og(s: &[u8]) -> Result<u64, PIE> {
 
     let chunk = unsafe { *(s.as_ptr() as *const u128) ^ ASCII_ZEROS };
     if (chunk & MASK_HI)
-        | (chunk + 0x76767676767676767676767676767676u128 & 0x80808080808080808080808080808080u128)
+        | (chunk.wrapping_add(0x76767676767676767676767676767676u128) & 0x80808080808080808080808080808080u128)
         == 0
     {
         // 1-byte mask trick (works on 8 pairs of single digits)
@@ -110,6 +111,8 @@ pub fn parse_16_chars_og(s: &[u8]) -> Result<u64, PIE> {
     }
 }
 
+/// Almost as good as SIMD...
+#[cfg(not(target_feature = "sse2"))]
 #[cfg(target_endian = "little")]
 #[inline]
 pub fn parse_16_chars(s: &[u8]) -> Result<u64, PIE> {
@@ -135,7 +138,7 @@ pub fn parse_16_chars(s: &[u8]) -> Result<u64, PIE> {
     let upper_digits = (chunk & 0x000000000000ffff000000000000ffff) * 100_00;
     let chunk = lower_digits + upper_digits;
 
-    let chk = chunk_og + 0x76767676767676767676767676767676u128;
+    let chk = chunk_og.wrapping_add(0x76767676767676767676767676767676u128);
     // 8-byte mask trick (works on a pair of eight digits)
     let lower_digits = ((chunk & 0x00000000ffffffff0000000000000000) >> 64) as u64;
     let upper_digits = (chunk as u64) * 100_00_00_00; //& 0x00000000ffffffff
@@ -150,6 +153,69 @@ pub fn parse_16_chars(s: &[u8]) -> Result<u64, PIE> {
     }
 }
 
+
+#[cfg(target_feature="sse2")]
+#[inline]
+pub fn parse_16_chars(s: &[u8]) -> Result<u64, PIE> {
+    debug_assert!(s.len() >= 16);
+
+    use core::arch::x86_64::{
+        _mm_cvtsi128_si64, _mm_lddqu_si128, _mm_madd_epi16, _mm_maddubs_epi16, _mm_packus_epi32,
+        _mm_set1_epi8, _mm_set_epi16, _mm_set_epi8, _mm_sub_epi16,
+        _mm_cmplt_epi8,
+        _mm_add_epi8, _mm_test_all_ones
+    };
+
+    unsafe {
+        let chunk = _mm_lddqu_si128(std::mem::transmute_copy(&s));
+        let zeros = _mm_set1_epi8(b'0' as i8);
+        // println!("hhihiihihihihihiz {:64b}", _mm_cvtsi128_si64x(zeros) as u64);
+        // println!("hhihiihihihihihic {:64b}", _mm_cvtsi128_si64x(chunk) as u64);
+
+        let chunk = _mm_sub_epi16(chunk, zeros);//will wrap
+
+        // println!("hhihiihihihihihin {:64b}", _mm_cvtsi128_si64x(chunk) as u64);
+        let zero_to_lowest = _mm_set1_epi8(-128);
+        // println!("hhihiihihihihihix {:64b}", _mm_cvtsi128_si64x(zero_to_lowest) as u64);
+        
+        // 0 => -128, 1 => -127...
+        let digits_at_lowest = _mm_add_epi8(chunk, zero_to_lowest);
+        let upper_bound = _mm_set1_epi8(-128 + 10);
+        let range_chk1 = _mm_cmplt_epi8(digits_at_lowest, upper_bound);
+        let range_chk = _mm_test_all_ones(range_chk1);
+        // println!("hhihiihihihihihil {:64b}", _mm_cvtsi128_si64x(digits_at_lowest) as u64);   
+        // println!("hhihiihihihihihiu {:64b}", _mm_cvtsi128_si64x(upper_bound) as u64);       
+        // println!("hhihiihihihihihir {:64b}", _mm_cvtsi128_si64x(range_chk1) as u64);        
+        
+        let is_valid = range_chk != 0;
+      //  println!("hhihiihihihihihi");        
+      //  println!("{:?}", _mm_cvtsi128_si64(range_chk) as u64);
+        //println!("{:?}", _mm_cvtsi128_si64x(range_chk) as u64);
+        let mult = _mm_set_epi8(1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10);
+        let chunk = _mm_maddubs_epi16(chunk, mult);
+
+        let mult = _mm_set_epi16(1, 100, 1, 100, 1, 100, 1, 100);
+        let chunk = _mm_madd_epi16(chunk, mult);
+
+        let chunk = _mm_packus_epi32(chunk, chunk);
+        let mult = _mm_set_epi16(0, 0, 0, 0, 1, 10000, 1, 10000);
+        let chunk = _mm_madd_epi16(chunk, mult);
+
+        let chunk = _mm_cvtsi128_si64(chunk) as u64;
+        let chunk = ((chunk & 0xffffffff) * 1_0000_0000) + (chunk >> 32);
+
+        if is_valid {
+            Ok(chunk)
+        } else {
+            //TODO do we need to check the upper element?
+            return Err(PIE {
+                        kind: IntErrorKind::InvalidDigit,
+                    });
+        }
+    }
+}
+
+
 // 2.94, 2.99, 2.91
 #[cfg(target_endian = "little")]
 #[inline]
@@ -163,7 +229,7 @@ pub fn parse_8_chars_orig(s: &[u8]) -> Result<u32, PIE> {
     //std::ptr::copy_nonoverlapping(s.as_ptr() as *const u64, &mut chunk, 1);
 
     let chunk = unsafe { *(s.as_ptr() as *const u64) ^ ASCII_ZEROS };
-    if (chunk & MASK_HI) | (chunk + 0x7676767676767676u64 & 0x8080808080808080u64) == 0 {
+    if (chunk & MASK_HI) | (chunk.wrapping_add(0x7676767676767676u64) & 0x8080808080808080u64) == 0 {
         // 1-byte mask trick (works on 4 pairs of single digits)
         let lower_digits = (chunk & 0x0f000f000f000f00) >> 8;
         let upper_digits = (chunk & 0x000f000f000f000f) * 10;
@@ -197,7 +263,7 @@ pub fn parse_8_chars(s: &[u8]) -> Result<u32, PIE> {
 
     let chunk = unsafe { *(s.as_ptr() as *const u64) ^ ASCII_ZEROS };
     let chunk_og = chunk;
-    let chk = chunk_og + 0x7676767676767676u64;
+    let chk = chunk_og.wrapping_add(0x7676767676767676u64);
     // 1-byte mask trick (works on 4 pairs of single digits)
     let lower_digits = (chunk & 0x0f000f000f000f00) >> 8;
     let upper_digits = (chunk & 0x000f000f000f000f) * 10; //Compiler does *8 + *2
@@ -259,10 +325,10 @@ pub fn parse_6_chars(s: &[u8]) -> Result<u32, PIE> {
     let chunk = lower_digits + upper_digits;
     let chunk = chunk * 100;
 
-    let lower_digits = ((chunk2 & 0x0f00) >> 8);
+    let lower_digits = (chunk2 & 0x0f00) >> 8;
     let upper_digits = (chunk2 & 0x000f) * 10;
-    let og1add = chunk_og + 0x76767676u32;
-    let og2add = chunk2_og + 0x7676u16;
+    let og1add = chunk_og.wrapping_add(0x76767676u32);
+    let og2add = chunk2_og.wrapping_add(0x7676u16);
     let result = chunk + (lower_digits + upper_digits) as u32;
 
     if ((chunk_og & MASK_HI) | (og1add & 0x80808080u32) == 0)
@@ -303,7 +369,7 @@ pub fn parse_4_chars_orig(s: &[u8]) -> Result<u16, PIE> {
         // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
         *(s.as_ptr() as *const u32) ^ ASCII_ZEROS
     };
-    if (chunk & MASK_HI) | (chunk + 0x76767676u32 & 0x80808080u32) == 0 {
+    if (chunk & MASK_HI) | (chunk.wrapping_add(0x76767676u32) & 0x80808080u32) == 0 {
         // 04030201 >> 16 = 00000403 |
         // truncate 0201 << 4 = 2010  = 2413
         // 4030201
@@ -368,16 +434,16 @@ pub fn parse_4_chars(s: &[u8]) -> Result<u16, PIE> {
     // 1-byte mask trick (works on 4 pairs of single digits)
     let lower_digits = (chunk1 & 0x0f000f00) >> 8; // => 0x00f000f0
 
-    let sum = chunk1 + 0x76767676u32 & 0x80808080u32;
+    let sum = chunk1.wrapping_add(0x76767676u32) & 0x80808080u32;
 
     let chunk = lower_digits + ((chunk1 & 0x000f000f) << 3) + ((chunk1 & 0x000f000f) << 1);
 
-    let masked = (chunk as u16); // & 0x00ff;
+    let masked = chunk as u16; // & 0x00ff;
     let cond = (chunk1 & MASK_HI) | sum == 0;
 
-    let m1 = (masked << 6);
-    let m2 = (masked << 5);
-    let m3 = (masked << 2);
+    let m1 = masked << 6;
+    let m2 = masked << 5;
+    let m3 = masked << 2;
 
     let r = ((chunk & 0x00ff0000) >> 16) as u16;
 
@@ -418,7 +484,7 @@ pub fn parse_2_charsX(s: &[u8]) -> Result<u8, PIE> {
 
         *(s.as_ptr() as *const u16) ^ ASCII_ZEROS
     };
-    if (chunk & MASK_HI) | (chunk + 0x7676u16 & 0x8080u16) == 0 {
+    if (chunk & MASK_HI) | (chunk.wrapping_add(0x7676u16) & 0x8080u16) == 0 {
         // 04030201 >> 16 = 00000403 |
         // truncate 0201 << 4 = 2010  = 2413
         // 4030201
@@ -486,13 +552,13 @@ pub fn parse_2_charsX(s: &[u8]) -> Result<u8, PIE> {
 /// Returning u16 rather than u8 as faster.
 #[cfg(target_endian = "little")]
 #[inline]
-pub fn parse_2_chars(s: &[u8]) -> Result<(u16), PIE> {
+pub fn parse_2_chars(s: &[u8]) -> Result<u16, PIE> {
     //SAFETY:
     debug_assert!(s.len() >= 2);
     unsafe {
         let chunk = *(s.as_ptr() as *const u16) ^ 0x3030u16;
         //Early add
-        let ch = chunk + 0x7676u16;
+        let ch = chunk.wrapping_add(0x7676u16);
         //Early calc result before use
         let res = ((chunk & 0x000f) << 1) + ((chunk & 0x000f) << 3) + ((chunk & 0x0f00) >> 8);
 
@@ -613,9 +679,10 @@ mod tests {
                 fn [<test_ $target_type _specific $postfix>]() {
                     let s = $specific;
                     let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
-                    assert_eq!(p, [<parse_ $target_type $postfix>](&s).map_err(|_| ()), "fail to parse: '{}'", &s);
+                    assert_eq!(p, [<parse_ $target_type $postfix>](s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                 }
 
+                #[cfg(feature="std")]
                 #[test]
                 fn [<test_invalid_ascii_ $target_type $postfix>]() {
                     for &ascii in [b':', b'/'].iter() {
@@ -625,12 +692,13 @@ mod tests {
                                 let mut v = vec.clone();
                                 v[j] = ascii;
                                 let s = String::from_utf8_lossy(&v[..]);
-                                assert_eq!(Err(()), [<parse_ $target_type $postfix>](&s).map_err(|_| ()), "parsing `{}`", s);
+                                assert_eq!(Err(()), [<parse_ $target_type $postfix>](s.as_bytes()).map_err(|_| ()), "parsing `{}`", s);
                             }
                         }
                     }
                 }
 
+                #[cfg(feature="std")]
                 #[test]
                 fn [<test_invalid_too_big_ $target_type $postfix>]() {
                     let mut s = ($target_type::MAX as $target_type).to_string();
@@ -639,7 +707,9 @@ mod tests {
                         Err(PIE {
                             kind: IntErrorKind::PosOverflow
                         }),
-                        [<parse_ $target_type $postfix>](&s)
+                        [<parse_ $target_type $postfix>](s.as_bytes()),
+                        " when parsing '{}'",
+                        &s
                     );
                 }
 
@@ -649,26 +719,28 @@ mod tests {
                         Err(PIE {
                             kind: IntErrorKind::Empty
                         }),
-                        [<parse_ $target_type $postfix>]("")
+                        [<parse_ $target_type $postfix>]("".as_bytes())
                     );
                 }
 
+                #[cfg(feature="std")]
                 #[test]
                 fn [<test_ $target_type $postfix>]() {
                     for i in ($min..$max as $target_type).step_by($step) {
                         let s = i.to_string();
                         let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
-                        assert_eq!(p, [<parse_ $target_type $postfix>](&s).map_err(|_| ()), "fail to parse: '{}'", &s);
+                        assert_eq!(p, [<parse_ $target_type $postfix>](s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                     }
                 }
 
+                #[cfg(feature="std")]
                 #[test]
                 fn [<test_ $target_type _plus $postfix>]() {
                     for i in ($min..$max as $target_type).step_by($step) {
                         let mut s = i.to_string();
                         s.insert(0, '+');
                         let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
-                        assert_eq!(p, [<parse_ $target_type $postfix>](&s).map_err(|_| ()), "fail to parse: '{}'", &s);
+                        assert_eq!(p, [<parse_ $target_type $postfix>](s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                     }
                 }
             }
@@ -676,7 +748,7 @@ mod tests {
     }
 
     gen_tests!(u8, u8::MIN, u8::MAX, 1, 3, "", "1");
-    gen_tests!(u8, u8::MIN, u8::MAX, 1, 3, "_challenger", "1");
+    gen_tests!(u8, u8::MIN, u8::MAX, 1, 3, "_challenger", "+200");
 
     gen_tests!(i8, i8::MIN, i8::MAX, 1, 3, "", "1");
     gen_tests!(i8, i8::MIN, i8::MAX, 1, 3, "_challenger", "1");
@@ -750,15 +822,56 @@ mod tests {
         100_301_000_000_000,
         39,
         "",
-        "-170141183460469231731687303715884105728"
+       "1701411834604692317316873037158841057271"// "1:11111111111111"
     );
-    gen_tests!(
-        i128,
-        u64::MIN as i128,
-        u64::MAX,
-        100_301_000_000_000,
-        39,
-        "_challenger",
-        "123456789012345678901234567890123456789"
-    );
+    // gen_tests!(
+    //     i128,
+    //     u64::MIN as i128,
+    //     u64::MAX,
+    //     100_301_000_000_000,
+    //     39,
+    //     "_challenger",
+    //     "123456789012345678901234567890123456789"
+    // );
+
+    #[test]
+    fn test_fuzz1() {
+        // needed checked add when checking digits in range.
+        check(&[50, 35, 43, 173]);
+    }
+    #[test]
+    fn test_fuzz2() {
+        // Too long is defined by std as invalid digit error rather than overflow.
+        check(&[48, 48, 54, 54, 49, 54, 56, 57, 54, 49, 51]);
+    }
+
+    #[test]
+    fn test_fuzz3() {
+        //"00661689613" std can deal with any number of leading zeros
+        // as it keeps multiplying them by 10...
+        check(&[54, 48, 48, 48, 54, 48, 54, 48, 54, 48, 54]);
+    }
+    #[test]
+    fn test_fuzz4() {
+        //leading zeros then plus: "0000+6600660"
+        check(& [48, 48, 48, 48, 43, 54, 54, 48, 48, 54, 54, 48]);
+    }
+    #[test]
+    fn test_fuzz5() {
+        //leading zeros then plus: "0000+6600660"
+        check(&  [43, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48]);
+    }
+
+    fn check(data:&[u8]) {
+        if let Ok(s) = String::from_utf8(data.to_vec()){
+            let spec: Result<u32, _> = s.parse();
+            let expected = spec.map_err(|e| ());
+            assert_eq!(expected, parse_u32(&data).map_err(|e| ()));
+            // let expected = spec.map_err(|e| e.kind().clone());
+            // assert_eq!(expected, parse_u32(&data).map_err(|e| e.kind));
+        } else {
+            //just make sure doesn't panic:
+            let _ = parse_u32(&data);
+        }
+    }
 }

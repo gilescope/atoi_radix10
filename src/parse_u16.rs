@@ -1,11 +1,11 @@
 use super::{parse_2_chars, parse_4_chars, ParseIntError2, PLUS};
-use std::num::IntErrorKind::*;
+use core::num::IntErrorKind::*;
 
 type PIE = ParseIntError2;
 
 
-pub fn parse_u16(s: &str) -> Result<u16, PIE> {
-    let mut s = s.as_bytes();
+pub fn parse_u16(s: &[u8]) -> Result<u16, PIE> {
+    let mut s = s;//.as_bytes();
     let mut l: usize;
     let val = match s.get(0) {
         Some(&val) => {
@@ -18,7 +18,9 @@ pub fn parse_u16(s: &str) -> Result<u16, PIE> {
                 } else {
                     Err(PIE { kind: InvalidDigit })
                 };
-            } else if val == b'+' {
+            } else if val != b'+' {
+                val
+            } else {
                 s = &s[1..];
                 l -= 1;
                 match s.get(0) {
@@ -35,7 +37,7 @@ pub fn parse_u16(s: &str) -> Result<u16, PIE> {
                     },
                     None => return Err(PIE { kind: InvalidDigit }),
                 }
-            } else { val }
+            }
         }
         None => return Err(PIE { kind: Empty }),
     };
@@ -67,8 +69,8 @@ pub fn parse_u16(s: &str) -> Result<u16, PIE> {
     }
 }
 
-pub fn parse_u16_challenger(s: &str) -> Result<u16, PIE> {
-    let mut s = s.as_bytes();
+pub fn parse_u16_challenger(s: &[u8]) -> Result<u16, PIE> {
+    let mut s = s;//.as_bytes();
     let (val, val2, val3) = match s.get(0) {
         Some(val) => {
             let mut val = val.wrapping_sub(b'0');
@@ -130,6 +132,20 @@ pub fn parse_u16_challenger(s: &str) -> Result<u16, PIE> {
                 None => return Err(PIE { kind: PosOverflow }),
             }
         }
-        _ => Err(PIE { kind: PosOverflow }),
+        _ => {
+            let pos = s.iter().position(|byte| *byte != b'0');
+            if let Some(pos) = pos {
+                if l - pos <= 5 {
+                    if s[pos] != b'+' {
+                        return parse_u16(&s[pos..])
+                    } else {
+                        return Err(PIE { kind: InvalidDigit });
+                    }
+                }
+            } else {
+                return Ok(0);
+            }
+            return Err(PIE { kind: PosOverflow });
+        },
     }
 }

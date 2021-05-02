@@ -1,11 +1,11 @@
 use super::{parse_2_chars, parse_4_chars, parse_8_chars, ParseIntError2, PLUS};
-use std::num::IntErrorKind::*;
+use core::num::IntErrorKind::*;
 
 type PIE = ParseIntError2;
 
 /// Parses from 0 -> 4_294_967_295 (10 digits and optionally +)
-pub fn parse_u32(s: &str) -> Result<u32, PIE> {
-    let mut s = s.as_bytes();
+pub fn parse_u32(mut s: &[u8]) -> Result<u32, PIE> {
+   // let mut s = s.as_bytes();
     let val = match s.get(0) {
         Some(val) => {
             let val = val.wrapping_sub(b'0');
@@ -32,7 +32,7 @@ pub fn parse_u32(s: &str) -> Result<u32, PIE> {
         }
         None => return Err(PIE { kind: Empty }),
     };
-    let l = s.len();
+    let mut l = s.len();
     unsafe {
         match l {
             1 => Ok(val as u32),
@@ -89,7 +89,21 @@ pub fn parse_u32(s: &str) -> Result<u32, PIE> {
                     return Err(PIE { kind: PosOverflow });
                 }
             }
-            _ => Err(PIE { kind: PosOverflow }),
+            _ => {
+                let pos = s.iter().position(|byte| *byte != b'0');
+                if let Some(pos) = pos {
+                    if l - pos <= 10 {
+                        if s[pos] != b'+' {
+                            return parse_u32(&s[pos..])
+                        } else {
+                            return Err(PIE { kind: InvalidDigit });
+                        }
+                    }
+                } else {
+                    return Ok(0);
+                }
+                return Err(PIE { kind: PosOverflow });
+            },
         }
     }
 }
@@ -371,8 +385,9 @@ pub fn parse_u32(s: &str) -> Result<u32, PIE> {
 // }
 
 /// Parses from 0 -> 4_294_967_295 (10 digits and optionally +)
-pub fn parse_u32_challenger(s: &str) -> Result<u32, PIE> {
-    let mut s = s.as_bytes();
+pub fn parse_u32_challenger(s: &[u8]) -> Result<u32, PIE> {
+    //TODO: can we accept AsRef<[u8]> or IntoRef<u8]> ?
+    let mut s = s;//.as_bytes();
     let val = match s.get(0) {
         Some(val) => {
             let val = val.wrapping_sub(b'0');

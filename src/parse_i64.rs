@@ -1,12 +1,12 @@
 use super::{parse_16_chars, parse_4_chars, parse_8_chars, ParseIntError2, TENS_U64};
-use std::num::IntErrorKind::*;
+use core::num::IntErrorKind::*;
 
 type PIE = ParseIntError2;
 
 /// Parses -9_223_372_036_854_775_808 -> 9_223_372_036_854_775_807 (up to 19 chars)
-pub fn parse_i64(s: &str) -> Result<i64, PIE> {
+pub fn parse_i64(s: &[u8]) -> Result<i64, PIE> {
     unsafe {
-        let mut s = s.as_bytes();
+        let mut s = s;//.as_bytes();
         let (val, val2) = match s.get(0) {
             Some(val) => {
                 let val = if *val == b'-' {
@@ -162,9 +162,9 @@ pub fn parse_i64(s: &str) -> Result<i64, PIE> {
 }
 
 /// Parses -9_223_372_036_854_775_808 -> 9_223_372_036_854_775_807 (up to 19 chars)
-pub fn parse_i64_challenger(s: &str) -> Result<i64, PIE> {
+pub fn parse_i64_challenger(s: &[u8]) -> Result<i64, PIE> {
     unsafe {
-        let mut s = s.as_bytes();
+        let mut s = s;//.as_bytes();
         let (val, val2) = match s.get(0) {
             Some(val) => {
                 let val = if *val == b'-' {
