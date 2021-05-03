@@ -31,30 +31,30 @@ where
     s.parse().map_err(|_| ())
 }
 
-pub fn cluatoi_parse_u32(s: &str) -> u32 {
-    use cluatoi::Atoi;
-    u32::atoi(s.as_bytes()).unwrap()
-}
+// pub fn cluatoi_parse_u32(s: &str) -> u32 {
+//     use cluatoi::Atoi;
+//     u32::atoi(s.as_bytes()).unwrap()
+// }
 
-pub fn cluatoi_parse_u16(s: &str) -> u16 {
-    use cluatoi::Atoi;
-    u16::atoi(s.as_bytes()).unwrap()
-}
+// pub fn cluatoi_parse_u16(s: &str) -> u16 {
+//     use cluatoi::Atoi;
+//     u16::atoi(s.as_bytes()).unwrap()
+// }
 
-pub fn cluatoi_parse_u8(s: &str) -> u8 {
-    use cluatoi::Atoi;
-    u8::atoi(s.as_bytes()).unwrap()
-}
+// pub fn cluatoi_parse_u8(s: &str) -> u8 {
+//     use cluatoi::Atoi;
+//     u8::atoi(s.as_bytes()).unwrap()
+// }
 
-//bit faster than std
-pub fn btoi_parse_u32(s: &str) -> u32 {
-    btoi::btoi(s.as_bytes()).unwrap()
-}
+// //bit faster than std
+// pub fn btoi_parse_u32(s: &str) -> u32 {
+//     btoi::btoi(s.as_bytes()).unwrap()
+// }
 
-//atoi crate about the same speed as std.
-pub fn atoi_parse_u32(s: &str) -> u32 {
-    atoi::atoi::<u32>(s.as_bytes()).unwrap()
-}
+// //atoi crate about the same speed as std.
+// pub fn atoi_parse_u32(s: &str) -> u32 {
+//     atoi::atoi::<u32>(s.as_bytes()).unwrap()
+// }
 
 const PLUS: u8 = b'+'.wrapping_sub(b'0');
 const MINUS: u8 = b'-'.wrapping_sub(b'0');
@@ -111,6 +111,18 @@ pub fn parse_16_chars_og(s: &[u8]) -> Result<u64, PIE> {
     }
 }
 
+pub fn parse_32_chars(mut s: &[u8]) -> Result<u128, PIE> {
+    unsafe {
+        let val16 = parse_16_chars(&s)? as u128;
+        s = &s.get_unchecked(16..);
+        let res = val16 * 1_0000_0000_0000_0000;
+
+        // Do the same thing again as a parse_32_chars fn would need 256bits.
+        let val16 = parse_16_chars(&s)? as u128;
+        Ok(res + val16)
+    }
+}
+
 /// Almost as good as SIMD...
 #[cfg(not(target_feature = "sse2"))]
 #[cfg(target_endian = "little")]
@@ -154,9 +166,136 @@ pub fn parse_16_chars(s: &[u8]) -> Result<u64, PIE> {
 }
 
 
+// #[cfg(target_feature="sse2")]
+// #[inline]
+// pub fn parse_32_chars(s: &[u8]) -> Result<u64, PIE> {
+//     debug_assert!(s.len() >= 32);
+
+//     use core::arch::x86_64::{
+//         //_mm256_test_all_ones,
+//         _mm256_testz_si256,
+//         _mm256_lddqu_si256,_mm256_set_epi8,
+//         _mm256_sub_epi16, _mm256_add_epi8,_mm256_set1_epi8,_mm256_cmpgt_epi8,
+//         _mm256_maddubs_epi16,_mm256_madd_epi16,_mm256_set_epi16,
+//         _mm256_packus_epi32,_mm256_castsi256_si128
+//     };
+
+//     unsafe {
+//         let chunk = _mm256_lddqu_si256(std::mem::transmute_copy(&s));
+//         let zeros = _mm256_set1_epi8(b'0' as i8);
+//         // println!("hhihiihihihihihiz {:64b}", _mm_cvtsi128_si64x(zeros) as u64);
+//         // println!("hhihiihihihihihic {:64b}", _mm_cvtsi128_si64x(chunk) as u64);
+
+//         let chunk = _mm256_sub_epi16(chunk, zeros);//will wrap
+
+//         // println!("hhihiihihihihihin {:64b}", _mm_cvtsi128_si64x(chunk) as u64);
+//         let zero_to_lowest = _mm256_set1_epi8(-128);
+//         // println!("hhihiihihihihihix {:64b}", _mm_cvtsi128_si64x(zero_to_lowest) as u64);
+        
+//         // 0 => -128, 1 => -127...
+//         let digits_at_lowest = _mm256_add_epi8(chunk, zero_to_lowest);
+//         let upper_bound = _mm256_set1_epi8(-128 + 10);
+//         let range_chk1 = _mm256_cmpgt_epi8(digits_at_lowest, upper_bound);
+//         let range_chk = _mm256_testz_si256(range_chk1);
+//         // println!("hhihiihihihihihil {:64b}", _mm_cvtsi128_si64x(digits_at_lowest) as u64);   
+//         // println!("hhihiihihihihihiu {:64b}", _mm_cvtsi128_si64x(upper_bound) as u64);       
+//         // println!("hhihiihihihihihir {:64b}", _mm_cvtsi128_si64x(range_chk1) as u64);        
+        
+//         let is_valid = range_chk != 0;
+//       //  println!("hhihiihihihihihi");        
+//       //  println!("{:?}", _mm_cvtsi128_si64(range_chk) as u64);
+//         //println!("{:?}", _mm_cvtsi128_si64x(range_chk) as u64);
+//         let mult = _mm256_set_epi8(1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10);
+//         let chunk = _mm256_maddubs_epi16(chunk, mult);
+
+//         let mult = _mm256_set_epi16(1, 100, 1, 100, 1, 100, 1, 100, 1, 100, 1, 100, 1, 100, 1, 100);
+//         let chunk = _mm256_madd_epi16(chunk, mult);
+
+//         let chunk = _mm256_packus_epi32(chunk, chunk);
+//         let mult = _mm256_set_epi16(0, 0, 0, 0, 0, 0, 0, 0,1, 10000, 1, 10000, 1, 10000, 1, 10000);
+//         let chunk = _mm256_madd_epi16(chunk, mult);
+
+//         //TODO:
+//         // let chunk = _mm256_packus_epi64(chunk, chunk);
+//         // let mult = _mm256_set_epi16(0, 0, 0, 0, 0, 0, 0, 0, 1, 10000_0000, 1, 10000_0000, 1, 10000_0000, 1, 10000_0000);
+//         // let chunk = _mm256_madd_epi16(chunk, mult);
+
+//         let chunk: u128 = _mm256_castsi256_si128(chunk) ;//as u128;
+//         let chunk = ((chunk & 0xffffffffffffffff) * 1_0000_0000_0000_0000) + (chunk >> 64);
+
+//         if is_valid {
+//             Ok(chunk)
+//         } else {
+//             //TODO do we need to check the upper element?
+//             return Err(PIE {
+//                         kind: IntErrorKind::InvalidDigit,
+//                     });
+//         }
+//     }
+// }
+
 #[cfg(target_feature="sse2")]
 #[inline]
 pub fn parse_16_chars(s: &[u8]) -> Result<u64, PIE> {
+    debug_assert!(s.len() >= 16);
+
+    use core_simd::*;
+
+    unsafe {
+        let chunk = i8x32::from(std::mem::transmute_copy(&s));//) _mm_lddqu_si128
+        
+        let zeros = i8x32::splat(b'0' as i8);
+        // println!("hhihiihihihihihiz {:64b}", _mm_cvtsi128_si64x(zeros) as u64);
+        // println!("hhihiihihihihihic {:64b}", _mm_cvtsi128_si64x(chunk) as u64);
+
+        let chunk = i16x16::sub(chunk.into(), zeros.into());//will wrap
+
+        // println!("hhihiihihihihihin {:64b}", _mm_cvtsi128_si64x(chunk) as u64);
+        let zero_to_lowest = i8x32::splat(-128);
+        // println!("hhihiihihihihihix {:64b}", _mm_cvtsi128_si64x(zero_to_lowest) as u64);
+        
+        // 0 => -128, 1 => -127...
+        let digits_at_lowest = i8x32::add(chunk, zero_to_lowest);
+        let upper_bound = i8x32::splat(-128 + 10);
+        let range_chk1 =i8x32::lanes_lt(digits_at_lowest, upper_bound);
+        let is_valid = range_chk1.all();
+        // println!("hhihiihihihihihil {:64b}", _mm_cvtsi128_si64x(digits_at_lowest) as u64);   
+        // println!("hhihiihihihihihiu {:64b}", _mm_cvtsi128_si64x(upper_bound) as u64);       
+        // println!("hhihiihihihihihir {:64b}", _mm_cvtsi128_si64x(range_chk1) as u64);        
+        
+        //let is_valid = range_chk;
+      //  println!("hhihiihihihihihi");        
+      //  println!("{:?}", _mm_cvtsi128_si64(range_chk) as u64);
+        //println!("{:?}", _mm_cvtsi128_si64x(range_chk) as u64);
+        let mult = i8x16::from_array([1_i8, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10]);
+        let chunk = _mm_maddubs_epi16(chunk, mult);
+
+        let mult = _mm_set_epi16(1, 100, 1, 100, 1, 100, 1, 100);
+        let chunk = _mm_madd_epi16(chunk, mult);
+
+        let chunk = _mm_packus_epi32(chunk, chunk);
+        let mult = _mm_set_epi16(0, 0, 0, 0, 1, 10000, 1, 10000);
+        let chunk = _mm_madd_epi16(chunk, mult);
+
+        let chunk = _mm_cvtsi128_si64(chunk) as u64;
+        let chunk = ((chunk & 0xffffffff) * 1_0000_0000) + (chunk >> 32);
+
+        if is_valid {
+            Ok(chunk)
+        } else {
+            //TODO do we need to check the upper element?
+            return Err(PIE {
+                        kind: IntErrorKind::InvalidDigit,
+                    });
+        }
+    }
+}
+
+
+
+#[cfg(target_feature="sse2")]
+#[inline]
+pub fn parse_16_chars_og(s: &[u8]) -> Result<u64, PIE> {
     debug_assert!(s.len() >= 16);
 
     use core::arch::x86_64::{

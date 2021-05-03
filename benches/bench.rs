@@ -48,6 +48,11 @@ fn parse_chars_bench(c: &mut Criterion) {
     //group //.sample_size(30)
     //    .warm_up_time(std::time::Duration::from_millis(1000))
     //    .measurement_time(std::time::Duration::from_millis(2000));
+    let num_str = "12345678123456781234567812345678";
+    group.throughput(Throughput::Bytes(num_str.len() as u64));
+    group.bench_with_input(BenchmarkId::new("32", num_str), &num_str, |b, &_val| {
+        b.iter(|| parse_32_chars(black_box(num_str.as_bytes())));
+    });
     let num_str = "1234567812345678";
     group.throughput(Throughput::Bytes(num_str.len() as u64));
     group.bench_with_input(BenchmarkId::new("16", num_str), &num_str, |b, &_val| {
