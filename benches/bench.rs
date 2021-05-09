@@ -1,4 +1,3 @@
-
 use criterion::black_box;
 use criterion::BenchmarkId;
 use criterion::Throughput;
@@ -8,7 +7,7 @@ use paste::paste;
 
 use atoi_radix10::*;
 
-fn no_op(c: &mut Criterion//<CyclesPerByte>
+fn no_op(c: &mut Criterion, //<CyclesPerByte>
 ) {
 }
 
@@ -396,7 +395,7 @@ ok_bench!(
     ]
 );
 
-#[cfg(feature="std")]
+#[cfg(feature = "std")]
 criterion_group!(
     name = benches;
     config = Criterion::default();//.with_measurement(CyclesPerByte);
@@ -418,7 +417,7 @@ criterion_group!(
     parse_chars_bench,
 );
 
-#[cfg(not(feature="std"))]
+#[cfg(not(feature = "std"))]
 criterion_group!(
     name = benches;
     config = Criterion::default();//.with_measurement(CyclesPerByte);
