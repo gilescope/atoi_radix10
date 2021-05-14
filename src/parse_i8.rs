@@ -1,4 +1,4 @@
-use super::{ParseIntError2, PLUS};
+use super::{parse, ParseIntError2, PLUS};
 use core::num::IntErrorKind::*;
 
 type PIE = ParseIntError2;
@@ -199,7 +199,7 @@ pub fn parse_i8(s: &[u8]) -> Result<i8, PIE> {
 // }
 
 pub fn parse_i8_challenger(s: &[u8]) -> Result<i8, PIE> {
-    parse_i8(s)
+    parse::<i8>(s).map_err(|_| PIE { kind: InvalidDigit })
 }
 
 // pub fn parse_i8_challenger(s: &[u8]) -> Result<i8, PIE> {

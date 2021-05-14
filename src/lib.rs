@@ -630,8 +630,8 @@ mod tests {
                 //     let mut s = ($target_type::MAX as $target_type).to_string();
                 //     s.push('1');
                 //     assert_eq!(
-                //         Err(PIE {
-                //             kind: IntErrorKind::PosOverflow
+                //         Err(ParseIntError3 {
+                //             kind: IntErrorKind3::InvalidDigit //PosOverflow
                 //         }),
                 //         [<parse_ $target_type $postfix>](s.as_bytes()),
                 //         " when parsing '{}'",
@@ -702,7 +702,7 @@ mod tests {
     gen_tests!(u8, u8::MIN, u8::MAX, 1, 3, "_challenger", "+200");
 
     gen_tests!(i8, i8::MIN, i8::MAX, 1, 3, "", "1");
-    gen_tests!(i8, i8::MIN, i8::MAX, 1, 3, "_challenger", "1");
+    gen_tests!(i8, i8::MIN, i8::MAX, 1, 3, "_challenger", "-127");
 
     gen_tests!(u16, u16::MIN, u16::MAX, 1, 5, "", "1");
     gen_tests!(u16, u16::MIN, u16::MAX, 1, 5, "_challenger", "1");
