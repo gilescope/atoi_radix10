@@ -12,9 +12,6 @@ std = []
 [dependencies]
 core_simd = { git="https://github.com/rust-lang/stdsimd.git"}
 paste = "1.0"
-# atoi = "0.4"
-# btoi = "0.4"
-# cluatoi = "0.2"
 
 [dev-dependencies]
 criterion = {version="0.3", features=["html_reports"]}

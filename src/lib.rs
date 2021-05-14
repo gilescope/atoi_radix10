@@ -624,20 +624,18 @@ mod tests {
                     }
                 }
 
-                // #[cfg(feature="std")]
-                // #[test]
-                // fn [<test_invalid_too_big_ $target_type $postfix>]() {
-                //     let mut s = ($target_type::MAX as $target_type).to_string();
-                //     s.push('1');
-                //     assert_eq!(
-                //         Err(ParseIntError3 {
-                //             kind: IntErrorKind3::InvalidDigit //PosOverflow
-                //         }),
-                //         [<parse_ $target_type $postfix>](s.as_bytes()),
-                //         " when parsing '{}'",
-                //         &s
-                //     );
-                // }
+                #[cfg(feature="std")]
+                #[test]
+                fn [<test_invalid_too_big_ $target_type $postfix>]() {
+                    let mut s = ($target_type::MAX as $target_type).to_string();
+                    s.push('1');
+                    assert_eq!(
+                        Err(()),
+                        [<parse_ $target_type $postfix>](s.as_bytes()).map_err(|_|()),
+                        " when parsing '{}'",
+                        &s
+                    );
+                }
 
                 // #[test]
                 // fn [<test_empty_ $target_type $postfix>]() {
@@ -713,7 +711,7 @@ mod tests {
     gen_tests!(u32, u32::MIN, u32::MAX, 10_301, 10, "", "1");
     gen_tests!(u32, u32::MIN, u32::MAX, 10_301, 10, "_challenger", "1");
 
-    gen_tests!(i32, i32::MIN, i32::MAX, 10_301, 10, "", "1");
+    gen_tests!(i32, i32::MIN, i32::MAX, 10_301, 10, "", "-2147483648");
     gen_tests!(i32, i32::MIN, i32::MAX, 10_301, 10, "_challenger", "1");
 
     gen_tests!(

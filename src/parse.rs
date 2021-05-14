@@ -189,12 +189,12 @@ where
 
                             if val != b'0' {
                                 if l == T::CHARS {
-                                    let val = val.wrapping_sub(b'0');
+                                    val = val.wrapping_sub(b'0');
                                     if val <= T::FIRST_SIG {
                                         checked = Some(val);
                                         s = &s[1..];
+                                        val = *s.get_unchecked(0);
                                         continue;
-                                        //return val.cchecked_add(rest).ok_or_else(|| PIE{kind: IntErrorKind3::InvalidDigit })//PosOverflow})
                                     } else {
                                         return Err(PIE {
                                             kind: IntErrorKind3::InvalidDigit,
@@ -319,7 +319,7 @@ where
                             if val <= T::FIRST_SIG {
                                 checked = Some(val);
                                 s = &s[1..];
-                                val = s[0];
+                                val = *s.get_unchecked(0);
                                 continue;
                                 //return val.cchecked_add(rest).ok_or_else(|| PIE{kind: IntErrorKind3::InvalidDigit })//PosOverflow})
                             } else {
