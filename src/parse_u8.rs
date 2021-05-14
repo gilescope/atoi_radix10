@@ -6,10 +6,11 @@ use core::num::IntErrorKind::*;
 type PIE = ParseIntError2;
 
 /// Parse from "0" to "+255" and "+00000000255"
-pub fn parse_u8_challenger(mut s: &[u8]) -> Result<u8, ParseIntError2> {
+pub fn parse_u8(mut s: &[u8]) -> Result<u8, ParseIntError2> {
     loop {
         match s.len() {
-            1 => {  // 0
+            1 => {
+                // 0
                 let val = s[0].wrapping_sub(b'0');
                 if val <= 9 {
                     return Ok(val);
@@ -17,8 +18,9 @@ pub fn parse_u8_challenger(mut s: &[u8]) -> Result<u8, ParseIntError2> {
                     return Err(PIE { kind: InvalidDigit });
                 }
             }
-            3 => { // +00, 100
-                let val23 = parse_2_chars(unsafe {&s.get_unchecked(1..)})? as u8;
+            3 => {
+                // +00, 100
+                let val23 = parse_2_chars(unsafe { &s.get_unchecked(1..) })? as u8;
                 let a = 100 + val23;
                 let val = unsafe { *s.get_unchecked(0) };
                 if val == b'1' {
@@ -35,9 +37,10 @@ pub fn parse_u8_challenger(mut s: &[u8]) -> Result<u8, ParseIntError2> {
                     return Err(PIE { kind: PosOverflow });
                 }
             }
-            2 => { // +0, 10
+            2 => {
+                // +0, 10
                 match parse_2_chars(s) {
-                    Ok(val) => { return Ok(val as u8) },
+                    Ok(val) => return Ok(val as u8),
                     Err(_) => {
                         if s[0] == b'+' {
                             let val = s[1].wrapping_sub(b'0');
@@ -49,25 +52,27 @@ pub fn parse_u8_challenger(mut s: &[u8]) -> Result<u8, ParseIntError2> {
                     }
                 }
             }
-            _ => {
-                match s.get(0) {
-                    Some(val) => {
-                        if *val == b'+' {
-                            s = &s[1..];
-                        }
-                        match s.iter().position(|ch| *ch != b'0') {
-                            Some(pos) => {
-                                s = &s[pos..];
-                                if s[0] == b'+' || s.len() > 3 {
-                                    return Err(PIE { kind: PosOverflow });
-                                }
+            _ => match s.get(0) {
+                Some(val) => {
+                    if *val == b'+' {
+                        s = &s[1..];
+                    }
+                    match s.iter().position(|ch| *ch != b'0') {
+                        Some(pos) => {
+                            s = &s[pos..];
+                            if s[0] == b'+' || s.len() > 3 {
+                                return Err(PIE { kind: PosOverflow });
                             }
-                            None => { return Ok(0); }
+                        }
+                        None => {
+                            return Ok(0);
                         }
                     }
-                    None => {return Err(PIE { kind: Empty });}
                 }
-            }
+                None => {
+                    return Err(PIE { kind: Empty });
+                }
+            },
         }
     }
 }
@@ -145,7 +150,7 @@ pub fn parse_u8_challenger(mut s: &[u8]) -> Result<u8, ParseIntError2> {
 // }
 
 /// Parse from "0" to "+255"
-pub fn parse_u8(s: &[u8]) -> Result<u8, ParseIntError2> {
+pub fn parse_u8_challenger(s: &[u8]) -> Result<u8, ParseIntError2> {
     let mut iter = s.iter();
     match iter.next() {
         Some(mut val) => {
@@ -163,11 +168,13 @@ pub fn parse_u8(s: &[u8]) -> Result<u8, ParseIntError2> {
                     Some(val2) => {
                         let val2 = val2.wrapping_sub(b'0');
                         if val2 > 9 {
-                            return Err(PIE { kind: InvalidDigit })
+                            return Err(PIE { kind: InvalidDigit });
                         }
                         val2
                     }
-                    None => {return Ok(0); }
+                    None => {
+                        return Ok(0);
+                    }
                 };
             }
             match iter.next() {

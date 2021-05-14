@@ -4,7 +4,7 @@ use core::num::IntErrorKind::*;
 type PIE = ParseIntError2;
 
 pub fn parse_i16(s: &[u8]) -> Result<i16, PIE> {
-    let mut s = s;//.as_bytes();
+    let mut s = s; //.as_bytes();
     match s.get(0) {
         Some(val) => {
             let mut val = val.wrapping_sub(b'0');
@@ -118,7 +118,21 @@ pub fn parse_i16(s: &[u8]) -> Result<i16, PIE> {
                         Err(PIE { kind: PosOverflow })
                     }
                 }
-                _ => Err(PIE { kind: PosOverflow }),
+                _ => {
+                    let pos = s.iter().position(|byte| *byte != b'0');
+                    if let Some(pos) = pos {
+                        if l - pos <= 5 {
+                            if s[pos] != b'+' {
+                                return parse_i16(&s[pos..]);
+                            } else {
+                                return Err(PIE { kind: InvalidDigit });
+                            }
+                        }
+                    } else {
+                        return Ok(0);
+                    }
+                    return Err(PIE { kind: PosOverflow });
+                }
             }
         }
         None => return Err(PIE { kind: Empty }),
@@ -203,7 +217,7 @@ pub fn parse_i16(s: &[u8]) -> Result<i16, PIE> {
 // }
 
 pub fn parse_i16_challenger(s: &[u8]) -> Result<i16, PIE> {
-    let mut s = s;//.as_bytes();
+    let mut s = s; //.as_bytes();
     let mut l = s.len();
     match s.get(0) {
         Some(val) => {
@@ -321,7 +335,21 @@ pub fn parse_i16_challenger(s: &[u8]) -> Result<i16, PIE> {
                         Err(PIE { kind: PosOverflow })
                     }
                 }
-                _ => Err(PIE { kind: PosOverflow }),
+                _ => {
+                    let pos = s.iter().position(|byte| *byte != b'0');
+                    if let Some(pos) = pos {
+                        if l - pos <= 5 {
+                            if s[pos] != b'+' {
+                                return parse_i16(&s[pos..]);
+                            } else {
+                                return Err(PIE { kind: InvalidDigit });
+                            }
+                        }
+                    } else {
+                        return Ok(0);
+                    }
+                    return Err(PIE { kind: PosOverflow });
+                }
             }
         }
         None => return Err(PIE { kind: Empty }),

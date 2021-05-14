@@ -3,9 +3,8 @@ use core::num::IntErrorKind::*;
 
 type PIE = ParseIntError2;
 
-
 pub fn parse_u16(s: &[u8]) -> Result<u16, PIE> {
-    let mut s = s;//.as_bytes();
+    let mut s = s; //.as_bytes();
     let mut l: usize;
     let val = match s.get(0) {
         Some(&val) => {
@@ -34,7 +33,7 @@ pub fn parse_u16(s: &[u8]) -> Result<u16, PIE> {
                             };
                         }
                         val
-                    },
+                    }
                     None => return Err(PIE { kind: InvalidDigit }),
                 }
             }
@@ -49,7 +48,9 @@ pub fn parse_u16(s: &[u8]) -> Result<u16, PIE> {
             let val1 = val as u16 * 100;
             if val <= 9 {
                 return Ok(val1 + parse_2_chars(&s[1..])?);
-            } else {return Err(PIE { kind: InvalidDigit })};
+            } else {
+                return Err(PIE { kind: InvalidDigit });
+            };
         }
         4 => parse_4_chars(s),
         5 => {
@@ -65,12 +66,26 @@ pub fn parse_u16(s: &[u8]) -> Result<u16, PIE> {
                 Err(PIE { kind: PosOverflow })
             }
         }
-        _ => Err(PIE { kind: PosOverflow }),
+        _ => {
+            let pos = s.iter().position(|byte| *byte != b'0');
+            if let Some(pos) = pos {
+                if l - pos <= 5 {
+                    if s[pos] != b'+' {
+                        return parse_u16(&s[pos..]);
+                    } else {
+                        return Err(PIE { kind: InvalidDigit });
+                    }
+                }
+            } else {
+                return Ok(0);
+            }
+            return Err(PIE { kind: PosOverflow });
+        }
     }
 }
 
 pub fn parse_u16_challenger(s: &[u8]) -> Result<u16, PIE> {
-    let mut s = s;//.as_bytes();
+    let mut s = s; //.as_bytes();
     let (val, val2, val3) = match s.get(0) {
         Some(val) => {
             let mut val = val.wrapping_sub(b'0');
@@ -137,7 +152,7 @@ pub fn parse_u16_challenger(s: &[u8]) -> Result<u16, PIE> {
             if let Some(pos) = pos {
                 if l - pos <= 5 {
                     if s[pos] != b'+' {
-                        return parse_u16(&s[pos..])
+                        return parse_u16(&s[pos..]);
                     } else {
                         return Err(PIE { kind: InvalidDigit });
                     }
@@ -146,6 +161,6 @@ pub fn parse_u16_challenger(s: &[u8]) -> Result<u16, PIE> {
                 return Ok(0);
             }
             return Err(PIE { kind: PosOverflow });
-        },
+        }
     }
 }

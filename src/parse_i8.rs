@@ -14,10 +14,10 @@ pub fn parse_i8(s: &[u8]) -> Result<i8, PIE> {
                         if val <= 9 {
                             while val == 0 {
                                 val = match iter.next() {
-                                    Some(val2) => {
-                                        val2.wrapping_sub(b'0')
+                                    Some(val2) => val2.wrapping_sub(b'0'),
+                                    None => {
+                                        return Ok(0);
                                     }
-                                    None => { return Ok(0); }
                                 }
                             }
                             match iter.next() {
@@ -78,10 +78,10 @@ pub fn parse_i8(s: &[u8]) -> Result<i8, PIE> {
             }
             while val == 0 {
                 val = match iter.next() {
-                    Some(val2) => {
-                        val2.wrapping_sub(b'0')
+                    Some(val2) => val2.wrapping_sub(b'0'),
+                    None => {
+                        return Ok(0);
                     }
-                    None => { return Ok(0); }
                 }
             }
             match iter.next() {
@@ -199,106 +199,110 @@ pub fn parse_i8(s: &[u8]) -> Result<i8, PIE> {
 // }
 
 pub fn parse_i8_challenger(s: &[u8]) -> Result<i8, PIE> {
-    let mut iter = s.iter();
-    match iter.next() {
-        Some(mut val) => {
-            if *val == b'-' {
-                return match iter.next() {
-                    Some(val) => {
-                        let val = val.wrapping_sub(b'0');
-                        if val <= 9 {
-                            match iter.next() {
-                                None => Ok(-(val as i8)),
-                                Some(val2) => {
-                                    let val2 = val2.wrapping_sub(b'0');
-                                    if val2 <= 9 {
-                                        match iter.next() {
-                                            None => Ok(-((val * 10 + val2) as i8)),
-                                            Some(val3) => match iter.next() {
-                                                None => {
-                                                    let val3 = val3.wrapping_sub(b'0');
-                                                    if (val3 <= 9) & (val <= 1) {
-                                                        let result = val * 100 + val2 * 10 + val3;
-                                                        if result < 128 {
-                                                            Ok(-(result as i8))
-                                                        } else if result == 128 {
-                                                            Ok(i8::MIN)
-                                                        } else {
-                                                            Err(PIE { kind: PosOverflow })
-                                                        }
-                                                    } else {
-                                                        Err(PIE { kind: PosOverflow })
-                                                    }
-                                                }
-                                                Some(_) => return Err(PIE { kind: PosOverflow }),
-                                            },
-                                        }
-                                    } else {
-                                        Err(PIE { kind: InvalidDigit })
-                                    }
-                                }
-                            }
-                        } else {
-                            Err(PIE { kind: InvalidDigit })
-                        }
-                    }
-                    _ => Err(PIE { kind: InvalidDigit }),
-                };
-            } else if *val == b'+' {
-                match iter.next() {
-                    Some(alt_val) => {
-                        val = alt_val;
-                    }
-                    None => return Err(PIE { kind: InvalidDigit }),
-                }
-            }
-            let val = val.wrapping_sub(b'0');
-            match iter.next() {
-                None => {
-                    if val <= 9 {
-                        Ok(val as i8)
-                    } else {
-                        Err(PIE { kind: InvalidDigit })
-                    }
-                }
-                Some(val2) => {
-                    let val2 = val2.wrapping_sub(b'0');
-                    if val2 <= 9 {
-                        match iter.next() {
-                            None => {
-                                if val <= 9 {
-                                    Ok((val * 10 + val2) as i8)
-                                } else {
-                                    Err(PIE { kind: InvalidDigit })
-                                }
-                            }
-                            Some(val3) => match iter.next() {
-                                None => {
-                                    let val3 = val3.wrapping_sub(b'0');
-                                    let val2 = val2 * 10;
-                                    if (val3 <= 9) & (val <= 1) {
-                                        let result = val * 100 + val2 + val3;
-                                        if result < 128 {
-                                            Ok(result as i8)
-                                        } else {
-                                            Err(PIE { kind: PosOverflow })
-                                        }
-                                    } else {
-                                        return Err(PIE { kind: PosOverflow });
-                                    }
-                                }
-                                Some(_) => return Err(PIE { kind: PosOverflow }),
-                            },
-                        }
-                    } else {
-                        return Err(PIE { kind: InvalidDigit });
-                    }
-                }
-            }
-        }
-        _ => Err(PIE { kind: Empty }),
-    }
+    parse_i8(s)
 }
+
+// pub fn parse_i8_challenger(s: &[u8]) -> Result<i8, PIE> {
+//     let mut iter = s.iter();
+//     match iter.next() {
+//         Some(mut val) => {
+//             if *val == b'-' {
+//                 return match iter.next() {
+//                     Some(val) => {
+//                         let val = val.wrapping_sub(b'0');
+//                         if val <= 9 {
+//                             match iter.next() {
+//                                 None => Ok(-(val as i8)),
+//                                 Some(val2) => {
+//                                     let val2 = val2.wrapping_sub(b'0');
+//                                     if val2 <= 9 {
+//                                         match iter.next() {
+//                                             None => Ok(-((val * 10 + val2) as i8)),
+//                                             Some(val3) => match iter.next() {
+//                                                 None => {
+//                                                     let val3 = val3.wrapping_sub(b'0');
+//                                                     if (val3 <= 9) & (val <= 1) {
+//                                                         let result = val * 100 + val2 * 10 + val3;
+//                                                         if result < 128 {
+//                                                             Ok(-(result as i8))
+//                                                         } else if result == 128 {
+//                                                             Ok(i8::MIN)
+//                                                         } else {
+//                                                             Err(PIE { kind: PosOverflow })
+//                                                         }
+//                                                     } else {
+//                                                         Err(PIE { kind: PosOverflow })
+//                                                     }
+//                                                 }
+//                                                 Some(_) => return Err(PIE { kind: PosOverflow }),
+//                                             },
+//                                         }
+//                                     } else {
+//                                         Err(PIE { kind: InvalidDigit })
+//                                     }
+//                                 }
+//                             }
+//                         } else {
+//                             Err(PIE { kind: InvalidDigit })
+//                         }
+//                     }
+//                     _ => Err(PIE { kind: InvalidDigit }),
+//                 };
+//             } else if *val == b'+' {
+//                 match iter.next() {
+//                     Some(alt_val) => {
+//                         val = alt_val;
+//                     }
+//                     None => return Err(PIE { kind: InvalidDigit }),
+//                 }
+//             }
+//             let val = val.wrapping_sub(b'0');
+//             match iter.next() {
+//                 None => {
+//                     if val <= 9 {
+//                         Ok(val as i8)
+//                     } else {
+//                         Err(PIE { kind: InvalidDigit })
+//                     }
+//                 }
+//                 Some(val2) => {
+//                     let val2 = val2.wrapping_sub(b'0');
+//                     if val2 <= 9 {
+//                         match iter.next() {
+//                             None => {
+//                                 if val <= 9 {
+//                                     Ok((val * 10 + val2) as i8)
+//                                 } else {
+//                                     Err(PIE { kind: InvalidDigit })
+//                                 }
+//                             }
+//                             Some(val3) => match iter.next() {
+//                                 None => {
+//                                     let val3 = val3.wrapping_sub(b'0');
+//                                     let val2 = val2 * 10;
+//                                     if (val3 <= 9) & (val <= 1) {
+//                                         let result = val * 100 + val2 + val3;
+//                                         if result < 128 {
+//                                             Ok(result as i8)
+//                                         } else {
+//                                             Err(PIE { kind: PosOverflow })
+//                                         }
+//                                     } else {
+//                                         return Err(PIE { kind: PosOverflow });
+//                                     }
+//                                 }
+//                                 Some(_) => return Err(PIE { kind: PosOverflow }),
+//                             },
+//                         }
+//                     } else {
+//                         return Err(PIE { kind: InvalidDigit });
+//                     }
+//                 }
+//             }
+//         }
+//         _ => Err(PIE { kind: Empty }),
+//     }
+// }
 
 // pub fn parse_i8_old_best(s: &str) -> Result<i8, ()> {
 //     let mut is_positive = 1;

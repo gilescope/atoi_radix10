@@ -5,7 +5,7 @@ type PIE = ParseIntError2;
 
 /// Parses from 0 -> 4_294_967_295 (10 digits and optionally +)
 pub fn parse_u32(mut s: &[u8]) -> Result<u32, PIE> {
-   // let mut s = s.as_bytes();
+    // let mut s = s.as_bytes();
     let val = match s.get(0) {
         Some(val) => {
             let val = val.wrapping_sub(b'0');
@@ -32,7 +32,7 @@ pub fn parse_u32(mut s: &[u8]) -> Result<u32, PIE> {
         }
         None => return Err(PIE { kind: Empty }),
     };
-    let mut l = s.len();
+    let l = s.len();
     unsafe {
         match l {
             1 => Ok(val as u32),
@@ -94,7 +94,7 @@ pub fn parse_u32(mut s: &[u8]) -> Result<u32, PIE> {
                 if let Some(pos) = pos {
                     if l - pos <= 10 {
                         if s[pos] != b'+' {
-                            return parse_u32(&s[pos..])
+                            return parse_u32(&s[pos..]);
                         } else {
                             return Err(PIE { kind: InvalidDigit });
                         }
@@ -103,7 +103,7 @@ pub fn parse_u32(mut s: &[u8]) -> Result<u32, PIE> {
                     return Ok(0);
                 }
                 return Err(PIE { kind: PosOverflow });
-            },
+            }
         }
     }
 }
@@ -384,103 +384,107 @@ pub fn parse_u32(mut s: &[u8]) -> Result<u32, PIE> {
 //     }
 // }
 
-/// Parses from 0 -> 4_294_967_295 (10 digits and optionally +)
-pub fn parse_u32_challenger(s: &[u8]) -> Result<u32, PIE> {
-    //TODO: can we accept AsRef<[u8]> or IntoRef<u8]> ?
-    let mut s = s;//.as_bytes();
-    let val = match s.get(0) {
-        Some(val) => {
-            let val = val.wrapping_sub(b'0');
-            if val <= 9 {
-                val
-            } else {
-                if val == PLUS {
-                    s = &s[1..];
-                    match s.get(0) {
-                        Some(val2) => {
-                            let val2 = (*val2).wrapping_sub(b'0');
-                            if val2 <= 9 {
-                                val2
-                            } else {
-                                return Err(PIE { kind: InvalidDigit });
-                            }
-                        }
-                        None => return Err(PIE { kind: InvalidDigit }),
-                    }
-                } else {
-                    return Err(PIE { kind: InvalidDigit });
-                }
-            }
-        }
-        None => return Err(PIE { kind: Empty }),
-    };
-    let l = s.len();
-    unsafe {
-        match l {
-            1 => Ok(val as u32),
-            2 => {
-                let val2 = s.get_unchecked(1).wrapping_sub(b'0');
-                if val2 <= 9 {
-                    Ok((val * 10 + val2) as u32)
-                } else {
-                    Err(PIE { kind: InvalidDigit })
-                }
-            }
-            3 => {
-                let val2 = s.get_unchecked(1).wrapping_sub(b'0');
-                let val3 = s.get_unchecked(2).wrapping_sub(b'0');
-                if (val2 <= 9) & (val3 <= 9) {
-                    Ok(val as u32 * 100 + (val2 * 10 + val3) as u32)
-                } else {
-                    Err(PIE { kind: InvalidDigit })
-                }
-            }
-            4 => Ok(parse_4_chars(s)? as u32),
-            5 => Ok(val as u32 * 1_0000 + parse_4_chars(&s[1..])? as u32),
-            6 => {
-                let val2 = s.get_unchecked(1).wrapping_sub(b'0');
-                if val2 <= 9 {
-                    let result = parse_4_chars(&s[2..])? as u32;
-                    Ok(val as u32 * 10_0000 + val2 as u32 * 1_0000 + result)
-                } else {
-                    Err(PIE { kind: InvalidDigit })
-                }
-            }
-            7 => {
-                let val2 = parse_4_chars(&s[1..])? as u32 * 100;
-                //let val3 = parse_2_chars(&s[5..])? as u32;
-                let val3 = s.get_unchecked(5).wrapping_sub(b'0');
-                let val4 = s.get_unchecked(6).wrapping_sub(b'0');
-                if (val3 <= 9) & (val4 <= 9) {
-                    Ok(val as u32 * 1_000_000 + val2 + (val3 * 10) as u32 + val4 as u32)
-                } else {
-                    Err(PIE { kind: InvalidDigit })
-                }
-            }
-            8 => parse_8_chars(&s),
-            9 => {
-                parse_8_chars(&s[1..]).map(|val2| (val as u32 * 100_000_000) + val2)
-                //              let result = parse_8_chars(&s[1..])?;
-                //                Ok(result + (val as u32 * 100_000_000))
-            }
-            10 => {
-                let mut val2 = s.get_unchecked(1).wrapping_sub(b'0') as u32;
-                if (val <= 4) & (val2 <= 9) {
-                    let mut result = parse_8_chars(&s[2..])?;
-                    let val = val as u32 * 1_000_000_000;
-                    val2 *= 100_000_000;
-                    result += val;
-                    match result.checked_add(val2) {
-                        Some(val) => Ok(val),
-                        None => Err(PIE { kind: PosOverflow }),
-                    }
-                } else {
-                    return Err(PIE { kind: PosOverflow });
-                }
-            }
-            _ => Err(PIE { kind: PosOverflow }),
-        }
-    }
+// /// Parses from 0 -> 4_294_967_295 (10 digits and optionally +)
+// pub fn parse_u32_challenger(s: &[u8]) -> Result<u32, PIE> {
+//     //TODO: can we accept AsRef<[u8]> or IntoRef<u8]> ?
+//     let mut s = s; //.as_bytes();
+//     let val = match s.get(0) {
+//         Some(val) => {
+//             let val = val.wrapping_sub(b'0');
+//             if val <= 9 {
+//                 val
+//             } else {
+//                 if val == PLUS {
+//                     s = &s[1..];
+//                     match s.get(0) {
+//                         Some(val2) => {
+//                             let val2 = (*val2).wrapping_sub(b'0');
+//                             if val2 <= 9 {
+//                                 val2
+//                             } else {
+//                                 return Err(PIE { kind: InvalidDigit });
+//                             }
+//                         }
+//                         None => return Err(PIE { kind: InvalidDigit }),
+//                     }
+//                 } else {
+//                     return Err(PIE { kind: InvalidDigit });
+//                 }
+//             }
+//         }
+//         None => return Err(PIE { kind: Empty }),
+//     };
+//     let l = s.len();
+//     unsafe {
+//         match l {
+//             1 => Ok(val as u32),
+//             2 => {
+//                 let val2 = s.get_unchecked(1).wrapping_sub(b'0');
+//                 if val2 <= 9 {
+//                     Ok((val * 10 + val2) as u32)
+//                 } else {
+//                     Err(PIE { kind: InvalidDigit })
+//                 }
+//             }
+//             3 => {
+//                 let val2 = s.get_unchecked(1).wrapping_sub(b'0');
+//                 let val3 = s.get_unchecked(2).wrapping_sub(b'0');
+//                 if (val2 <= 9) & (val3 <= 9) {
+//                     Ok(val as u32 * 100 + (val2 * 10 + val3) as u32)
+//                 } else {
+//                     Err(PIE { kind: InvalidDigit })
+//                 }
+//             }
+//             4 => Ok(parse_4_chars(s)? as u32),
+//             5 => Ok(val as u32 * 1_0000 + parse_4_chars(&s[1..])? as u32),
+//             6 => {
+//                 let val2 = s.get_unchecked(1).wrapping_sub(b'0');
+//                 if val2 <= 9 {
+//                     let result = parse_4_chars(&s[2..])? as u32;
+//                     Ok(val as u32 * 10_0000 + val2 as u32 * 1_0000 + result)
+//                 } else {
+//                     Err(PIE { kind: InvalidDigit })
+//                 }
+//             }
+//             7 => {
+//                 let val2 = parse_4_chars(&s[1..])? as u32 * 100;
+//                 //let val3 = parse_2_chars(&s[5..])? as u32;
+//                 let val3 = s.get_unchecked(5).wrapping_sub(b'0');
+//                 let val4 = s.get_unchecked(6).wrapping_sub(b'0');
+//                 if (val3 <= 9) & (val4 <= 9) {
+//                     Ok(val as u32 * 1_000_000 + val2 + (val3 * 10) as u32 + val4 as u32)
+//                 } else {
+//                     Err(PIE { kind: InvalidDigit })
+//                 }
+//             }
+//             8 => parse_8_chars(&s),
+//             9 => {
+//                 parse_8_chars(&s[1..]).map(|val2| (val as u32 * 100_000_000) + val2)
+//                 //              let result = parse_8_chars(&s[1..])?;
+//                 //                Ok(result + (val as u32 * 100_000_000))
+//             }
+//             10 => {
+//                 let mut val2 = s.get_unchecked(1).wrapping_sub(b'0') as u32;
+//                 if (val <= 4) & (val2 <= 9) {
+//                     let mut result = parse_8_chars(&s[2..])?;
+//                     let val = val as u32 * 1_000_000_000;
+//                     val2 *= 100_000_000;
+//                     result += val;
+//                     match result.checked_add(val2) {
+//                         Some(val) => Ok(val),
+//                         None => Err(PIE { kind: PosOverflow }),
+//                     }
+//                 } else {
+//                     return Err(PIE { kind: PosOverflow });
+//                 }
+//             }
+//             _ => Err(PIE { kind: PosOverflow }),
+//         }
+//     }
+// }
+
+pub fn parse_u32_challenger(ss: &[u8]) -> Result<u32, PIE> {
+    super::parse::<u32>(ss).map_err(|_| PIE { kind: InvalidDigit })
 }
 
 // DEAD END: Tried to fold in the check of '+' but not fast enough.

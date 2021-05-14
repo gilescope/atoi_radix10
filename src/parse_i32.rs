@@ -5,7 +5,7 @@ type PIE = ParseIntError2;
 
 /// Parses from -2_147_483_648 to 2_147_483_647 (10 digits and optionally +/-)
 pub fn parse_i32(s: &[u8]) -> Result<i32, PIE> {
-    let mut s = s;//.as_bytes();
+    let mut s = s; //.as_bytes();
     let val = match s.get(0) {
         Some(val) => {
             let val = val.wrapping_sub(b'0');
@@ -167,7 +167,21 @@ pub fn parse_i32(s: &[u8]) -> Result<i32, PIE> {
                     return Err(PIE { kind: PosOverflow });
                 }
             }
-            _ => Err(PIE { kind: PosOverflow }),
+            _ => {
+                let pos = s.iter().position(|byte| *byte != b'0');
+                if let Some(pos) = pos {
+                    if l - pos <= 11 {
+                        if s[pos] != b'+' {
+                            return parse_i32(&s[pos..]);
+                        } else {
+                            return Err(PIE { kind: InvalidDigit });
+                        }
+                    }
+                } else {
+                    return Ok(0);
+                }
+                return Err(PIE { kind: PosOverflow });
+            }
         }
     }
 }
