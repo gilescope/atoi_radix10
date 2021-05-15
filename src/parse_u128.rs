@@ -13,7 +13,7 @@ pub fn parse_u128_challenger2(s: &[u8]) -> Result<u128, ParseIntError3> {
 
 pub fn parse_u128_challenger(s: &[u8]) -> Result<u128, PIE> {
     // return Err(PIE { kind: IntErrorKind3::InvalidDigit })
-    parse::<u128>(s)
+    parse_challenger::<u128>(s)
 }
 
 pub fn parse_u128(s: &[u8]) -> Result<u128, PIE> {

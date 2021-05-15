@@ -19,7 +19,7 @@ mod trees;
 
 //pub(crate) use tree::*;
 
-pub(crate) use parse::parse;
+pub(crate) use parse::{parse, parse_challenger};
 pub use parse_i128::{parse_i128, parse_i128_challenger};
 pub use parse_i16::{parse_i16, parse_i16_challenger};
 pub use parse_i32::{parse_i32, parse_i32_challenger};

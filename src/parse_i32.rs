@@ -187,9 +187,9 @@ pub fn parse_i32_fails(s: &[u8]) -> Result<i32, PIE> {
 }
 
 pub fn parse_i32(s: &[u8]) -> Result<i32, PIE> {
-    super::parse::<i32>(s).map_err(|_|PIE{kind:InvalidDigit})
+    super::parse::<i32>(s).map_err(|_| PIE { kind: InvalidDigit })
 }
 
 pub fn parse_i32_challenger(s: &[u8]) -> Result<i32, PIE> {
-    super::parse::<i32>(s).map_err(|_|PIE{kind:InvalidDigit})
+    super::parse::<i32>(s).map_err(|_| PIE { kind: InvalidDigit })
 }
