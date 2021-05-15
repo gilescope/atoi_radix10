@@ -501,6 +501,9 @@ where
                                 checked = Some(val);
                                 s = &s[1..];
                                 val = s.get_unchecked(0).wrapping_sub(b'0');
+                                if val > 9 {
+                                    return Err(invalid!());
+                                }
                             } else {
                                 return Err(pos_overflow!());
                             }
