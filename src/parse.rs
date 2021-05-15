@@ -6,7 +6,7 @@ use super::{
 type PIE = ParseIntError3;
 
 #[doc(hidden)]
-pub(crate) trait FromStrRadixHelper: PartialOrd + Copy + 'static {
+pub trait FromStrRadixHelper: PartialOrd + Copy + 'static {
     const MIN: Self;
     const BITS: u32;
     const FIRST_SIG: u8;
@@ -103,281 +103,14 @@ doit! {
     usize,TENS_USIZE,20,1,8_446_744_073_709_551_615
 }
 
-//TODO: 32bit isize
-
 /// u128: 0 to 340_282_366_920_938_463_463_374_607_431_768_211_455
 /// (39 digits!)
 
-pub(crate) fn parse_challenger<T>(mut s: &[u8]) -> Result<T, PIE>
+pub fn parse_challenger<T>(s: &[u8]) -> Result<T, PIE>
 where
     T: FromStrRadixHelper,
 {
-    let is_signed_ty = T::from_u32(0) > T::MIN;
-    unsafe {
-        let mut checked: Option<u8> = None;
-        if let Some(val) = s.get(0) {
-            let mut val = *val;
-            let mut res = T::from_u8(0);
-            if !(is_signed_ty && val == b'-') {
-                loop {
-                    let l = s.len();
-                    if std::intrinsics::likely(val != b'+' && l < T::CHARS) {
-                        let l_1 = l & 1_ != 0 && T::BITS >= 4__;
-                        let l_2 = l & 2_ != 0 && T::BITS >= 8__;
-                        let l_4 = l & 4_ != 0 && T::BITS >= 16_;
-                        let l_8 = l & 8_ != 0 && T::BITS >= 32_;
-                        let l16 = l & 16 != 0 && T::BITS >= 64_;
-                        let l32 = l & 32 != 0 && T::BITS >= 128;
-
-                        if l_1 {
-                            let val = val.wrapping_sub(b'0');
-                            let val_t = T::from_u8(val);
-                            if std::intrinsics::likely(val <= 9 && l == 1) {
-                                return Ok(val_t);
-                            } else if std::intrinsics::likely(val <= 9) {
-                                s = &s.get_unchecked(1..);
-                                res = val_t.uunchecked_mul(*T::TREE.get_unchecked(s.len()));
-                            } else {
-                                return Err(PIE {
-                                    kind: IntErrorKind3::InvalidDigit,
-                                });
-                            };
-                        }
-                        if l32 {
-                            let val = T::from_u128(parse_32_chars(&s).map_err(|_| PIE {
-                                kind: IntErrorKind3::InvalidDigit,
-                            })?);
-                            s = &s.get_unchecked(32..);
-                            res = res
-                                .uunchecked_add(T::TREE.get_unchecked(s.len()).uunchecked_mul(val));
-                        }
-                        if l16 {
-                            let val = T::from_u64(parse_16_chars(&s).map_err(|_| PIE {
-                                kind: IntErrorKind3::InvalidDigit,
-                            })?);
-                            s = &s.get_unchecked(16..);
-                            res = res
-                                .uunchecked_add(T::TREE.get_unchecked(s.len()).uunchecked_mul(val));
-                        }
-                        if l_8 {
-                            let val = T::from_u32(parse_8_chars(&s).map_err(|_| PIE {
-                                kind: IntErrorKind3::InvalidDigit,
-                            })?);
-                            s = &s.get_unchecked(8..);
-                            res = res
-                                .uunchecked_add(T::TREE.get_unchecked(s.len()).uunchecked_mul(val));
-                        }
-                        if l_4 {
-                            let val = T::from_u16(parse_4_chars(&s).map_err(|_| PIE {
-                                kind: IntErrorKind3::InvalidDigit,
-                            })?);
-                            s = &s.get_unchecked(4..);
-                            res = res
-                                .uunchecked_add(T::TREE.get_unchecked(s.len()).uunchecked_mul(val));
-                        }
-                        if l_2 {
-                            let val = T::from_u16(parse_2_chars(&s).map_err(|_| PIE {
-                                kind: IntErrorKind3::InvalidDigit,
-                            })?);
-                            //s = &s.get_unchecked(2..);
-                            res = res.uunchecked_add(val); //T::TREE.get_unchecked(s.len()).uunchecked_mul
-                        }
-                        return if checked.is_none() {
-                            Ok(res)
-                        } else {
-                            let checked = T::from_u8(checked.unwrap())
-                                .cchecked_mul(*T::TREE.get_unchecked(T::CHARS - 1))
-                                .ok_or_else(|| PIE {
-                                    kind: IntErrorKind3::InvalidDigit,
-                                })?; //PosOverflow})?;
-                            checked.cchecked_add(res).ok_or_else(|| PIE {
-                                kind: IntErrorKind3::InvalidDigit,
-                            }) //PosOverflow})
-                        };
-                    }
-
-                    if val != b'+' {
-                        if val != b'0' {
-                            if l == T::CHARS {
-                                val = val.wrapping_sub(b'0');
-                                if val <= T::FIRST_SIG {
-                                    checked = Some(val);
-                                    s = &s[1..];
-                                    val = *s.get_unchecked(0);
-                                    continue;
-                                    //return val.cchecked_add(rest).ok_or_else(|| PIE{kind: IntErrorKind3::InvalidDigit })//PosOverflow})
-                                } else {
-                                    return Err(PIE {
-                                        kind: IntErrorKind3::InvalidDigit,
-                                    }); //InvalidDigit });
-                                }
-                            } else {
-                                return Err(PIE {
-                                    kind: IntErrorKind3::InvalidDigit,
-                                }); //PosOverflow });
-                            }
-                        } else {
-                            while val == b'0' {
-                                s = &s[1..];
-                                val = match s.get(0) {
-                                    Some(val) => *val,
-                                    None => return Ok(T::from_u8(0)),
-                                }
-                            }
-                            if val == b'+' {
-                                return Err(PIE {
-                                    kind: IntErrorKind3::InvalidDigit,
-                                }); // Empty });
-                            }
-                        }
-                    } else {
-                        if checked.is_some() {
-                            return Err(PIE {
-                                kind: IntErrorKind3::InvalidDigit,
-                            });
-                        }
-                        s = &s[1..];
-                        val = match s.get(0) {
-                            Some(val) => {
-                                if *val == b'+' {
-                                    return Err(PIE {
-                                        kind: IntErrorKind3::InvalidDigit,
-                                    }); // Empty });
-                                } else {
-                                    *val
-                                }
-                            }
-                            None => {
-                                return Err(PIE {
-                                    kind: IntErrorKind3::InvalidDigit,
-                                })
-                            } // Empty });
-                        }
-                    }
-                }
-            } else {
-                s = &s[1..];
-                loop {
-                    let l = s.len();
-
-                    if std::intrinsics::likely(l < T::CHARS && l != 0) {
-                        if (l & 1) != 0 && T::BITS >= 4__ {
-                            let val = s.get_unchecked(0).wrapping_sub(b'0');
-                            let val_t = T::from_u8(0).uunchecked_sub(T::from_u8(val));
-                            if std::intrinsics::likely(val <= 9 && l == 1) {
-                                return Ok(val_t);
-                            } else if std::intrinsics::likely(val <= 9) {
-                                s = &s.get_unchecked(1..);
-                                res = val_t.uunchecked_mul(*T::TREE.get_unchecked(s.len()));
-                            } else {
-                                return Err(PIE {
-                                    kind: IntErrorKind3::InvalidDigit,
-                                });
-                            };
-                        }
-                        if (l & 32) != 0 && T::BITS >= 128 {
-                            let val = T::from_u128(parse_32_chars(&s).map_err(|_| PIE {
-                                kind: IntErrorKind3::InvalidDigit,
-                            })?);
-                            s = &s.get_unchecked(32..);
-                            res = res
-                                .uunchecked_sub(T::TREE.get_unchecked(s.len()).uunchecked_mul(val));
-                        }
-                        if (l & 16) != 0 && T::BITS >= 64_ {
-                            let val = T::from_u64(parse_16_chars(&s).map_err(|_| PIE {
-                                kind: IntErrorKind3::InvalidDigit,
-                            })?);
-                            s = &s.get_unchecked(16..);
-                            res = res
-                                .uunchecked_sub(T::TREE.get_unchecked(s.len()).uunchecked_mul(val));
-                        }
-                        if (l & 8_) != 0 && T::BITS >= 32_ {
-                            let val = T::from_u32(parse_8_chars(&s).map_err(|_| PIE {
-                                kind: IntErrorKind3::InvalidDigit,
-                            })?);
-                            s = &s.get_unchecked(8..);
-                            res = res
-                                .uunchecked_sub(T::TREE.get_unchecked(s.len()).uunchecked_mul(val));
-                        }
-                        if (l & 4_) != 0 && T::BITS >= 16_ {
-                            let val = T::from_u16(parse_4_chars(&s).map_err(|_| PIE {
-                                kind: IntErrorKind3::InvalidDigit,
-                            })?);
-                            s = &s.get_unchecked(4..);
-                            res = res
-                                .uunchecked_sub(T::TREE.get_unchecked(s.len()).uunchecked_mul(val));
-                        }
-                        if (l & 2_ != 0) && T::BITS >= 8__ {
-                            let val = T::from_u16(parse_2_chars(&s).map_err(|_| PIE {
-                                kind: IntErrorKind3::InvalidDigit,
-                            })?);
-                            //s = &s.get_unchecked(2..);
-                            res = res.uunchecked_sub(val); //T::TREE.get_unchecked(s.len()).uunchecked_mul
-                        }
-                        return if checked.is_none() {
-                            Ok(res)
-                        } else {
-                            let chk = checked.unwrap();
-                            if chk == T::FIRST_SIG && res == T::TAIL {
-                                return Ok(T::MIN);
-                            }
-                            let val = T::from_u8(chk)
-                                .cchecked_mul(*T::TREE.get_unchecked(T::CHARS - 1))
-                                .ok_or_else(|| PIE {
-                                    kind: IntErrorKind3::InvalidDigit,
-                                })?; //PosOverflow})?;
-                            res.cchecked_sub(val).ok_or_else(|| PIE {
-                                kind: IntErrorKind3::InvalidDigit,
-                            }) //PosOverflow})
-                        };
-                    }
-                    val = if let Some(val) = s.get(0) {
-                        *val
-                    } else {
-                        return Err(PIE {
-                            kind: IntErrorKind3::InvalidDigit,
-                        }); //Empty });
-                    };
-                    if val != b'0' {
-                        if l == T::CHARS {
-                            val = val.wrapping_sub(b'0');
-                            if val <= T::FIRST_SIG {
-                                checked = Some(val);
-                                s = &s[1..];
-                                val = *s.get_unchecked(0);
-                                continue;
-                            } else {
-                                return Err(PIE {
-                                    kind: IntErrorKind3::InvalidDigit,
-                                }); //InvalidDigit });
-                            }
-                        } else {
-                            return Err(PIE {
-                                kind: IntErrorKind3::InvalidDigit,
-                            }); //PosOverflow });
-                        }
-                    } else {
-                        while val == b'0' {
-                            s = &s[1..];
-                            val = match s.get(0) {
-                                Some(val) => *val,
-                                None => return Ok(T::from_u8(0)),
-                            }
-                        }
-                        if val == b'+' {
-                            return Err(PIE {
-                                kind: IntErrorKind3::InvalidDigit,
-                            }); // Empty });
-                        }
-                    }
-                }
-            }
-        } else {
-            return Err(PIE {
-                kind: IntErrorKind3::InvalidDigit,
-            }); // Empty });
-        }
-    }
+    parse(s)
 }
 
 // u128: 0 to 340_282_366_920_938_463_463_374_607_431_768_211_455
@@ -414,7 +147,7 @@ macro_rules! neg_overflow {
     };
 }
 
-pub(crate) fn parse<T>(mut s: &[u8]) -> Result<T, PIE>
+pub fn parse<T>(mut s: &[u8]) -> Result<T, PIE>
 where
     T: FromStrRadixHelper,
 {
@@ -454,7 +187,9 @@ where
                                         return Ok(res);
                                     }
                                 } else {
-                                    res = res.uunchecked_add(T::TREE.get_unchecked(s.len()).uunchecked_mul(val));
+                                    res = res.uunchecked_add(
+                                        T::TREE.get_unchecked(s.len()).uunchecked_mul(val),
+                                    );
                                 }
                             }
                             if l_4 {
@@ -467,7 +202,7 @@ where
                                     }
                                 } else {
                                     res = res.uunchecked_add(
-                                        T::TREE.get_unchecked(s.len()).uunchecked_mul(val)
+                                        T::TREE.get_unchecked(s.len()).uunchecked_mul(val),
                                     );
                                 }
                             }
@@ -480,7 +215,7 @@ where
                                         return Ok(res);
                                     }
                                 } else {
-                                   res = res.uunchecked_add(
+                                    res = res.uunchecked_add(
                                         T::TREE.get_unchecked(s.len()).uunchecked_mul(val),
                                     );
                                 }
@@ -521,19 +256,19 @@ where
                                 return Err(invalid!());
                             }
                         } else if val == 0 {
-                             // Remove leading zeros
-                             val = b'0';
-                             while val == b'0' {
-                                 s = &s[1..];
-                                 val = match s.get(0) {
-                                     Some(val) => *val,
-                                     None => return Ok(T::from_u8(0)),
-                                 }
-                             }
-                             val = val.wrapping_sub(b'0');
-                             if val > 9 {
-                                 return Err(empty!());
-                             }
+                            // Remove leading zeros
+                            val = b'0';
+                            while val == b'0' {
+                                s = &s[1..];
+                                val = match s.get(0) {
+                                    Some(val) => *val,
+                                    None => return Ok(T::from_u8(0)),
+                                }
+                            }
+                            val = val.wrapping_sub(b'0');
+                            if val > 9 {
+                                return Err(empty!());
+                            }
                         } else {
                             return Err(pos_overflow!());
                         }
@@ -569,7 +304,9 @@ where
                                         return Ok(res);
                                     }
                                 } else {
-                                    res = res.uunchecked_sub(T::TREE.get_unchecked(s.len()).uunchecked_mul(val));
+                                    res = res.uunchecked_sub(
+                                        T::TREE.get_unchecked(s.len()).uunchecked_mul(val),
+                                    );
                                 }
                             }
                             if (l & 4_) != 0 && T::BITS >= 16_ {
@@ -671,7 +408,7 @@ where
                             }
                         }
                         None => return Err(empty!()),
-                    }
+                    };
                 } else {
                     return Err(invalid!());
                 }

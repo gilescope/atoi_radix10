@@ -19,7 +19,7 @@ mod trees;
 
 //pub(crate) use tree::*;
 
-pub(crate) use parse::{parse, parse_challenger};
+pub use parse::{parse, parse_challenger};
 pub use parse_i128::{parse_i128, parse_i128_challenger};
 pub use parse_i16::{parse_i16, parse_i16_challenger};
 pub use parse_i32::{parse_i32, parse_i32_challenger};
@@ -450,54 +450,54 @@ pub fn parse_4_chars(s: &[u8]) -> Result<u16, PIE> {
     }
 }
 
-#[inline]
-pub fn parse_2_charsX(s: &[u8]) -> Result<u8, PIE> {
-    //SAFETY:
-    debug_assert!(s.len() >= 2);
-    const MASK_HI: u16 = 0xf0f0u16;
-    const ASCII_ZEROS: u16 = 0x3030u16; //0b0011__0000_0011_0000
+// #[inline]
+// pub fn parse_2_charsX(s: &[u8]) -> Result<u8, PIE> {
+//     //SAFETY:
+//     debug_assert!(s.len() >= 2);
+//     const MASK_HI: u16 = 0xf0f0u16;
+//     const ASCII_ZEROS: u16 = 0x3030u16; //0b0011__0000_0011_0000
 
-    let chunk = unsafe {
-        //mask, shift, or
-        //   a | b
-        // 0x01010101
+//     let chunk = unsafe {
+//         //mask, shift, or
+//         //   a | b
+//         // 0x01010101
 
-        // 0b01010101 => 0b001111
+//         // 0b01010101 => 0b001111
 
-        // 04030201 >> 16 = 00000403 |
-        // truncate 0201 << 4 = 2010  = 2413
+//         // 04030201 >> 16 = 00000403 |
+//         // truncate 0201 << 4 = 2010  = 2413
 
-        // 4030201
-        //
+//         // 4030201
+//         //
 
-        // let mut chunk: u16 = 0;
-        // std::ptr::copy_nonoverlapping(s.as_ptr() as *const u16, &mut chunk, 1);
+//         // let mut chunk: u16 = 0;
+//         // std::ptr::copy_nonoverlapping(s.as_ptr() as *const u16, &mut chunk, 1);
 
-        *(s.as_ptr() as *const u16) ^ ASCII_ZEROS
-    };
-    if (chunk & MASK_HI) | (chunk.wrapping_add(0x7676u16) & 0x8080u16) == 0 {
-        // 04030201 >> 16 = 00000403 |
-        // truncate 0201 << 4 = 2010  = 2413
-        // 4030201
-        //
-        //
-        //
-        //
-        // let lower_digits = (chunk & 0xf0) >> 8;
-        // let upper_digits = (chunk & 0x0f) * 10;
-        // let chunk = lower_digits + upper_digits;
+//         *(s.as_ptr() as *const u16) ^ ASCII_ZEROS
+//     };
+//     if (chunk & MASK_HI) | (chunk.wrapping_add(0x7676u16) & 0x8080u16) == 0 {
+//         // 04030201 >> 16 = 00000403 |
+//         // truncate 0201 << 4 = 2010  = 2413
+//         // 4030201
+//         //
+//         //
+//         //
+//         //
+//         // let lower_digits = (chunk & 0xf0) >> 8;
+//         // let upper_digits = (chunk & 0x0f) * 10;
+//         // let chunk = lower_digits + upper_digits;
 
-        // 1-byte mask trick (works on a pair of single digits)
-        let lower_digits = (chunk & 0x0f00) >> 8;
-        let upper_digits = (chunk & 0x000f) * 10;
-        let chunk = lower_digits + upper_digits;
-        Ok(chunk as u8) // u8 can guarantee to hold 2 chars.
-    } else {
-        return Err(PIE {
-            kind: IntErrorKind::InvalidDigit,
-        });
-    }
-}
+//         // 1-byte mask trick (works on a pair of single digits)
+//         let lower_digits = (chunk & 0x0f00) >> 8;
+//         let upper_digits = (chunk & 0x000f) * 10;
+//         let chunk = lower_digits + upper_digits;
+//         Ok(chunk as u8) // u8 can guarantee to hold 2 chars.
+//     } else {
+//         return Err(PIE {
+//             kind: IntErrorKind::InvalidDigit,
+//         });
+//     }
+// }
 // #[inline]
 // pub fn parse_2_chars(s: &[u8]) -> Result<u8, PIE> {
 //     unsafe {
@@ -709,7 +709,7 @@ mod tests {
     gen_tests!(i16, i16::MIN, i16::MAX, 1, 5, "_challenger", "1");
 
     gen_tests!(u32, u32::MIN, u32::MAX, 10_301, 10, "", "1");
-    gen_tests!(u32, u32::MIN, u32::MAX, 10_301, 10, "_challenger", "1");
+    gen_tests!(u32, u32::MIN, u32::MAX, 10_301, 10, "_challenger", "4294967295");
 
     gen_tests!(i32, i32::MIN, i32::MAX, 10_301, 10, "", "-2147483648");
     gen_tests!(i32, i32::MIN, i32::MAX, 10_301, 10, "_challenger", "1");
