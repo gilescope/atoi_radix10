@@ -76,16 +76,33 @@ doit! {
     i8,TENS_I8,3,1,-28
     i16,TENS_I16,5,3,-2768
     i32,TENS_I32,10,2,-147_483_648
-    i64,TENS_I64,20,9,-223_372_036_854_775_808
+    i64,TENS_I64,19,9,-223_372_036_854_775_808
     i128,TENS_I128,39,1,-70141183460469231731687303715884105728
-    isize,TENS_ISIZE,20,9,-223_372_036_854_775_808
     u8,TENS_U8,3,2,55
     u16,TENS_U16,5,6,5535
     u32,TENS_U32,10,4,294_967_295
     u64,TENS_U64,20,1,8_446_744_073_709_551_615
     u128,TENS_U128,39,3,40_282_366_920_938_463_463_374_607_431_768_211_455
+}
+
+#[cfg(target_pointer_width = "16")] //E.g. msp430-none-elf micro-controller.
+doit! {
+    isize,TENS_ISIZE,5,3,-2768
+    usize,TENS_USIZE,5,6,5535
+}
+
+#[cfg(target_pointer_width = "32")]
+doit! {
+    isize,TENS_ISIZE,10,2,-147_483_648
+    usize,TENS_USIZE,10,4,294_967_295
+}
+
+#[cfg(target_pointer_width = "64")]
+doit! {
+    isize,TENS_ISIZE,19,9,-223_372_036_854_775_808
     usize,TENS_USIZE,20,1,8_446_744_073_709_551_615
 }
+
 //TODO: 32bit isize
 
 /// u128: 0 to 340_282_366_920_938_463_463_374_607_431_768_211_455
