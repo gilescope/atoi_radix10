@@ -489,38 +489,36 @@ where
                             return if checked.is_none() {
                                 Ok(res)
                             } else {
+                                // SAFETY: mul is in range as `checked` is constrained to <= T::FIRST_SIG
                                 let checked = T::from_u8(checked.unwrap())
-                                    .cchecked_mul(*T::TREE.get_unchecked(T::CHARS - 1))
-                                    .ok_or_else(|| pos_overflow!())?;
+                                    .uunchecked_mul(*T::TREE.get_unchecked(T::CHARS - 1));
                                 checked.cchecked_add(res).ok_or_else(|| pos_overflow!())
                             };
                         }
                         // Deal with edge cases then get back to the top,
-                        if val != 0 {
-                            if l == T::CHARS && val <= T::FIRST_SIG {
-                                checked = Some(val);
-                                s = &s[1..];
-                                val = s.get_unchecked(0).wrapping_sub(b'0');
-                                if val > 9 {
-                                    return Err(invalid!());
-                                }
-                            } else {
-                                return Err(pos_overflow!());
-                            }
-                        } else {
-                            // Remove leading zeros
-                            val = b'0';
-                            while val == b'0' {
-                                s = &s[1..];
-                                val = match s.get(0) {
-                                    Some(val) => *val,
-                                    None => return Ok(T::from_u8(0)),
-                                }
-                            }
-                            val = val.wrapping_sub(b'0');
+                        if l == T::CHARS && val <= T::FIRST_SIG {
+                            checked = Some(val);
+                            s = &s[1..];
+                            val = s.get_unchecked(0).wrapping_sub(b'0');
                             if val > 9 {
-                                return Err(empty!());
+                                return Err(invalid!());
                             }
+                        } else if val == 0 {
+                             // Remove leading zeros
+                             val = b'0';
+                             while val == b'0' {
+                                 s = &s[1..];
+                                 val = match s.get(0) {
+                                     Some(val) => *val,
+                                     None => return Ok(T::from_u8(0)),
+                                 }
+                             }
+                             val = val.wrapping_sub(b'0');
+                             if val > 9 {
+                                 return Err(empty!());
+                             }
+                        } else {
+                            return Err(pos_overflow!());
                         }
 
                         debug_assert!(val <= 9);
@@ -601,7 +599,7 @@ where
                             }
                             if (l & 32) != 0 && T::BITS >= 128 {
                                 let val = T::from_u128(parse_32_chars(&s).map_err(|_| invalid!())?);
-                                s = &s.get_unchecked(32..);
+                                //s = &s.get_unchecked(32..);
                                 res = res.uunchecked_sub(val);
                             }
                             return if checked.is_none() {
@@ -611,9 +609,9 @@ where
                                 if chk == T::FIRST_SIG && res == T::TAIL {
                                     return Ok(T::MIN);
                                 }
+                                // SAFETY: mul is in range as `checked` is constrained to <= T::FIRST_SIG
                                 let val = T::from_u8(chk)
-                                    .cchecked_mul(*T::TREE.get_unchecked(T::CHARS - 1))
-                                    .ok_or_else(|| neg_overflow!())?;
+                                    .uunchecked_mul(*T::TREE.get_unchecked(T::CHARS - 1));
                                 res.cchecked_sub(val).ok_or_else(|| neg_overflow!())
                             };
                         }
