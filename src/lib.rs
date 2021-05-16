@@ -5,31 +5,31 @@
 
 mod parse;
 
-mod parse_i128;
-mod parse_i16;
-mod parse_i32;
-mod parse_i64;
-mod parse_i8;
-mod parse_u128;
-mod parse_u16;
-mod parse_u32;
-mod parse_u64;
-mod parse_u8;
+// mod parse_i128;
+// mod parse_i16;
+// mod parse_i32;
+// mod parse_i64;
+// mod parse_i8;
+// mod parse_u128;
+// mod parse_u16;
+// mod parse_u32;
+// mod parse_u64;
+// mod parse_u8;
 mod trees;
 
 //pub(crate) use tree::*;
 
 pub use parse::{parse, parse_challenger};
-pub use parse_i128::{parse_i128, parse_i128_challenger};
-pub use parse_i16::{parse_i16, parse_i16_challenger};
-pub use parse_i32::{parse_i32, parse_i32_challenger};
-pub use parse_i64::{parse_i64, parse_i64_challenger};
-pub use parse_i8::{parse_i8, parse_i8_challenger};
-pub use parse_u128::{parse_u128, parse_u128_challenger};
-pub use parse_u16::{parse_u16, parse_u16_challenger};
-pub use parse_u32::{parse_u32, parse_u32_challenger};
-pub use parse_u64::{parse_u64, parse_u64_challenger};
-pub use parse_u8::{parse_u8, parse_u8_challenger};
+// pub use parse_i128::{parse_i128, parse_i128_challenger};
+// pub use parse_i16::{parse_i16, parse_i16_challenger};
+// pub use parse_i32::{parse_i32, parse_i32_challenger};
+// pub use parse_i64::{parse_i64, parse_i64_challenger};
+// pub use parse_i8::{parse_i8, parse_i8_challenger};
+// pub use parse_u128::{parse_u128, parse_u128_challenger};
+// pub use parse_u16::{parse_u16, parse_u16_challenger};
+// pub use parse_u32::{parse_u32, parse_u32_challenger};
+// pub use parse_u64::{parse_u64, parse_u64_challenger};
+// pub use parse_u8::{parse_u8, parse_u8_challenger};
 
 #[cfg(feature = "std")]
 pub fn std_parse<T>(s: &str) -> Result<T, ()>
@@ -67,7 +67,7 @@ where
 const PLUS: u8 = b'+'.wrapping_sub(b'0');
 const MINUS: u8 = b'-'.wrapping_sub(b'0');
 
-use core::num::IntErrorKind;
+use IntErrorKind3 as IntErrorKind;
 //use core::num::ParseIntError;
 #[derive(Debug, Eq, PartialEq)]
 pub struct ParseIntError2 {
@@ -107,7 +107,7 @@ pub struct ParseIntError3 {
     pub kind: IntErrorKind3,
 }
 
-type PIE = ParseIntError2;
+type PIE = ParseIntError3;
 
 #[cfg(not(target_feature = "avx"))]
 #[cfg(target_endian = "little")]
@@ -605,7 +605,7 @@ mod tests {
                 fn [<test_ $target_type _specific $postfix>]() {
                     let s = $specific;
                     let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
-                    assert_eq!(p, [<parse_ $target_type $postfix>](s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
+                    assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                 }
 
                 #[cfg(feature="std")]
@@ -618,7 +618,7 @@ mod tests {
                                 let mut v = vec.clone();
                                 v[j] = ascii;
                                 let s = String::from_utf8_lossy(&v[..]);
-                                assert_eq!(Err(()), [<parse_ $target_type $postfix>](s.as_bytes()).map_err(|_| ()), "parsing `{}`", s);
+                                assert_eq!(Err(()), [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "parsing `{}`", s);
                             }
                         }
                     }
@@ -631,7 +631,7 @@ mod tests {
                     s.push('1');
                     assert_eq!(
                         Err(()),
-                        [<parse_ $target_type $postfix>](s.as_bytes()).map_err(|_|()),
+                        [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_|()),
                         " when parsing '{}'",
                         &s
                     );
@@ -653,7 +653,7 @@ mod tests {
                     for i in ($min..$max as $target_type).step_by($step) {
                         let s = i.to_string();
                         let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
-                        assert_eq!(p, [<parse_ $target_type $postfix>](s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
+                        assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                     }
                 }
 
@@ -664,7 +664,7 @@ mod tests {
                         let mut s = i.to_string();
                         s.insert(0, '+');
                         let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
-                        assert_eq!(p, [<parse_ $target_type $postfix>](s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
+                        assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                     }
                 }
 
@@ -678,7 +678,7 @@ mod tests {
                         s.insert(0, '0');
                     }
                     let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
-                    assert_eq!(p, [<parse_ $target_type $postfix>](s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
+                    assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                 }
 
                 #[cfg(feature="std")]
@@ -690,7 +690,7 @@ mod tests {
                         s.insert(0, '0');
                     }
                     let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
-                    assert_eq!(p, [<parse_ $target_type $postfix>](s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
+                    assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                 }
             }
         }
@@ -709,7 +709,15 @@ mod tests {
     gen_tests!(i16, i16::MIN, i16::MAX, 1, 5, "_challenger", "1");
 
     gen_tests!(u32, u32::MIN, u32::MAX, 10_301, 10, "", "1");
-    gen_tests!(u32, u32::MIN, u32::MAX, 10_301, 10, "_challenger", "4294967295");
+    gen_tests!(
+        u32,
+        u32::MIN,
+        u32::MAX,
+        10_301,
+        10,
+        "_challenger",
+        "4294967295"
+    );
 
     gen_tests!(i32, i32::MIN, i32::MAX, 10_301, 10, "", "-2147483648");
     gen_tests!(i32, i32::MIN, i32::MAX, 10_301, 10, "_challenger", "1");
@@ -839,13 +847,13 @@ mod tests {
     fn check(data: &[u8]) {
         if let Ok(s) = String::from_utf8(data.to_vec()) {
             let spec: Result<u32, _> = s.parse();
-            let expected = spec.map_err(|e| ());
-            assert_eq!(expected, parse_u32(&data).map_err(|e| ()));
+            let expected = spec.map_err(|_| ());
+            assert_eq!(expected, parse::<u32>(&data).map_err(|_| ()));
             // let expected = spec.map_err(|e| e.kind().clone());
             // assert_eq!(expected, parse_u32(&data).map_err(|e| e.kind));
         } else {
             //just make sure doesn't panic:
-            let _ = parse_u32(&data);
+            let _ = parse::<u32>(&data);
         }
     }
 
@@ -857,8 +865,8 @@ mod tests {
     {
         if let Ok(s) = String::from_utf8(data.to_vec()) {
             let spec: Result<T, _> = s.parse::<T>();
-            let expected = spec.map_err(|e| ());
-            assert_eq!(expected, parse::<T>(&data).map_err(|e| ()));
+            let expected = spec.map_err(|_| ());
+            assert_eq!(expected, parse::<T>(&data).map_err(|_| ()));
             // let expected = spec.map_err(|e| e.kind().clone());
             // assert_eq!(expected, parse_u32(&data).map_err(|e| e.kind));
         } else {
