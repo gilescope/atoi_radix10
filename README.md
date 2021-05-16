@@ -34,6 +34,13 @@ For u8/i8 it's about the same as std.
 
 For u16, u32, u64 it's around 1/3 faster than std.
 
+Usage and Features
+==================
+
+`nightly` and `simd` features for highest speed.
+
+`std` feature required if you want to run all the tests. 
+It's `no_std` by default and will parse from any `[u8]` slice.
 
 How this works
 ==============

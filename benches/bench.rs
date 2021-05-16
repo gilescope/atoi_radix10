@@ -7,14 +7,10 @@ use paste::paste;
 
 use atoi_radix10::*;
 
-// fn no_op(c: &mut Criterion, //<CyclesPerByte>
-// ) {
-// }
-
 #[cfg(feature = "std")]
 pub fn std_parse<T>(s: &str) -> Result<T, ()>
 where
-    T: std::str::FromStr,
+    T: core::str::FromStr,
 {
     s.parse().map_err(|_| ())
 }
@@ -22,17 +18,17 @@ where
 macro_rules! ok_bench {
     ($target_type:ty, $prefix:literal,  $values:expr) => {
         paste! {
-            #[cfg(feature="std")]
             fn [<bench_parse_ $prefix $target_type>](c: &mut Criterion//<CyclesPerByte>
                       ) {
                 let mut group = c.benchmark_group(stringify!([<$prefix $target_type>]));
 
                 group //.sample_size(30)
-                    .warm_up_time(std::time::Duration::from_millis(500));
-                //    .measurement_time(std::time::Duration::from_millis(2000));
+                    .warm_up_time(core::time::Duration::from_millis(500));
+                //    .measurement_time(core::time::Duration::from_millis(2000));
                 for num_str in $values.iter() {
                     let num : $target_type = num_str.parse().unwrap();
                     group.throughput(Throughput::Bytes(num_str.len() as u64));
+                    #[cfg(feature="std")]
                     group.bench_with_input(BenchmarkId::new(format!("{}std",$prefix), num), &num_str, |b, &val| {
                         b.iter(|| std_parse::<$target_type>(&val));
                     });
@@ -61,8 +57,8 @@ macro_rules! ok_bench {
 fn parse_chars_bench(c: &mut Criterion) {
     let mut group = c.benchmark_group("parse_16_chars_bench_group");
     //group //.sample_size(30)
-    //    .warm_up_time(std::time::Duration::from_millis(1000))
-    //    .measurement_time(std::time::Duration::from_millis(2000));
+    //    .warm_up_time(core::time::Duration::from_millis(1000))
+    //    .measurement_time(core::time::Duration::from_millis(2000));
     let num_str = "12345678123456781234567812345678";
     group.throughput(Throughput::Bytes(num_str.len() as u64));
     group.bench_with_input(BenchmarkId::new("32", num_str), &num_str, |b, &_val| {
@@ -99,29 +95,13 @@ fn parse_chars_bench(c: &mut Criterion) {
     group.finish();
 }
 
-ok_bench!(
-    u8,
-    "",
-    ["1", "12", "123", "+200", &u8::MAX.to_string()]
-);
+ok_bench!(u8, "", ["1", "12", "123", "+200", &u8::MAX.to_string()]);
 
-ok_bench!(
-    i8,
-    "pos_",
-    ["1", "12", "123", "+100", &i8::MAX.to_string()]
-);
+ok_bench!(i8, "pos_", ["1", "12", "123", "+100", &i8::MAX.to_string()]);
 
-ok_bench!(
-    i8,
-    "neg_",
-    [&i8::MIN.to_string(), "-12", "-1"]
-);
+ok_bench!(i8, "neg_", [&i8::MIN.to_string(), "-12", "-1"]);
 
-ok_bench!(
-    u16,
-    "",
-    ["1", "12", "123", "1234", "12345",]
-);
+ok_bench!(u16, "", ["1", "12", "123", "1234", "12345",]);
 
 ok_bench!(
     i16,
@@ -357,11 +337,10 @@ ok_bench!(
     ]
 );
 
-#[cfg(feature = "std")]
 criterion_group!(
     name = benches;
     config = Criterion::default();//.with_measurement(CyclesPerByte);
-    targets = 
+    targets =
     bench_parse_u8,
     bench_parse_u16,
     bench_parse_u32,
@@ -380,49 +359,4 @@ criterion_group!(
     parse_chars_bench,
 );
 
-#[cfg(not(feature = "std"))]
-criterion_group!(
-    name = benches;
-    config = Criterion::default();//.with_measurement(CyclesPerByte);
-    targets=no_op
-);
-
 criterion_main!(benches);
-
-// #[bench]
-// fn bench_trick_with_checks_i64(b: &mut Bencher) {
-//     assert_eq!(
-//         trick_with_checks_i64(EXAMPLE_TIMESTAMP),
-//         EXPECTED_TIMESTAMP as i64
-//     );
-//     b.bytes = EXAMPLE_TIMESTAMP.len() as u64;
-//     b.iter(|| trick_with_checks_i64(black_box(EXAMPLE_TIMESTAMP)));
-// }
-
-// // #[bench]
-// // fn bench_trick_128(b: &mut Bencher) {
-// //     assert_eq!(trick_128(EXAMPLE_TIMESTAMP), EXPECTED_TIMESTAMP);
-// //     b.bytes = EXAMPLE_TIMESTAMP.len() as u64;
-// //     b.iter(|| trick_128(black_box(EXAMPLE_TIMESTAMP)));
-// // }
-
-// // #[bench]
-// // fn bench_trick_simd(b: &mut Bencher) {
-// //     assert_eq!(trick_simd(EXAMPLE_TIMESTAMP), EXPECTED_TIMESTAMP);
-// //     b.bytes = EXAMPLE_TIMESTAMP.len() as u64;
-// //     b.iter(|| trick_simd(black_box(EXAMPLE_TIMESTAMP)));
-// // }
-
-// // #[bench]
-// // fn bench_trick_simd_8(b: &mut Bencher) {
-// //     assert_eq!(trick_simd_8(EXAMPLE_TIMESTAMP), EXPECTED_TIMESTAMP);
-// //     b.bytes = EXAMPLE_TIMESTAMP.len() as u64;
-// //     b.iter(|| trick_simd_8(black_box(EXAMPLE_TIMESTAMP)));
-// // }
-
-// // #[bench]
-// // fn bench_trick_simd_c16(b: &mut Bencher) {
-// //     assert_eq!(trick_simd_c16(EXAMPLE_TIMESTAMP), EXPECTED_TIMESTAMP);
-// //     b.bytes = EXAMPLE_TIMESTAMP.len() as u64;
-// //     b.iter(|| trick_simd_c16(black_box(EXAMPLE_TIMESTAMP)));
-// // }

@@ -1,8 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-#![feature(int_error_matching)]
-#![feature(unchecked_math)]
-#![feature(core_intrinsics)]
+//#![feature(int_error_matching)]
+//#![feature(unchecked_math)]
+#![cfg_attr(feature = "nightly", feature(core_intrinsics))]
 
+#[macro_use]
 mod parse;
 
 // mod parse_i128;
@@ -80,15 +81,13 @@ type Pie = ParseIntError3;
 #[cfg(target_endian = "little")]
 #[inline]
 pub fn parse_32_chars(mut s: &[u8]) -> Result<u128, Pie> {
-    unsafe {
-        let val16 = parse_16_chars(&s)? as u128;
-        s = &s.get_unchecked(16..);
-        let res = val16 * 1_0000_0000_0000_0000;
+    let val16 = parse_16_chars(&s)? as u128;
+    s = &s[16..];
+    let res = val16 * 1_0000_0000_0000_0000;
 
-        // Do the same thing again as a parse_32_chars fn would need 256bits.
-        let val16 = parse_16_chars(&s)? as u128;
-        Ok(res + val16)
-    }
+    // Do the same thing again as a parse_32_chars fn would need 256bits.
+    let val16 = parse_16_chars(&s)? as u128;
+    Ok(res + val16)
 }
 
 #[cfg(target_feature = "avx")]
@@ -103,7 +102,7 @@ pub fn parse_32_chars(s: &[u8]) -> Result<u64, Pie> {
     use core_simd::*;
 
     unsafe {
-        let chunk = _mm256_lddqu_si256(std::mem::transmute_copy(&s));
+        let chunk = _mm256_lddqu_si256(core::mem::transmute_copy(&s));
         let zeros = _mm256_set1_epi8(b'0' as i8);
         let chunk = _mm256_sub_epi16(chunk, zeros); //will wrap
 
@@ -148,7 +147,7 @@ pub fn parse_32_chars(s: &[u8]) -> Result<u64, Pie> {
 }
 
 /// Almost as good as SIMD...
-#[cfg(not(target_feature = "sse2"))]
+#[cfg(not(all(target_feature = "sse2", feature = "simd")))]
 #[cfg(target_endian = "little")]
 #[inline]
 pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
@@ -180,7 +179,7 @@ pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     let upper_digits = (chunk as u64) * 100_00_00_00; //& 0x00000000ffffffff
     let chunk = lower_digits + upper_digits;
 
-    if (chunk_og & MASK_HI) | (chk & 0x80808080808080808080808080808080u128) == 0 {
+    if likely!((chunk_og & MASK_HI) | (chk & 0x80808080808080808080808080808080u128) == 0) {
         Ok(chunk) //u64 can guarantee to contain 19 digits.
     } else {
         return Err(Pie {
@@ -189,7 +188,7 @@ pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     }
 }
 
-#[cfg(target_feature = "sse2")]
+#[cfg(all(target_feature = "sse2", feature = "simd"))]
 #[inline]
 pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     debug_assert!(s.len() >= 16);
@@ -200,7 +199,7 @@ pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     use core_simd::*;
     unsafe {
         //TODO: waiting on https://github.com/rust-lang/stdsimd/issues/102
-        let chunk: __m128i = _mm_lddqu_si128(std::mem::transmute_copy(&s)); //) _mm_lddqu_si128
+        let chunk: __m128i = _mm_lddqu_si128(core::mem::transmute_copy(&s)); //) _mm_lddqu_si128
         let chunk: i8x16 = chunk.into(); //) _mm_lddqu_si128
         let zeros = i8x16::splat(b'0' as i8);
 
@@ -235,7 +234,7 @@ pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
         let chunk: u64 = chunk.to_array()[1].unsigned_abs(); //this could just be a transmute
 
         let chunk = ((chunk & 0xffffffff) * 1_0000_0000) + (chunk >> 32);
-        if is_valid {
+        if likely!(is_valid) {
             Ok(chunk)
         } else {
             Err(Pie {
@@ -275,7 +274,7 @@ pub fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
     //We do this before the if shaving 300ps.
     let chunk = lower_digits + upper_digits;
 
-    if valid {
+    if likely!(valid) {
         Ok(chunk) //u32 can guarantee to contain 9 digits.
     } else {
         Err(Pie {
@@ -313,7 +312,7 @@ pub fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
     // 2-byte mask trick (works on 2 pairs of two digits)
     let chunk = r + m1 + m2 + m3;
 
-    if cond {
+    if likely!(cond) {
         Ok(chunk) //u16 can guarantee to hold 4 digits
     } else {
         Err(Pie {
@@ -335,7 +334,7 @@ pub fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
         //Early calc result before use
         let res = ((chunk & 0x000f) << 1) + ((chunk & 0x000f) << 3) + ((chunk & 0x0f00) >> 8);
 
-        if (chunk & 0xf0f0u16) | (ch & 0x8080u16) == 0 {
+        if likely!((chunk & 0xf0f0u16) | (ch & 0x8080u16) == 0) {
             Ok(res)
         } else {
             Err(Pie {
@@ -555,18 +554,21 @@ mod tests {
         "123456789012345678901234567890123456789"
     );
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_fuzz1() {
         // needed checked add when checking digits in range.
         check(&[50, 35, 43, 173]);
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_fuzz2() {
         // Too long is defined by std as invalid digit error rather than overflow.
         check(&[48, 48, 54, 54, 49, 54, 56, 57, 54, 49, 51]);
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_fuzz3() {
         //"00661689613" std can deal with any number of leading zeros
@@ -574,12 +576,14 @@ mod tests {
         check(&[54, 48, 48, 48, 54, 48, 54, 48, 54, 48, 54]);
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_fuzz4() {
         //leading zeros then plus: "0000+6600660"
         check(&[48, 48, 48, 48, 43, 54, 54, 48, 48, 54, 54, 48]);
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_fuzz5() {
         //leading zeros then plus: "0000+6600660"
@@ -592,11 +596,14 @@ mod tests {
         ]);
     }
     #[test]
+    #[cfg(feature = "std")]
     fn test_fuzz6() {
         check_generic::<u64>(&[
             43, 49, 43, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48,
         ]);
     }
+
+    #[cfg(feature = "std")]
 
     fn check(data: &[u8]) {
         if let Ok(s) = String::from_utf8(data.to_vec()) {
@@ -611,11 +618,13 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "std")]
+
     fn check_generic<T>(data: &[u8])
     where
         T: FromStrRadixHelper,
-        T: std::str::FromStr,
-        T: std::fmt::Debug,
+        T: core::str::FromStr,
+        T: core::fmt::Debug,
     {
         if let Ok(s) = String::from_utf8(data.to_vec()) {
             let spec: Result<T, _> = s.parse::<T>();

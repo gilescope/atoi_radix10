@@ -3,12 +3,38 @@ use super::{
     IntErrorKind3, ParseIntError3, MINUS, PLUS,
 };
 
+#[cfg(feature = "core_intrinsics")]
+macro_rules! likely {
+    ($e:expr) => {
+        core::intrinsics::likely($e)
+    };
+}
+#[cfg(not(feature = "core_intrinsics"))]
+macro_rules! likely {
+    ($e:expr) => {
+        $e
+    };
+}
+
+#[cfg(feature = "core_intrinsics")]
+macro_rules! unlikely {
+    ($e:expr) => {
+        core::intrinsics::unlikely($e)
+    };
+}
+#[cfg(not(feature = "core_intrinsics"))]
+macro_rules! unlikely {
+    ($e:expr) => {
+        $e
+    };
+}
+
 type Pie = ParseIntError3;
 
 #[doc(hidden)]
 pub trait FromStrRadixHelper: PartialOrd + Copy + 'static {
-    const MIN: Self;
-    const BITS: u32;
+    const MINIMUM: Self;
+    const BITS_COUNT: u32;
     const FIRST_SIG: u8;
     const TAIL: Self;
     const TREE: &'static [Self];
@@ -29,10 +55,10 @@ pub trait FromStrRadixHelper: PartialOrd + Copy + 'static {
 
 macro_rules! doit {
     ($($t:ty,$tr:expr,$chars:literal,$first_sig:literal,$tail:literal)*) => ($(impl FromStrRadixHelper for $t {
-        const MIN: Self = Self::MIN;
+        const MINIMUM: Self = Self::MIN;
         const FIRST_SIG: u8 = $first_sig;
         const TAIL: Self = $tail;
-        const BITS: u32 = Self::BITS;
+        const BITS_COUNT: u32 = Self::BITS;
         const TREE: &'static[Self] = $tr;
         const CHARS: usize = $chars;
         #[inline(always)]
@@ -59,15 +85,15 @@ macro_rules! doit {
         }
         #[inline(always)]
         unsafe fn mul_unchecked(&self, other: Self) -> Self {
-            Self::unchecked_mul(*self, other as Self)
+            Self::wrapping_mul(*self, other as Self)
         }
         #[inline(always)]
         unsafe fn sub_unchecked(&self, other: Self) -> Self {
-            Self::unchecked_sub(*self, other as Self)
+            Self::wrapping_sub(*self, other as Self)
         }
         #[inline(always)]
         unsafe fn add_unchecked(&self, other: Self) -> Self {
-            Self::unchecked_add(*self, other as Self)
+            Self::wrapping_add(*self, other as Self)
         }
     })*)
 }
@@ -151,23 +177,23 @@ pub fn parse<T>(mut s: &[u8]) -> Result<T, Pie>
 where
     T: FromStrRadixHelper,
 {
-    let is_signed_ty = T::from_u32(0) > T::MIN;
+    let is_signed_ty = T::from_u32(0) > T::MINIMUM;
     let mut checked: Option<u8> = None;
     if let Some(val) = s.get(0) {
         let mut val = val.wrapping_sub(b'0');
         loop {
-            if std::intrinsics::likely(val <= 9) {
+            if likely!(val <= 9) {
                 // positive without +. could be long with lots of leading zeros.
                 loop {
                     let l = s.len();
-                    if std::intrinsics::likely(l < T::CHARS) {
+                    if likely!(l < T::CHARS) {
                         let mut res = T::from_u8(0);
-                        let l_1 = l & 1 != 0 && T::BITS >= 4;
-                        let l_2 = l & 2 != 0 && T::BITS >= 8;
-                        let l_4 = l & 4 != 0 && T::BITS >= 16;
-                        let l_8 = l & 8 != 0 && T::BITS >= 32;
-                        let l16 = l & 16 != 0 && T::BITS >= 64;
-                        let l32 = l & 32 != 0 && T::BITS >= 128;
+                        let l_1 = l & 1 != 0 && T::BITS_COUNT >= 4;
+                        let l_2 = l & 2 != 0 && T::BITS_COUNT >= 8;
+                        let l_4 = l & 4 != 0 && T::BITS_COUNT >= 16;
+                        let l_8 = l & 8 != 0 && T::BITS_COUNT >= 32;
+                        let l16 = l & 16 != 0 && T::BITS_COUNT >= 64;
+                        let l32 = l & 32 != 0 && T::BITS_COUNT >= 128;
 
                         unsafe {
                             if l_1 {
@@ -241,11 +267,11 @@ where
                             return if let Some(checked) = checked {
                                 // SAFETY: mul is in range as `checked` is constrained to <= T::FIRST_SIG
                                 let checked = T::from_u8(checked)
-                                .mul_unchecked(*T::TREE.get_unchecked(T::CHARS - 1));
+                                    .mul_unchecked(*T::TREE.get_unchecked(T::CHARS - 1));
                                 checked.add_checked(res).ok_or(pos_overflow!())
                             } else {
                                 Ok(res)
-                            }
+                            };
                         }
                     }
                     // Deal with edge cases then get back to the top,
@@ -276,30 +302,30 @@ where
 
                     debug_assert!(val <= 9);
                 }
-            } else if std::intrinsics::likely(is_signed_ty && val == MINUS) {
+            } else if likely!(is_signed_ty && val == MINUS) {
                 s = &s[1..];
 
                 // negative without -. could be long with lots of leading zeros.
                 loop {
                     let l = s.len();
-                    if std::intrinsics::likely(l < T::CHARS && l != 0) {
+                    if likely!(l < T::CHARS && l != 0) {
                         let mut res = T::from_u8(0);
                         unsafe {
-                            if (l & 1) != 0 && T::BITS >= 4 {
+                            if (l & 1) != 0 && T::BITS_COUNT >= 4 {
                                 let val = s.get_unchecked(0).wrapping_sub(b'0');
                                 let val_t = T::from_u8(0).sub_unchecked(T::from_u8(val));
-                                if std::intrinsics::likely(val <= 9 && l == 1) {
+                                if likely!(val <= 9 && l == 1) {
                                     return Ok(val_t);
-                                } else if std::intrinsics::likely(val <= 9) {
-                                    s = &s.get_unchecked(1..);
+                                } else if likely!(val <= 9) {
+                                    s = &s[1..];
                                     res = val_t.mul_unchecked(*T::TREE.get_unchecked(s.len()));
                                 } else {
                                     return Err(invalid!());
                                 };
                             }
-                            if (l & 2 != 0) && T::BITS >= 8 {
+                            if (l & 2 != 0) && T::BITS_COUNT >= 8 {
                                 let val = T::from_u16(parse_2_chars(&s)?);
-                                s = &s.get_unchecked(2..);
+                                s = &s[2..];
                                 if s.is_empty() {
                                     res = res.sub_unchecked(val);
                                     if checked.is_none() {
@@ -311,9 +337,9 @@ where
                                     );
                                 }
                             }
-                            if (l & 4) != 0 && T::BITS >= 16 {
+                            if (l & 4) != 0 && T::BITS_COUNT >= 16 {
                                 let val = T::from_u16(parse_4_chars(&s)?);
-                                s = &s.get_unchecked(4..);
+                                s = &s[4..];
                                 if s.is_empty() {
                                     res = res.sub_unchecked(val);
                                     if checked.is_none() {
@@ -325,9 +351,9 @@ where
                                     );
                                 }
                             }
-                            if (l & 8) != 0 && T::BITS >= 32 {
+                            if (l & 8) != 0 && T::BITS_COUNT >= 32 {
                                 let val = T::from_u32(parse_8_chars(&s)?);
-                                s = &s.get_unchecked(8..);
+                                s = &s[8..];
                                 if s.is_empty() {
                                     res = res.sub_unchecked(val);
                                     if checked.is_none() {
@@ -339,9 +365,9 @@ where
                                     );
                                 }
                             }
-                            if (l & 16) != 0 && T::BITS >= 64 {
+                            if (l & 16) != 0 && T::BITS_COUNT >= 64 {
                                 let val = T::from_u64(parse_16_chars(&s)?);
-                                s = &s.get_unchecked(16..);
+                                s = &s[16..];
                                 if s.is_empty() {
                                     res = res.sub_unchecked(val);
                                     if checked.is_none() {
@@ -353,20 +379,19 @@ where
                                     );
                                 }
                             }
-                            if (l & 32) != 0 && T::BITS >= 128 {
+                            if (l & 32) != 0 && T::BITS_COUNT >= 128 {
                                 res = res.sub_unchecked(T::from_u128(parse_32_chars(&s)?));
                             }
 
                             return if let Some(chk) = checked {
-                                if std::intrinsics::unlikely(res == T::TAIL && chk == T::FIRST_SIG)
-                                {
-                                    return Ok(T::MIN);
+                                if unlikely!(res == T::TAIL && chk == T::FIRST_SIG) {
+                                    return Ok(T::MINIMUM);
                                 }
                                 // SAFETY: mul is in range as `checked` is constrained to <= T::FIRST_SIG
                                 let val = T::from_u8(chk)
                                     .mul_unchecked(*T::TREE.get_unchecked(T::CHARS - 1));
                                 res.sub_checked(val).ok_or(neg_overflow!())
-                            }  else {
+                            } else {
                                 Ok(res)
                             };
                         }
@@ -403,7 +428,7 @@ where
                 val = match s.get(0) {
                     Some(value) => {
                         let value = value.wrapping_sub(b'0');
-                        if std::intrinsics::likely(value <= 9) {
+                        if likely!(value <= 9) {
                             value
                         } else {
                             return Err(empty!());
