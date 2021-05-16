@@ -10,13 +10,14 @@ default = [ "std" ]
 std = []
 
 [dependencies]
+
+[target.'cfg(any(target_feature = "sse2", target_feature = "avx"))'.dependencies]
 core_simd = { git="https://github.com/rust-lang/stdsimd.git"}
-paste = "1.0"
 
 [dev-dependencies]
+paste = "1.0"
 criterion = {version="0.3", features=["html_reports"]}
-itoa = "0.4"
-criterion-cycles-per-byte = "0.1"
+#criterion-cycles-per-byte = "0.1"
 
 [[bench]]
 name = "bench"

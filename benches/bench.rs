@@ -11,6 +11,14 @@ use atoi_radix10::*;
 // ) {
 // }
 
+#[cfg(feature = "std")]
+pub fn std_parse<T>(s: &str) -> Result<T, ()>
+where
+    T: std::str::FromStr,
+{
+    s.parse().map_err(|_| ())
+}
+
 macro_rules! ok_bench {
     ($target_type:ty, $prefix:literal,  $values:expr) => {
         paste! {
@@ -34,9 +42,9 @@ macro_rules! ok_bench {
                     group.bench_with_input(BenchmarkId::new(format!("{}generic",$prefix), num), &num_str, |b, &val| {
                         b.iter(|| atoi_radix10::parse::<$target_type>(val.as_bytes()));
                     });
-                    group.bench_with_input(BenchmarkId::new(format!("{}challenger",$prefix), num), &num_str, |b, &val| {
-                        b.iter(|| atoi_radix10::parse_challenger::<$target_type>(val.as_bytes()));
-                    });
+                    // group.bench_with_input(BenchmarkId::new(format!("{}challenger",$prefix), num), &num_str, |b, &val| {
+                    //     b.iter(|| atoi_radix10::parse_challenger::<$target_type>(val.as_bytes()));
+                    // });
                     //super::parse::<u16>(s).map_err(|_| PIE { kind: InvalidDigit })
                     // group.bench_with_input(BenchmarkId::new(format!("{}atoi_radix10",$prefix), num), &num_str, |b, &val| {
                     //     b.iter(|| $meth(val.as_bytes()));
@@ -71,12 +79,12 @@ fn parse_chars_bench(c: &mut Criterion) {
     group.bench_with_input(BenchmarkId::new("8", num_str), &num_str, |b, &_val| {
         b.iter(|| parse_8_chars(black_box(num_str.as_bytes())));
     });
-    let num_str = "123456";
-    assert_eq!(parse_6_chars(num_str.as_bytes()), Ok(123456));
-    group.throughput(Throughput::Bytes(num_str.len() as u64));
-    group.bench_with_input(BenchmarkId::new("6", num_str), &num_str, |b, &_val| {
-        b.iter(|| parse_6_chars(black_box(num_str.as_bytes())));
-    });
+    // let num_str = "123456";
+    // assert_eq!(parse_6_chars(num_str.as_bytes()), Ok(123456));
+    // group.throughput(Throughput::Bytes(num_str.len() as u64));
+    // group.bench_with_input(BenchmarkId::new("6", num_str), &num_str, |b, &_val| {
+    //     b.iter(|| parse_6_chars(black_box(num_str.as_bytes())));
+    // });
     let num_str = "1234";
     group.throughput(Throughput::Bytes(num_str.len() as u64));
     group.bench_with_input(BenchmarkId::new("4", num_str), &num_str, |b, &_val| {

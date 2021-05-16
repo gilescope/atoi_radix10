@@ -15,7 +15,7 @@ Notes:
 
 Spec:
 
-+/- 0000000000000 then numbers.
++/- 0000000000000 then digits.
 
 Goals:
 
@@ -24,19 +24,16 @@ while keeping the performance.)
 
 We try to obey the rule of small numbers and make sure single digit numbers are especially fast, and in general all numbers will be parsed faster than std.
 
-| type | std worst time ns | atoi_radix10 worst ns | std best | ati best |
-| u8   | 6                 | 3.8                   | 3.2      | 2.0      |
-| i8   | 8.1               | 5                     |
-| u16  | 6.8               | 5.1                   |
-| i16  | 8                 | 5.5                   |
-| u32  | 14                | 7                     |
-| i32  | 10                | 8                     |
-| u64  | 24                | 12                    |
-| i64  | 21                | 12                    |
-| u128 | 96                | 25                    |
-| i128 | 360               | 25                    |
+Performance
+===========
 
-(worst doesn't include leading + and leading 000s as these aren't typical)
+If you have to parse u128 and i128 numbers this crate does any number in under 20ns
+(and if you target a specific cpu with avx then maybe all under 15ns). It is hands down many many times faster than std rust (especially i128) across all the numbers.
+
+For u8/i8 it's about the same as std.
+
+For u16, u32, u64 it's around 1/3 faster than std.
+
 
 How this works
 ==============

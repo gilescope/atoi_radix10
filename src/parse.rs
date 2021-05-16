@@ -179,7 +179,7 @@ where
                                 res = val_t.mul_unchecked(*T::TREE.get_unchecked(s.len()));
                             }
                             if l_2 {
-                                let val = T::from_u16(parse_2_chars(&s).map_err(|_| invalid!())?);
+                                let val = T::from_u16(parse_2_chars(&s)?);
                                 s = &s.get_unchecked(2..);
                                 if s.is_empty() {
                                     res = res.add_unchecked(val);
@@ -193,7 +193,7 @@ where
                                 }
                             }
                             if l_4 {
-                                let val = T::from_u16(parse_4_chars(&s).map_err(|_| invalid!())?);
+                                let val = T::from_u16(parse_4_chars(&s)?);
                                 s = &s.get_unchecked(4..);
                                 if s.is_empty() {
                                     res = res.add_unchecked(val);
@@ -207,7 +207,7 @@ where
                                 }
                             }
                             if l_8 {
-                                let val = T::from_u32(parse_8_chars(&s).map_err(|_| invalid!())?);
+                                let val = T::from_u32(parse_8_chars(&s)?);
                                 s = &s.get_unchecked(8..);
                                 if s.is_empty() {
                                     res = res.add_unchecked(val);
@@ -221,7 +221,7 @@ where
                                 }
                             }
                             if l16 {
-                                let val = T::from_u64(parse_16_chars(&s).map_err(|_| invalid!())?);
+                                let val = T::from_u64(parse_16_chars(&s)?);
                                 s = &s.get_unchecked(16..);
                                 if s.is_empty() {
                                     res = res.add_unchecked(val);
@@ -235,7 +235,7 @@ where
                                 }
                             }
                             if l32 {
-                                let val = T::from_u128(parse_32_chars(&s).map_err(|_| invalid!())?);
+                                let val = T::from_u128(parse_32_chars(&s)?);
                                 res = res.add_unchecked(val);
                             }
                             return if checked.is_none() {
@@ -296,7 +296,7 @@ where
                                 };
                             }
                             if (l & 2_ != 0) && T::BITS >= 8__ {
-                                let val = T::from_u16(parse_2_chars(&s).map_err(|_| invalid!())?);
+                                let val = T::from_u16(parse_2_chars(&s)?);
                                 s = &s.get_unchecked(2..);
                                 if s.is_empty() {
                                     res = res.sub_unchecked(val);
@@ -310,7 +310,7 @@ where
                                 }
                             }
                             if (l & 4_) != 0 && T::BITS >= 16_ {
-                                let val = T::from_u16(parse_4_chars(&s).map_err(|_| invalid!())?);
+                                let val = T::from_u16(parse_4_chars(&s)?);
                                 s = &s.get_unchecked(4..);
                                 if s.is_empty() {
                                     res = res.sub_unchecked(val);
@@ -324,7 +324,7 @@ where
                                 }
                             }
                             if (l & 8_) != 0 && T::BITS >= 32_ {
-                                let val = T::from_u32(parse_8_chars(&s).map_err(|_| invalid!())?);
+                                let val = T::from_u32(parse_8_chars(&s)?);
                                 s = &s.get_unchecked(8..);
                                 if s.is_empty() {
                                     res = res.sub_unchecked(val);
@@ -338,7 +338,7 @@ where
                                 }
                             }
                             if (l & 16) != 0 && T::BITS >= 64_ {
-                                let val = T::from_u64(parse_16_chars(&s).map_err(|_| invalid!())?);
+                                let val = T::from_u64(parse_16_chars(&s)?);
                                 s = &s.get_unchecked(16..);
                                 if s.is_empty() {
                                     res = res.sub_unchecked(val);
@@ -352,7 +352,7 @@ where
                                 }
                             }
                             if (l & 32) != 0 && T::BITS >= 128 {
-                                res = res.sub_unchecked(T::from_u128(parse_32_chars(&s).map_err(|_| invalid!())?));
+                                res = res.sub_unchecked(T::from_u128(parse_32_chars(&s)?));
                             }
                             return if std::intrinsics::likely(checked.is_none()) {
                                 Ok(res)
