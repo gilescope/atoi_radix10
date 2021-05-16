@@ -3,7 +3,7 @@ use super::{
     IntErrorKind3, ParseIntError3, MINUS, PLUS,
 };
 
-type PIE = ParseIntError3;
+type Pie = ParseIntError3;
 
 #[doc(hidden)]
 pub trait FromStrRadixHelper: PartialOrd + Copy + 'static {
@@ -106,7 +106,7 @@ doit! {
 /// u128: 0 to 340_282_366_920_938_463_463_374_607_431_768_211_455
 /// (39 digits!)
 
-pub fn parse_challenger<T>(s: &[u8]) -> Result<T, PIE>
+pub fn parse_challenger<T>(s: &[u8]) -> Result<T, Pie>
 where
     T: FromStrRadixHelper,
 {
@@ -118,14 +118,14 @@ where
 
 macro_rules! invalid {
     () => {
-        PIE {
+        Pie {
             kind: IntErrorKind3::InvalidDigit,
         }
     };
 }
 macro_rules! empty {
     () => {
-        PIE {
+        Pie {
             kind: IntErrorKind3::InvalidDigit,
         }
     };
@@ -133,7 +133,7 @@ macro_rules! empty {
 
 macro_rules! pos_overflow {
     () => {
-        PIE {
+        Pie {
             kind: IntErrorKind3::InvalidDigit,
         }
     };
@@ -141,13 +141,13 @@ macro_rules! pos_overflow {
 
 macro_rules! neg_overflow {
     () => {
-        PIE {
+        Pie {
             kind: IntErrorKind3::InvalidDigit,
         }
     };
 }
 
-pub fn parse<T>(mut s: &[u8]) -> Result<T, PIE>
+pub fn parse<T>(mut s: &[u8]) -> Result<T, Pie>
 where
     T: FromStrRadixHelper,
 {
@@ -162,11 +162,11 @@ where
                     let l = s.len();
                     if std::intrinsics::likely(l < T::CHARS) {
                         let mut res = T::from_u8(0);
-                        let l_1 = l & 1_ != 0 && T::BITS >= 4__;
-                        let l_2 = l & 2_ != 0 && T::BITS >= 8__;
-                        let l_4 = l & 4_ != 0 && T::BITS >= 16_;
-                        let l_8 = l & 8_ != 0 && T::BITS >= 32_;
-                        let l16 = l & 16 != 0 && T::BITS >= 64_;
+                        let l_1 = l & 1 != 0 && T::BITS >= 4;
+                        let l_2 = l & 2 != 0 && T::BITS >= 8;
+                        let l_4 = l & 4 != 0 && T::BITS >= 16;
+                        let l_8 = l & 8 != 0 && T::BITS >= 32;
+                        let l16 = l & 16 != 0 && T::BITS >= 64;
                         let l32 = l & 32 != 0 && T::BITS >= 128;
 
                         unsafe {
@@ -238,14 +238,14 @@ where
                                 let val = T::from_u128(parse_32_chars(&s)?);
                                 res = res.add_unchecked(val);
                             }
-                            return if checked.is_none() {
-                                Ok(res)
-                            } else {
+                            return if let Some(checked) = checked {
                                 // SAFETY: mul is in range as `checked` is constrained to <= T::FIRST_SIG
-                                let checked = T::from_u8(checked.unwrap())
-                                    .mul_unchecked(*T::TREE.get_unchecked(T::CHARS - 1));
-                                checked.add_checked(res).ok_or_else(|| pos_overflow!())
-                            };
+                                let checked = T::from_u8(checked)
+                                .mul_unchecked(*T::TREE.get_unchecked(T::CHARS - 1));
+                                checked.add_checked(res).ok_or(pos_overflow!())
+                            } else {
+                                Ok(res)
+                            }
                         }
                     }
                     // Deal with edge cases then get back to the top,
@@ -285,7 +285,7 @@ where
                     if std::intrinsics::likely(l < T::CHARS && l != 0) {
                         let mut res = T::from_u8(0);
                         unsafe {
-                            if (l & 1) != 0 && T::BITS >= 4__ {
+                            if (l & 1) != 0 && T::BITS >= 4 {
                                 let val = s.get_unchecked(0).wrapping_sub(b'0');
                                 let val_t = T::from_u8(0).sub_unchecked(T::from_u8(val));
                                 if std::intrinsics::likely(val <= 9 && l == 1) {
@@ -297,7 +297,7 @@ where
                                     return Err(invalid!());
                                 };
                             }
-                            if (l & 2_ != 0) && T::BITS >= 8__ {
+                            if (l & 2 != 0) && T::BITS >= 8 {
                                 let val = T::from_u16(parse_2_chars(&s)?);
                                 s = &s.get_unchecked(2..);
                                 if s.is_empty() {
@@ -311,7 +311,7 @@ where
                                     );
                                 }
                             }
-                            if (l & 4_) != 0 && T::BITS >= 16_ {
+                            if (l & 4) != 0 && T::BITS >= 16 {
                                 let val = T::from_u16(parse_4_chars(&s)?);
                                 s = &s.get_unchecked(4..);
                                 if s.is_empty() {
@@ -325,7 +325,7 @@ where
                                     );
                                 }
                             }
-                            if (l & 8_) != 0 && T::BITS >= 32_ {
+                            if (l & 8) != 0 && T::BITS >= 32 {
                                 let val = T::from_u32(parse_8_chars(&s)?);
                                 s = &s.get_unchecked(8..);
                                 if s.is_empty() {
@@ -339,7 +339,7 @@ where
                                     );
                                 }
                             }
-                            if (l & 16) != 0 && T::BITS >= 64_ {
+                            if (l & 16) != 0 && T::BITS >= 64 {
                                 let val = T::from_u64(parse_16_chars(&s)?);
                                 s = &s.get_unchecked(16..);
                                 if s.is_empty() {
@@ -357,10 +357,7 @@ where
                                 res = res.sub_unchecked(T::from_u128(parse_32_chars(&s)?));
                             }
 
-                            return if std::intrinsics::likely(checked.is_none()) {
-                                Ok(res)
-                            } else {
-                                let chk = checked.unwrap();
+                            return if let Some(chk) = checked {
                                 if std::intrinsics::unlikely(res == T::TAIL && chk == T::FIRST_SIG)
                                 {
                                     return Ok(T::MIN);
@@ -368,7 +365,9 @@ where
                                 // SAFETY: mul is in range as `checked` is constrained to <= T::FIRST_SIG
                                 let val = T::from_u8(chk)
                                     .mul_unchecked(*T::TREE.get_unchecked(T::CHARS - 1));
-                                res.sub_checked(val).ok_or_else(|| neg_overflow!())
+                                res.sub_checked(val).ok_or(neg_overflow!())
+                            }  else {
+                                Ok(res)
                             };
                         }
                     }
@@ -417,6 +416,6 @@ where
             }
         }
     } else {
-        return Err(empty!());
+        Err(empty!())
     }
 }

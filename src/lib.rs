@@ -74,12 +74,12 @@ pub struct ParseIntError3 {
     pub kind: IntErrorKind3,
 }
 
-type PIE = ParseIntError3;
+type Pie = ParseIntError3;
 
 #[cfg(not(target_feature = "avx"))]
 #[cfg(target_endian = "little")]
 #[inline]
-pub fn parse_32_chars(mut s: &[u8]) -> Result<u128, PIE> {
+pub fn parse_32_chars(mut s: &[u8]) -> Result<u128, Pie> {
     unsafe {
         let val16 = parse_16_chars(&s)? as u128;
         s = &s.get_unchecked(16..);
@@ -93,7 +93,7 @@ pub fn parse_32_chars(mut s: &[u8]) -> Result<u128, PIE> {
 
 #[cfg(target_feature = "avx")]
 #[inline]
-pub fn parse_32_chars(s: &[u8]) -> Result<u64, PIE> {
+pub fn parse_32_chars(s: &[u8]) -> Result<u64, Pie> {
     debug_assert!(s.len() >= 32);
 
     use core::arch::x86_64::{
@@ -140,7 +140,7 @@ pub fn parse_32_chars(s: &[u8]) -> Result<u64, PIE> {
         if is_valid {
             Ok(chunk)
         } else {
-            return Err(PIE {
+            return Err(Pie {
                 kind: IntErrorKind::InvalidDigit,
             });
         }
@@ -151,7 +151,7 @@ pub fn parse_32_chars(s: &[u8]) -> Result<u64, PIE> {
 #[cfg(not(target_feature = "sse2"))]
 #[cfg(target_endian = "little")]
 #[inline]
-pub fn parse_16_chars(s: &[u8]) -> Result<u64, PIE> {
+pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     debug_assert!(s.len() >= 16);
     const MASK_HI: u128 = 0xf0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0u128;
     const ASCII_ZEROS: u128 = 0x30303030303030303030303030303030u128;
@@ -183,7 +183,7 @@ pub fn parse_16_chars(s: &[u8]) -> Result<u64, PIE> {
     if (chunk_og & MASK_HI) | (chk & 0x80808080808080808080808080808080u128) == 0 {
         Ok(chunk) //u64 can guarantee to contain 19 digits.
     } else {
-        return Err(PIE {
+        return Err(Pie {
             kind: IntErrorKind::InvalidDigit,
         });
     }
@@ -191,7 +191,7 @@ pub fn parse_16_chars(s: &[u8]) -> Result<u64, PIE> {
 
 #[cfg(target_feature = "sse2")]
 #[inline]
-pub fn parse_16_chars(s: &[u8]) -> Result<u64, PIE> {
+pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     debug_assert!(s.len() >= 16);
 
     use core::arch::x86_64::{
@@ -228,7 +228,7 @@ pub fn parse_16_chars(s: &[u8]) -> Result<u64, PIE> {
         let chunk = _mm_packus_epi32(chunk.into(), chunk.into());
         let mult = i16x8::from_array([10000, 1, 10000, 1, 10000, 1, 10000, 1]);
 
-        let chunk: __m128i = _mm_madd_epi16(chunk.into(), mult.into());
+        let chunk: __m128i = _mm_madd_epi16(chunk, mult.into());
         let chunk: i16x8 = chunk.into();
         let chunk: __m128i = chunk.into();
         let chunk: i64x2 = chunk.into();
@@ -238,16 +238,16 @@ pub fn parse_16_chars(s: &[u8]) -> Result<u64, PIE> {
         if is_valid {
             Ok(chunk)
         } else {
-            return Err(PIE {
+            Err(Pie {
                 kind: IntErrorKind::InvalidDigit,
-            });
+            })
         }
     }
 }
 
 #[cfg(target_endian = "little")]
 #[inline]
-pub fn parse_8_chars(s: &[u8]) -> Result<u32, PIE> {
+pub fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
     debug_assert!(s.len() >= 8);
     const MASK_HI: u64 = 0xf0f0f0f0f0f0f0f0u64;
     const ASCII_ZEROS: u64 = 0x3030303030303030u64;
@@ -278,7 +278,7 @@ pub fn parse_8_chars(s: &[u8]) -> Result<u32, PIE> {
     if valid {
         Ok(chunk) //u32 can guarantee to contain 9 digits.
     } else {
-        Err(PIE {
+        Err(Pie {
             kind: IntErrorKind::InvalidDigit,
         })
     }
@@ -286,7 +286,7 @@ pub fn parse_8_chars(s: &[u8]) -> Result<u32, PIE> {
 
 #[cfg(target_endian = "little")]
 #[inline]
-pub fn parse_4_chars(s: &[u8]) -> Result<u16, PIE> {
+pub fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
     //SAFETY:
     debug_assert!(s.len() >= 4);
 
@@ -316,7 +316,7 @@ pub fn parse_4_chars(s: &[u8]) -> Result<u16, PIE> {
     if cond {
         Ok(chunk) //u16 can guarantee to hold 4 digits
     } else {
-        Err(PIE {
+        Err(Pie {
             kind: IntErrorKind::InvalidDigit,
         })
     }
@@ -325,7 +325,7 @@ pub fn parse_4_chars(s: &[u8]) -> Result<u16, PIE> {
 /// Returning u16 rather than u8 as faster.
 #[cfg(target_endian = "little")]
 #[inline]
-pub fn parse_2_chars(s: &[u8]) -> Result<u16, PIE> {
+pub fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
     //SAFETY:
     debug_assert!(s.len() >= 2);
     unsafe {
@@ -338,9 +338,9 @@ pub fn parse_2_chars(s: &[u8]) -> Result<u16, PIE> {
         if (chunk & 0xf0f0u16) | (ch & 0x8080u16) == 0 {
             Ok(res)
         } else {
-            return Err(PIE {
+            Err(Pie {
                 kind: IntErrorKind::InvalidDigit,
-            });
+            })
         }
     }
 }
@@ -394,7 +394,7 @@ mod tests {
                 #[test]
                 fn [<test_empty_ $target_type $postfix>]() {
                     assert_eq!(
-                        Err(PIE {
+                        Err(Pie {
                             kind: IntErrorKind::InvalidDigit //Empty
                         }),
                         [<parse $postfix>]::<$target_type>("".as_bytes())
