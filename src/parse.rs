@@ -153,23 +153,23 @@ where
 {
     let is_signed_ty = T::from_u32(0) > T::MIN;
     let mut checked: Option<u8> = None;
-    unsafe {
-        if let Some(val) = s.get(0) {
-            let mut val = val.wrapping_sub(b'0');
-            loop {
-                if std::intrinsics::likely(val <= 9) {
-                    // positive without +. could be long with lots of leading zeros.
-                    loop {
-                        let l = s.len();
-                        if std::intrinsics::likely(l < T::CHARS) {
-                            let mut res = T::from_u8(0);
-                            let l_1 = l & 1_ != 0 && T::BITS >= 4__;
-                            let l_2 = l & 2_ != 0 && T::BITS >= 8__;
-                            let l_4 = l & 4_ != 0 && T::BITS >= 16_;
-                            let l_8 = l & 8_ != 0 && T::BITS >= 32_;
-                            let l16 = l & 16 != 0 && T::BITS >= 64_;
-                            let l32 = l & 32 != 0 && T::BITS >= 128;
+    if let Some(val) = s.get(0) {
+        let mut val = val.wrapping_sub(b'0');
+        loop {
+            if std::intrinsics::likely(val <= 9) {
+                // positive without +. could be long with lots of leading zeros.
+                loop {
+                    let l = s.len();
+                    if std::intrinsics::likely(l < T::CHARS) {
+                        let mut res = T::from_u8(0);
+                        let l_1 = l & 1_ != 0 && T::BITS >= 4__;
+                        let l_2 = l & 2_ != 0 && T::BITS >= 8__;
+                        let l_4 = l & 4_ != 0 && T::BITS >= 16_;
+                        let l_8 = l & 8_ != 0 && T::BITS >= 32_;
+                        let l16 = l & 16 != 0 && T::BITS >= 64_;
+                        let l32 = l & 32 != 0 && T::BITS >= 128;
 
+                        unsafe {
                             if l_1 {
                                 let val_t = T::from_u8(val);
                                 s = &s.get_unchecked(1..);
@@ -247,42 +247,44 @@ where
                                 checked.add_checked(res).ok_or_else(|| pos_overflow!())
                             };
                         }
-                        // Deal with edge cases then get back to the top,
-                        if l == T::CHARS && val <= T::FIRST_SIG {
-                            checked = Some(val);
-                            s = &s[1..];
-                            val = s.get_unchecked(0).wrapping_sub(b'0');
-                            if val > 9 {
-                                return Err(invalid!());
-                            }
-                        } else if val == 0 {
-                            // Remove leading zeros
-                            val = b'0';
-                            while val == b'0' {
-                                s = &s[1..];
-                                val = match s.get(0) {
-                                    Some(val) => *val,
-                                    None => return Ok(T::from_u8(0)),
-                                }
-                            }
-                            val = val.wrapping_sub(b'0');
-                            if val > 9 {
-                                return Err(empty!());
-                            }
-                        } else {
-                            return Err(pos_overflow!());
-                        }
-
-                        debug_assert!(val <= 9);
                     }
-                } else if std::intrinsics::likely(is_signed_ty && val == MINUS) {
-                    s = &s[1..];
+                    // Deal with edge cases then get back to the top,
+                    if l == T::CHARS && val <= T::FIRST_SIG {
+                        checked = Some(val);
+                        s = &s[1..];
+                        val = unsafe { s.get_unchecked(0).wrapping_sub(b'0') };
+                        if val > 9 {
+                            return Err(invalid!());
+                        }
+                    } else if val == 0 {
+                        // Remove leading zeros
+                        val = b'0';
+                        while val == b'0' {
+                            s = &s[1..];
+                            val = match s.get(0) {
+                                Some(val) => *val,
+                                None => return Ok(T::from_u8(0)),
+                            }
+                        }
+                        val = val.wrapping_sub(b'0');
+                        if val > 9 {
+                            return Err(empty!());
+                        }
+                    } else {
+                        return Err(pos_overflow!());
+                    }
 
-                    // negative without -. could be long with lots of leading zeros.
-                    loop {
-                        let l = s.len();
-                        if std::intrinsics::likely(l < T::CHARS && l != 0) {
-                            let mut res = T::from_u8(0);
+                    debug_assert!(val <= 9);
+                }
+            } else if std::intrinsics::likely(is_signed_ty && val == MINUS) {
+                s = &s[1..];
+
+                // negative without -. could be long with lots of leading zeros.
+                loop {
+                    let l = s.len();
+                    if std::intrinsics::likely(l < T::CHARS && l != 0) {
+                        let mut res = T::from_u8(0);
+                        unsafe {
                             if (l & 1) != 0 && T::BITS >= 4__ {
                                 let val = s.get_unchecked(0).wrapping_sub(b'0');
                                 let val_t = T::from_u8(0).sub_unchecked(T::from_u8(val));
@@ -354,11 +356,13 @@ where
                             if (l & 32) != 0 && T::BITS >= 128 {
                                 res = res.sub_unchecked(T::from_u128(parse_32_chars(&s)?));
                             }
+
                             return if std::intrinsics::likely(checked.is_none()) {
                                 Ok(res)
                             } else {
                                 let chk = checked.unwrap();
-                                if std::intrinsics::unlikely(res == T::TAIL && chk == T::FIRST_SIG) {
+                                if std::intrinsics::unlikely(res == T::TAIL && chk == T::FIRST_SIG)
+                                {
                                     return Ok(T::MIN);
                                 }
                                 // SAFETY: mul is in range as `checked` is constrained to <= T::FIRST_SIG
@@ -367,52 +371,52 @@ where
                                 res.sub_checked(val).ok_or_else(|| neg_overflow!())
                             };
                         }
-                        val = if let Some(val) = s.get(0) {
-                            *val
-                        } else {
-                            return Err(empty!());
-                        };
-                        if val != b'0' {
-                            if l == T::CHARS {
-                                val = val.wrapping_sub(b'0');
-                                if val <= T::FIRST_SIG {
-                                    checked = Some(val);
-                                    s = &s[1..];
-                                } else {
-                                    return Err(invalid!());
-                                }
+                    }
+                    val = if let Some(val) = s.get(0) {
+                        *val
+                    } else {
+                        return Err(empty!());
+                    };
+                    if val != b'0' {
+                        if l == T::CHARS {
+                            val = val.wrapping_sub(b'0');
+                            if val <= T::FIRST_SIG {
+                                checked = Some(val);
+                                s = &s[1..];
                             } else {
-                                return Err(neg_overflow!());
+                                return Err(invalid!());
                             }
                         } else {
-                            while val == b'0' {
-                                s = &s[1..];
-                                val = match s.get(0) {
-                                    Some(val) => *val,
-                                    None => return Ok(T::from_u8(0)),
-                                }
+                            return Err(neg_overflow!());
+                        }
+                    } else {
+                        while val == b'0' {
+                            s = &s[1..];
+                            val = match s.get(0) {
+                                Some(val) => *val,
+                                None => return Ok(T::from_u8(0)),
                             }
                         }
                     }
-                } else if val == PLUS {
-                    s = &s[1..];
-                    val = match s.get(0) {
-                        Some(value) => {
-                            let value = value.wrapping_sub(b'0');
-                            if std::intrinsics::likely(value <= 9) {
-                                value
-                            } else {
-                                return Err(empty!());
-                            }
-                        }
-                        None => return Err(empty!()),
-                    };
-                } else {
-                    return Err(invalid!());
                 }
+            } else if val == PLUS {
+                s = &s[1..];
+                val = match s.get(0) {
+                    Some(value) => {
+                        let value = value.wrapping_sub(b'0');
+                        if std::intrinsics::likely(value <= 9) {
+                            value
+                        } else {
+                            return Err(empty!());
+                        }
+                    }
+                    None => return Err(empty!()),
+                };
+            } else {
+                return Err(invalid!());
             }
-        } else {
-            return Err(empty!());
         }
+    } else {
+        return Err(empty!());
     }
 }
