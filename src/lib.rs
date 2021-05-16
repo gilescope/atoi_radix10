@@ -147,46 +147,6 @@ pub fn parse_32_chars(s: &[u8]) -> Result<u64, PIE> {
     }
 }
 
-#[cfg(target_endian = "little")]
-#[inline]
-pub fn parse_16_chars_og1(s: &[u8]) -> Result<u64, PIE> {
-    debug_assert!(s.len() >= 16);
-    const MASK_HI: u128 = 0xf0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0u128;
-    const ASCII_ZEROS: u128 = 0x30303030303030303030303030303030u128;
-
-    let chunk = unsafe { *(s.as_ptr() as *const u128) ^ ASCII_ZEROS };
-    if (chunk & MASK_HI)
-        | (chunk.wrapping_add(0x76767676767676767676767676767676u128)
-            & 0x80808080808080808080808080808080u128)
-        == 0
-    {
-        // 1-byte mask trick (works on 8 pairs of single digits)
-        let lower_digits = (chunk & 0x0f000f000f000f000f000f000f000f00) >> 8;
-        let upper_digits = (chunk & 0x000f000f000f000f000f000f000f000f) * 10;
-        let chunk = lower_digits + upper_digits;
-
-        // 2-byte mask trick (works on 4 pairs of two digits)
-        let lower_digits = (chunk & 0x00ff000000ff000000ff000000ff0000) >> 16;
-        let upper_digits = (chunk & 0x000000ff000000ff000000ff000000ff) * 100;
-        let chunk = lower_digits + upper_digits;
-
-        // 4-byte mask trick (works on 2 pair of four digits)
-        let lower_digits = (chunk & 0x0000ffff000000000000ffff00000000) >> 32;
-        let upper_digits = (chunk & 0x000000000000ffff000000000000ffff) * 100_00;
-        let chunk = lower_digits + upper_digits;
-
-        // 8-byte mask trick (works on a pair of eight digits)
-        let lower_digits = (chunk & 0x00000000ffffffff0000000000000000) >> 64;
-        let upper_digits = (chunk & 0x000000000000000000000000ffffffff) * 100_00_00_00;
-        let chunk = lower_digits + upper_digits;
-        Ok(chunk as u64) //u64 can guarantee to contain 19 digits.
-    } else {
-        return Err(PIE {
-            kind: IntErrorKind::InvalidDigit,
-        });
-    }
-}
-
 /// Almost as good as SIMD...
 #[cfg(not(target_feature = "sse2"))]
 #[cfg(target_endian = "little")]
@@ -324,57 +284,6 @@ pub fn parse_8_chars(s: &[u8]) -> Result<u32, PIE> {
     }
 }
 
-// //Learned: Expanding to u64 costs too much.
-// #[inline]
-// pub fn parse_6_chars(s: &[u8]) -> Result<u32, PIE> {
-//     //SAFETY:
-//     debug_assert!(s.len() >= 6);
-
-//     const MASK_HI: u32 = 0xf0f0f0f0u32;
-//     const ASCII_ZEROS: u32 = 0x30303030u32;
-//     const MASK_HI2: u16 = 0xf0f0u16;
-//     const ASCII_ZEROS2: u16 = 0x3030u16; //0b0011__0000_0011_0000
-
-//     let chunk = unsafe { *(s.as_ptr() as *const u32) };
-//     let chunk2 = unsafe { *(s.get_unchecked(4..).as_ptr() as *const u16) };
-
-//     // let chunk = *(s.as_ptr() as *const u32) as u64;
-//     // let chunk2 = (*(s.get_unchecked(4..).as_ptr() as *const u16) as u64) << ;
-
-//     // See https://graphics.stanford.edu/~seander/bithacks.html#HasMoreInWord
-//     let chunk = chunk ^ ASCII_ZEROS;
-//     let chunk2 = chunk2 ^ ASCII_ZEROS2;
-//     let chunk_og = chunk;
-//     let chunk2_og = chunk2;
-
-//     // 1-byte mask trick (works on 4 pairs of single digits)
-//     let lower_digits = (chunk & 0x0f000f00) >> 8;
-//     let upper_digits = (chunk & 0x000f000f) * 10;
-//     let chunk = lower_digits + upper_digits;
-
-//     // 2-byte mask trick (works on 2 pairs of two digits)
-//     let lower_digits = (chunk & 0x00ff0000) >> 16;
-//     let upper_digits = (chunk & 0x000000ff) * 100;
-//     let chunk = lower_digits + upper_digits;
-//     let chunk = chunk * 100;
-
-//     let lower_digits = (chunk2 & 0x0f00) >> 8;
-//     let upper_digits = (chunk2 & 0x000f) * 10;
-//     let og1add = chunk_og.wrapping_add(0x76767676u32);
-//     let og2add = chunk2_og.wrapping_add(0x7676u16);
-//     let result = chunk + (lower_digits + upper_digits) as u32;
-
-//     if ((chunk_og & MASK_HI) | (og1add & 0x80808080u32) == 0)
-//         & ((chunk2_og & MASK_HI2) | (og2add & 0x8080u16) == 0)
-//     {
-//         Ok(result) //u16 can guarantee to hold 4 digits
-//     } else {
-//         Err(PIE {
-//             kind: IntErrorKind::InvalidDigit,
-//         })
-//     }
-// }
-
 #[cfg(target_endian = "little")]
 #[inline]
 pub fn parse_4_chars(s: &[u8]) -> Result<u16, PIE> {
@@ -427,9 +336,6 @@ pub fn parse_2_chars(s: &[u8]) -> Result<u16, PIE> {
         let res = ((chunk & 0x000f) << 1) + ((chunk & 0x000f) << 3) + ((chunk & 0x0f00) >> 8);
 
         if (chunk & 0xf0f0u16) | (ch & 0x8080u16) == 0 {
-            //| (chunk + 0x7676u16 & 0x8080u16)
-            // 1-byte mask trick (works on a pair of single digits)
-            // x +=((chunk & 0x0f00) >> 8);
             Ok(res)
         } else {
             return Err(PIE {
