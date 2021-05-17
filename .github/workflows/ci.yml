@@ -10,14 +10,14 @@ jobs:
         rust: ["stable"]
         args: [""]
         include:
-          - rust: stable
+          - rust: beta
             args: --features std
-          - rust: stable
-            args: --features simd
           - rust: nightly
             args: --features nightly
-          - rust: "1.52.0"
-            args: --features nightly
+          - rust: nightly
+            args: --features nightly,simd
+          # - rust: "1.52.0"
+          #   args: --features std
 
     steps:
       - uses: actions/checkout@v2
