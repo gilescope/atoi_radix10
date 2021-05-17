@@ -140,9 +140,9 @@ pub fn parse_32_chars(s: &[u8]) -> Result<u64, Pie> {
         if is_valid {
             Ok(chunk)
         } else {
-            return Err(Pie {
+            Err(Pie {
                 kind: IntErrorKind::InvalidDigit,
-            });
+            })
         }
     }
 }
