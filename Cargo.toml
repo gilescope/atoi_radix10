@@ -9,7 +9,7 @@ edition = "2018"
 default = []
 nightly = []
 std = []
-simd = []
+simd = [ "core_simd" ]
 # simd not available on stable till core_simd is.
 
 [dependencies]
