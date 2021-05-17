@@ -70,5 +70,4 @@ TODO
 ====
 
    * more cargo-fuzz
-   * github actions CI
    * make work on big-endian ( See https://github.com/BurntSushi/rust-memchr/commit/059d0c63d30a37783b9a98bef7daf780524a3a6e )
