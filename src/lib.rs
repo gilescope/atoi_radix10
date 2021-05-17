@@ -183,9 +183,9 @@ pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     if likely!((chunk_og & MASK_HI) | (chk & 0x80808080808080808080808080808080u128) == 0) {
         Ok(chunk) //u64 can guarantee to contain 19 digits.
     } else {
-        return Err(Pie {
+        Err(Pie {
             kind: IntErrorKind::InvalidDigit,
-        });
+        })
     }
 }
 
