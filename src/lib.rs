@@ -2,6 +2,7 @@
 //#![feature(int_error_matching)]
 //#![feature(unchecked_math)]
 #![cfg_attr(feature = "nightly", feature(core_intrinsics))]
+#![allow(clippy::inconsistent_digit_grouping)]
 
 #[macro_use]
 mod parse;
