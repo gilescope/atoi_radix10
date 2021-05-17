@@ -7,16 +7,17 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        rust:
-          - stable
-          - beta
-          - nightly
-          - 1.52.0  # MSRV
-        args:
-          - --features std
-          - --features simd
-          - --features nightly
-          - --features std
+        rust: ["stable"]
+        args: [""]
+        include:
+          - rust: stable
+            args: --features std
+          - rust: stable
+            args: --features simd
+          - rust: nightly
+            args: --features nightly
+          - rust: "1.52.0"
+            args: --features nightly
 
     steps:
       - uses: actions/checkout@v2
