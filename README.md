@@ -1,3 +1,6 @@
+
+![CI](https://github.com/gilescope/parseint/actions/workflows/ci.yml/badge.svg)
+
 Faster Integer Parsing (rust port)
 ==================================
 
