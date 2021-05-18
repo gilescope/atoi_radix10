@@ -313,12 +313,12 @@ where
                         unsafe {
                             if (l & 1) != 0 && T::BITS_COUNT >= 4 {
                                 let val = s.get_unchecked(0).wrapping_sub(b'0');
-                                let val_t = T::from_u8(0).sub_unchecked(T::from_u8(val));
+                                res = res.sub_unchecked(T::from_u8(val));
                                 if likely!(val <= 9 && l == 1) {
-                                    return Ok(val_t);
+                                    return Ok(res);
                                 } else if likely!(val <= 9) {
                                     s = &s[1..];
-                                    res = val_t.mul_unchecked(*T::TREE.get_unchecked(s.len()));
+                                    res = res.mul_unchecked(*T::TREE.get_unchecked(s.len()));
                                 } else {
                                     return Err(invalid!());
                                 };
@@ -401,19 +401,12 @@ where
                     } else {
                         return Err(empty!());
                     };
-                    if val != b'0' {
-                        if l == T::CHARS {
-                            val = val.wrapping_sub(b'0');
-                            if val <= T::FIRST_SIG {
-                                checked = Some(val);
-                                s = &s[1..];
-                            } else {
-                                return Err(invalid!());
-                            }
-                        } else {
-                            return Err(neg_overflow!());
-                        }
-                    } else {
+                    val = val.wrapping_sub(b'0');
+                    if l == T::CHARS && val <= T::FIRST_SIG {
+                        checked = Some(val);
+                        s = &s[1..];
+                    } else if val == 0 {
+                        val = b'0';
                         while val == b'0' {
                             s = &s[1..];
                             val = match s.get(0) {
@@ -421,6 +414,8 @@ where
                                 None => return Ok(T::from_u8(0)),
                             }
                         }
+                    } else {
+                        return Err(neg_overflow!());
                     }
                 }
             } else if val == PLUS {
