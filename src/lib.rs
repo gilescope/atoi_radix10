@@ -1,5 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-//#![feature(int_error_matching)]
+#![feature(int_error_matching)]
 //#![feature(unchecked_math)]
 #![cfg_attr(feature = "nightly", feature(core_intrinsics))]
 #![allow(clippy::inconsistent_digit_grouping)]
@@ -36,47 +36,48 @@ pub use parse::{parse, parse_challenger};
 const PLUS: u8 = b'+'.wrapping_sub(b'0');
 const MINUS: u8 = b'-'.wrapping_sub(b'0');
 
-use IntErrorKind3 as IntErrorKind;
+use core::num::IntErrorKind;
+// as IntErrorKind;
 //use core::num::ParseIntError;
 #[derive(Debug, Eq, PartialEq)]
-pub struct ParseIntError2 {
+pub struct ParseIntErrorPublic {
     pub kind: IntErrorKind,
 }
 
-//TODO: At the moment having more than one arm in the enum
-// leads to a 3ns slowdown for 128bit types.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[non_exhaustive]
-pub enum IntErrorKind3 {
-    /// Value being parsed is empty.
-    ///
-    /// Among other causes, this variant will be constructed when parsing an empty string.
-    ///Empty,
-    /// Contains an invalid digit in its context.
-    ///
-    /// Among other causes, this variant will be constructed when parsing a string that
-    /// contains a non-ASCII char.
-    ///
-    /// This variant is also constructed when a `+` or `-` is misplaced within a string
-    /// either on its own or in the middle of a number.
-    InvalidDigit,
-    // Integer is too large to store in target integer type.
-    //  PosOverflow,
-    // Integer is too small to store in target integer type.
-    // NegOverflow,
-    // Value was Zero
-    //
-    // This variant will be emitted when the parsing string has a value of zero, which
-    // would be illegal for non-zero types.
-    // Zero,
-}
+// //TODO: At the moment having more than one arm in the enum
+// // leads to a 3ns slowdown for 128bit types.
+// #[derive(Debug, Clone, PartialEq, Eq)]
+// #[non_exhaustive]
+// pub enum IntErrorKind3 {
+//     /// Value being parsed is empty.
+//     ///
+//     /// Among other causes, this variant will be constructed when parsing an empty string.
+//     ///Empty,
+//     /// Contains an invalid digit in its context.
+//     ///
+//     /// Among other causes, this variant will be constructed when parsing a string that
+//     /// contains a non-ASCII char.
+//     ///
+//     /// This variant is also constructed when a `+` or `-` is misplaced within a string
+//     /// either on its own or in the middle of a number.
+//     InvalidDigit,
+//     // Integer is too large to store in target integer type.
+//     //  PosOverflow,
+//     // Integer is too small to store in target integer type.
+//     // NegOverflow,
+//     // Value was Zero
+//     //
+//     // This variant will be emitted when the parsing string has a value of zero, which
+//     // would be illegal for non-zero types.
+//     // Zero,
+// }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct ParseIntError3 {
-    pub kind: IntErrorKind3,
-}
+// #[derive(Debug, Eq, PartialEq)]
+// pub struct ParseIntError3 {
+//     pub kind: IntErrorKind3,
+// }
 
-type Pie = ParseIntError3;
+type Pie = ParseIntErrorPublic;
 
 #[cfg(not(target_feature = "avx"))]
 #[cfg(target_endian = "little")]
@@ -395,7 +396,7 @@ mod tests {
                 fn [<test_empty_ $target_type $postfix>]() {
                     assert_eq!(
                         Err(Pie {
-                            kind: IntErrorKind::InvalidDigit //Empty
+                            kind: IntErrorKind::Empty
                         }),
                         [<parse $postfix>]::<$target_type>("".as_bytes())
                     );

@@ -7,16 +7,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        rust: ["beta"]
+        rust: ["nightly"]
         args: [""]
         include:
-          - rust: beta
+          # beta and stable have to wait till 1.54
+          - rust: nightly
             args: --features std
           - rust: nightly
             args: --features nightly
           - rust: nightly
             args: --features nightly,simd
-          # - rust: "1.52.0"
+          - rust: nightly
+            args: --features nightly,simd -C target-cpu=native
+          # - rust: "1.54.0"
           #   args: --features std
 
     steps:

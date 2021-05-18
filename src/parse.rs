@@ -1,7 +1,7 @@
 use super::{
-    parse_16_chars, parse_2_chars, parse_32_chars, parse_4_chars, parse_8_chars, trees::*,
-    IntErrorKind3, ParseIntError3, MINUS, PLUS,
+    parse_16_chars, parse_2_chars, parse_32_chars, parse_4_chars, parse_8_chars, trees::*, MINUS, PLUS, ParseIntErrorPublic,
 };
+use core::num::IntErrorKind;
 
 #[cfg(feature = "core_intrinsics")]
 macro_rules! likely {
@@ -29,7 +29,7 @@ macro_rules! unlikely {
     };
 }
 
-type Pie = ParseIntError3;
+type Pie = ParseIntErrorPublic;
 
 #[doc(hidden)]
 pub trait FromStrRadixHelper: PartialOrd + Copy + 'static {
@@ -145,14 +145,14 @@ where
 macro_rules! invalid {
     () => {
         Pie {
-            kind: IntErrorKind3::InvalidDigit,
+            kind: IntErrorKind::InvalidDigit,
         }
     };
 }
 macro_rules! empty {
     () => {
         Pie {
-            kind: IntErrorKind3::InvalidDigit,
+            kind: IntErrorKind::Empty,
         }
     };
 }
@@ -160,7 +160,7 @@ macro_rules! empty {
 macro_rules! pos_overflow {
     () => {
         Pie {
-            kind: IntErrorKind3::InvalidDigit,
+            kind: IntErrorKind::PosOverflow,
         }
     };
 }
@@ -168,7 +168,7 @@ macro_rules! pos_overflow {
 macro_rules! neg_overflow {
     () => {
         Pie {
-            kind: IntErrorKind3::InvalidDigit,
+            kind: IntErrorKind::NegOverflow,
         }
     };
 }

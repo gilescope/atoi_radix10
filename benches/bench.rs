@@ -30,13 +30,13 @@ macro_rules! ok_bench {
                     group.throughput(Throughput::Bytes(num_str.len() as u64));
                     #[cfg(feature="std")]
                     group.bench_with_input(BenchmarkId::new(format!("{}std",$prefix), num), &num_str, |b, &val| {
-                        b.iter(|| std_parse::<$target_type>(&val));
+                        b.iter(|| std_parse::<$target_type>(&val).map_err(|_| ()));
                     });
                     // group.bench_with_input(BenchmarkId::new(format!("{}challenger",$prefix), num), &num_str, |b, &val| {
                     //     b.iter(|| $challenger_meth(val.as_bytes()));
                     // });
                     group.bench_with_input(BenchmarkId::new(format!("{}generic",$prefix), num), &num_str, |b, &val| {
-                        b.iter(|| atoi_radix10::parse::<$target_type>(val.as_bytes()));
+                        b.iter(|| atoi_radix10::parse::<$target_type>(val.as_bytes()).map_err(|_| ()));
                     });
                     // group.bench_with_input(BenchmarkId::new(format!("{}challenger",$prefix), num), &num_str, |b, &val| {
                     //     b.iter(|| atoi_radix10::parse_challenger::<$target_type>(val.as_bytes()));

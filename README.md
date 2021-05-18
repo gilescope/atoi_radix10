@@ -52,10 +52,11 @@ This is called SWAR: Simd within a register.
 Optimisations that did help
 ===========================
 
-   * Taking an if is faster than not.
+   * Using likely and unlikely intrinsics.
    * Moving `+` further up before it was accessed due to latency requirements.
    * Try not to do any instructions requiring latency just before returning. For example `if cond { return a as u16 }`, you can calculate the `a as u16` before the if then it's faster. (We're optimising for the happy path)
    * It was much easier to start fast and try and add things in than to start slow and make it faster (the latter you are in the dark as to why it is slow and just guessing, where as if you build it up you know instantly when you add something in that borks the speed.).
+   * It turns out that the error enum slows things down a bit so for max speed you can `.map_err(|_| ())` if you don't care what type of parse error it is.
 
 Optimisations that didn't
 =========================
