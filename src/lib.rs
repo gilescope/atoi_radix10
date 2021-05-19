@@ -37,48 +37,18 @@ const PLUS: u8 = b'+'.wrapping_sub(b'0');
 const MINUS: u8 = b'-'.wrapping_sub(b'0');
 
 use core::num::IntErrorKind;
-// as IntErrorKind;
-//use core::num::ParseIntError;
+
+/// A public version of `std::num::ParseIntError`
 #[derive(Debug, Eq, PartialEq)]
 pub struct ParseIntErrorPublic {
     pub kind: IntErrorKind,
 }
 
-// //TODO: At the moment having more than one arm in the enum
-// // leads to a 3ns slowdown for 128bit types.
-// #[derive(Debug, Clone, PartialEq, Eq)]
-// #[non_exhaustive]
-// pub enum IntErrorKind3 {
-//     /// Value being parsed is empty.
-//     ///
-//     /// Among other causes, this variant will be constructed when parsing an empty string.
-//     ///Empty,
-//     /// Contains an invalid digit in its context.
-//     ///
-//     /// Among other causes, this variant will be constructed when parsing a string that
-//     /// contains a non-ASCII char.
-//     ///
-//     /// This variant is also constructed when a `+` or `-` is misplaced within a string
-//     /// either on its own or in the middle of a number.
-//     InvalidDigit,
-//     // Integer is too large to store in target integer type.
-//     //  PosOverflow,
-//     // Integer is too small to store in target integer type.
-//     // NegOverflow,
-//     // Value was Zero
-//     //
-//     // This variant will be emitted when the parsing string has a value of zero, which
-//     // would be illegal for non-zero types.
-//     // Zero,
-// }
-
-// #[derive(Debug, Eq, PartialEq)]
-// pub struct ParseIntError3 {
-//     pub kind: IntErrorKind3,
-// }
-
 type Pie = ParseIntErrorPublic;
 
+/// Parse the first 32 chars in a u8 slice as a base 10 integer.
+/// SAFETY: Do not call with a string length less than that.
+#[doc(hidden)]
 #[cfg(not(target_feature = "avx"))]
 #[cfg(target_endian = "little")]
 #[inline]
@@ -92,6 +62,9 @@ pub fn parse_32_chars(mut s: &[u8]) -> Result<u128, Pie> {
     Ok(res + val16)
 }
 
+/// Parse the first 32 chars in a u8 slice as a base 10 integer.
+/// SAFETY: Do not call with a string length less than that.
+#[doc(hidden)]
 #[cfg(target_feature = "avx")]
 #[inline]
 pub fn parse_32_chars(s: &[u8]) -> Result<u64, Pie> {
@@ -148,10 +121,13 @@ pub fn parse_32_chars(s: &[u8]) -> Result<u64, Pie> {
     }
 }
 
-/// Almost as good as SIMD...
+/// Parse the first 16 chars in a u8 slice as a base 10 integer.
+/// SAFETY: Do not call with a string length less than that.
+/// (Almost as good as the simd feature...)
 #[cfg(not(all(target_feature = "sse2", feature = "simd")))]
 #[cfg(target_endian = "little")]
 #[inline]
+#[doc(hidden)]
 pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     debug_assert!(s.len() >= 16);
     const MASK_HI: u128 = 0xf0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0u128;
@@ -190,8 +166,11 @@ pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     }
 }
 
+/// Parse the first 16 chars in a u8 slice as a base 10 integer.
+/// SAFETY: Do not call with a string length less than that.
 #[cfg(all(target_feature = "sse2", feature = "simd"))]
 #[inline]
+#[doc(hidden)]
 pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     debug_assert!(s.len() >= 16);
 
@@ -246,8 +225,11 @@ pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     }
 }
 
+/// Parse the first 8 chars in a u8 slice as a base 10 integer.
+/// SAFETY: Do not call with a string length less than that.
 #[cfg(target_endian = "little")]
 #[inline]
+#[doc(hidden)]
 pub fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
     debug_assert!(s.len() >= 8);
     const MASK_HI: u64 = 0xf0f0f0f0f0f0f0f0u64;
@@ -285,8 +267,11 @@ pub fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
     }
 }
 
+/// Parse the first 4 chars in a u8 slice as a base 10 integer.
+/// SAFETY: Do not call with a string length less than that.
 #[cfg(target_endian = "little")]
 #[inline]
+#[doc(hidden)]
 pub fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
     //SAFETY:
     debug_assert!(s.len() >= 4);
@@ -323,9 +308,12 @@ pub fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
     }
 }
 
+/// Parse the first 2 chars in a u8 slice as a base 10 integer.
+/// SAFETY: Do not call with a string length less than that.
 /// Returning u16 rather than u8 as faster.
 #[cfg(target_endian = "little")]
 #[inline]
+#[doc(hidden)]
 pub fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
     //SAFETY:
     debug_assert!(s.len() >= 2);

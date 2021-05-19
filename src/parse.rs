@@ -1,5 +1,6 @@
 use super::{
-    parse_16_chars, parse_2_chars, parse_32_chars, parse_4_chars, parse_8_chars, trees::*, MINUS, PLUS, ParseIntErrorPublic,
+    parse_16_chars, parse_2_chars, parse_32_chars, parse_4_chars, parse_8_chars, trees::*,
+    ParseIntErrorPublic, MINUS, PLUS,
 };
 use core::num::IntErrorKind;
 
@@ -129,9 +130,9 @@ doit! {
     usize,TENS_USIZE,20,1,8_446_744_073_709_551_615
 }
 
-/// u128: 0 to 340_282_366_920_938_463_463_374_607_431_768_211_455
-/// (39 digits!)
-
+// u128: 0 to 340_282_366_920_938_463_463_374_607_431_768_211_455
+// (39 digits!)
+#[doc(hidden)]
 pub fn parse_challenger<T>(s: &[u8]) -> Result<T, Pie>
 where
     T: FromStrRadixHelper,
@@ -173,6 +174,24 @@ macro_rules! neg_overflow {
     };
 }
 
+/// Parses a UTF8 String as a number.
+///
+/// Takes a `&[u8]` so that it can be used in no_std contexts also
+/// (Call `.as_bytes()` on the String).
+///
+/// It has exactly the same semantics as `std::str::parse`,
+/// but faster. (compiled with nightly,simd features
+/// and target native cpu will get the absolute fastest result.)
+///
+/// Positives are slightly faster than negatives when parsing and
+/// if you don't need to put a leading `+` then that will be faster too.
+///
+/// # Examples
+///
+/// ```rust
+/// let s: String = "+000123".into();
+/// assert_eq!(atoi_radix10::parse::<u8>(s.as_bytes()), Ok(123));
+/// ```
 pub fn parse<T>(mut s: &[u8]) -> Result<T, Pie>
 where
     T: FromStrRadixHelper,
