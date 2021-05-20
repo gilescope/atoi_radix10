@@ -20,7 +20,76 @@ path = ".."
 members = ["."]
 
 [[bin]]
-name = "fuzz_target_1"
-path = "fuzz_targets/fuzz_target_1.rs"
+name = "fuzz_u128"
+path = "fuzz_targets/fuzz_u128.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_u64"
+path = "fuzz_targets/fuzz_u64.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_u32"
+path = "fuzz_targets/fuzz_u32.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_u16"
+path = "fuzz_targets/fuzz_u16.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_u8"
+path = "fuzz_targets/fuzz_u8.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_usize"
+path = "fuzz_targets/fuzz_usize.rs"
+test = false
+doc = false
+
+
+
+
+[[bin]]
+name = "fuzz_i128"
+path = "fuzz_targets/fuzz_i128.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_i64"
+path = "fuzz_targets/fuzz_i64.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_i32"
+path = "fuzz_targets/fuzz_i32.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_i16"
+path = "fuzz_targets/fuzz_i16.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_i8"
+path = "fuzz_targets/fuzz_i8.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_isize"
+path = "fuzz_targets/fuzz_isize.rs"
 test = false
 doc = false
