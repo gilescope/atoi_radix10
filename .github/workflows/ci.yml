@@ -18,10 +18,14 @@ jobs:
           - rust: nightly
             args: --features nightly,simd
           - rust: nightly
-            args: --features nightly,simd -C target-cpu=native
+            args: --features nightly,simd
+            env:
+              RUSTFLAGS: "target-cpu=native"
           # - rust: "1.54.0"
           #   args: --features std
 
+    env:
+      RUSTFLAGS: ""
     steps:
       - uses: actions/checkout@v2
 
