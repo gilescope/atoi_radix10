@@ -20,7 +20,7 @@ jobs:
             args: --features nightly,simd
           - rust: nightly
             args: --features nightly,simd
-            RUSTFLAGS: "target-cpu=native"
+            RUSTFLAGS: "-C target-cpu=native"
           # - rust: "1.54.0"
           #   args: --features std
 
