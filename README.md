@@ -67,8 +67,15 @@ Things that didn't seem to have any effect:
      slight gain)
    * casting len from usize to u8.
 
+FAQ
+===
+
+   * Should I use this in production? As it's a new crate I would treat it with caution,
+   there could still be a bug or two lurking despite tests and some light fuzzing.
+
+   * Why not include this in the std library? The std library parsing code isn't radix specific. As the num parsing is in core, code size is important for embedded systems. This implementation is definitely more code than std.
+
 TODO
 ====
 
-   * more cargo-fuzz
    * make work on big-endian ( See https://github.com/BurntSushi/rust-memchr/commit/059d0c63d30a37783b9a98bef7daf780524a3a6e )

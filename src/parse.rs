@@ -40,7 +40,6 @@ pub trait FromStrRadixHelper: PartialOrd + Copy + 'static {
     const TAIL: Self;
     const TREE: &'static [Self];
     const CHARS: usize;
-    fn from_u128(u: u128) -> Self;
     fn from_u64(u: u64) -> Self;
     fn from_u32(u: u32) -> Self;
     fn from_u16(u: u16) -> Self;
@@ -62,8 +61,6 @@ macro_rules! doit {
         const BITS_COUNT: u32 = Self::BITS;
         const TREE: &'static[Self] = $tr;
         const CHARS: usize = $chars;
-        #[inline(always)]
-        fn from_u128(u: u128) -> Self { u as Self }
         #[inline(always)]
         fn from_u64(u: u64) -> Self { u as Self }
         #[inline(always)]
@@ -280,7 +277,7 @@ where
                                 }
                             }
                             if l32 {
-                                let val = T::from_u128(parse_32_chars(&s)?);
+                                let val = T::from_u64(parse_32_chars(&s)?);
                                 res = res.add_unchecked(val);
                             }
                             return if let Some(checked) = checked {
@@ -399,7 +396,7 @@ where
                                 }
                             }
                             if (l & 32) != 0 && T::BITS_COUNT >= 128 {
-                                res = res.sub_unchecked(T::from_u128(parse_32_chars(&s)?));
+                                res = res.sub_unchecked(T::from_u64(parse_32_chars(&s)?));
                             }
 
                             return if let Some(chk) = checked {

@@ -21,7 +21,7 @@ mod trees;
 
 //pub(crate) use tree::*;
 
-pub use parse::{parse, parse_challenger};
+pub use parse::{parse, parse_challenger, FromStrRadixHelper};
 // pub use parse_i128::{parse_i128, parse_i128_challenger};
 // pub use parse_i16::{parse_i16, parse_i16_challenger};
 // pub use parse_i32::{parse_i32, parse_i32_challenger};
@@ -52,13 +52,13 @@ type Pie = ParseIntErrorPublic;
 #[cfg(not(target_feature = "avx"))]
 #[cfg(target_endian = "little")]
 #[inline]
-pub fn parse_32_chars(mut s: &[u8]) -> Result<u128, Pie> {
-    let val16 = parse_16_chars(&s)? as u128;
+pub fn parse_32_chars(mut s: &[u8]) -> Result<u64, Pie> {
+    let val16 = parse_16_chars(&s)?;
     s = &s[16..];
     let res = val16 * 1_0000_0000_0000_0000;
 
     // Do the same thing again as a parse_32_chars fn would need 256bits.
-    let val16 = parse_16_chars(&s)? as u128;
+    let val16 = parse_16_chars(&s)?;
     Ok(res + val16)
 }
 
