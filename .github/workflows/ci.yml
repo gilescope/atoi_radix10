@@ -9,6 +9,7 @@ jobs:
       matrix:
         rust: ["nightly"]
         args: [""]
+        RUSTFLAGS: [""]
         include:
           # beta and stable have to wait till 1.54
           - rust: nightly
@@ -19,13 +20,12 @@ jobs:
             args: --features nightly,simd
           - rust: nightly
             args: --features nightly,simd
-            env:
-              RUSTFLAGS: "target-cpu=native"
+            RUSTFLAGS: "target-cpu=native"
           # - rust: "1.54.0"
           #   args: --features std
 
     env:
-      RUSTFLAGS: ""
+      RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
     steps:
       - uses: actions/checkout@v2
 
