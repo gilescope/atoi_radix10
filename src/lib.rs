@@ -52,13 +52,13 @@ type Pie = ParseIntErrorPublic;
 #[cfg(not(target_feature = "avx"))]
 #[cfg(target_endian = "little")]
 #[inline]
-pub fn parse_32_chars(mut s: &[u8]) -> Result<u64, Pie> {
-    let val16 = parse_16_chars(&s)?;
+pub fn parse_32_chars(mut s: &[u8]) -> Result<u128, Pie> {
+    let val16 = parse_16_chars(&s)? as u128;
     s = &s[16..];
     let res = val16 * 1_0000_0000_0000_0000;
 
     // Do the same thing again as a parse_32_chars fn would need 256bits.
-    let val16 = parse_16_chars(&s)?;
+    let val16 = parse_16_chars(&s)? as u128;
     Ok(res + val16)
 }
 
@@ -67,7 +67,7 @@ pub fn parse_32_chars(mut s: &[u8]) -> Result<u64, Pie> {
 #[doc(hidden)]
 #[cfg(target_feature = "avx")]
 #[inline]
-pub fn parse_32_chars(s: &[u8]) -> Result<u64, Pie> {
+pub fn parse_32_chars(s: &[u8]) -> Result<u128, Pie> {
     debug_assert!(s.len() >= 32);
 
     use core::arch::x86_64::{
@@ -108,11 +108,13 @@ pub fn parse_32_chars(s: &[u8]) -> Result<u64, Pie> {
         let chunk: __m256i = _mm256_madd_epi16(chunk, mult);
 
         let chunk: i64x4 = chunk.into();
+
+//        let chunk: u128 = *(chunk.to_array().as_ptr() as *const u128);
         let chunk: u64 = chunk.to_array()[3].unsigned_abs() * 1_0000_0000_0000_0000
-            + chunk.to_array()[2].unsigned_abs();
+           + chunk.to_array()[2].unsigned_abs();
 
         if is_valid {
-            Ok(chunk)
+            Ok(chunk as u128)
         } else {
             Err(Pie {
                 kind: IntErrorKind::InvalidDigit,
