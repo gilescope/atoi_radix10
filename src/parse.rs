@@ -49,8 +49,14 @@ pub trait FromStrRadixHelper: PartialOrd + Copy + 'static {
     fn mul_checked(&self, other: Self) -> Option<Self>;
     fn sub_checked(&self, other: Self) -> Option<Self>;
     fn add_checked(&self, other: Self) -> Option<Self>;
+    /// # Safety
+    /// Caller needs to ensure no overflow can occur.
     unsafe fn mul_unchecked(&self, other: Self) -> Self;
+    /// # Safety
+    /// Caller needs to ensure no overflow can occur.
     unsafe fn sub_unchecked(&self, other: Self) -> Self;
+    /// # Safety
+    /// Caller needs to ensure no overflow can occur.
     unsafe fn add_unchecked(&self, other: Self) -> Self;
 }
 
