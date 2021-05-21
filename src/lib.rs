@@ -49,7 +49,7 @@ type Pie = ParseIntErrorPublic;
 /// Parse the first 32 chars in a u8 slice as a base 10 integer.
 /// SAFETY: Do not call with a string length less than that.
 #[doc(hidden)]
-#[cfg(not(target_feature = "avx"))]
+#[cfg(not(all(target_feature = "avx", feature = "simd")))]
 #[cfg(target_endian = "little")]
 #[inline]
 pub fn parse_32_chars(mut s: &[u8]) -> Result<u128, Pie> {
@@ -62,59 +62,120 @@ pub fn parse_32_chars(mut s: &[u8]) -> Result<u128, Pie> {
     Ok(res + val16)
 }
 
+// #[cfg(target_feature = "avx")]
+// use core::arch::x86_64::{
+//     __m256i, _mm256_lddqu_si256, _mm256_madd_epi16, _mm256_maddubs_epi16,
+//      _mm256_set_epi16,
+// };
+// #[cfg(target_feature = "avx")]
+// fn print(label: &str, chunk: __m256i) {
+//     use core_simd::*;
+
+//     let chunk: i64x4 = chunk.into();
+//     let a = chunk.to_array();
+//     //println!("{}\n{:64b}\n{:64b}\n{:64b}\n{:64b}\n", label, a[0], a[1], a[2], a[3]);
+// }
+
+const MULT10: core_simd::i8x32 = core_simd::i8x32::from_array([
+    10_i8, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10_i8, 1, 10, 1, 10, 1, 10, 1, 10,
+    1, 10, 1, 10, 1, 10, 1,
+]);
+
+const MULT100: core_simd::i16x16 = core_simd::i16x16::from_array([
+    100, 1, 100, 1, 100, 1, 100, 1, 100, 1, 100, 1, 100, 1, 100, 1,
+]);
+const MULT10000: core_simd::i32x8 =
+    core_simd::i32x8::from_array([10000, 1, 10000, 1, 10000, 1, 10000, 1]);
+const ZEROS: core_simd::i8x32 = core_simd::i8x32::splat(b'0' as i8);
+const ZERO_TO_LOWEST: core_simd::i8x32 = core_simd::i8x32::splat(-128);
+const UPPER_BOUND: core_simd::i8x32 = core_simd::i8x32::splat(-128 + 10);
+
 /// Parse the first 32 chars in a u8 slice as a base 10 integer.
 /// SAFETY: Do not call with a string length less than that.
 #[doc(hidden)]
-#[cfg(target_feature = "avx")]
+#[cfg(all(target_feature = "avx", feature = "simd"))]
 #[inline]
 pub fn parse_32_chars(s: &[u8]) -> Result<u128, Pie> {
     debug_assert!(s.len() >= 32);
 
     use core::arch::x86_64::{
-        __m256i, _mm256_lddqu_si256, _mm256_madd_epi16, _mm256_maddubs_epi16, _mm256_packus_epi32,
-        _mm256_set1_epi8, _mm256_set_epi16, _mm256_set_epi8, _mm256_sub_epi16,
+        _mm256_hadd_epi32, _mm256_lddqu_si256, _mm256_madd_epi16, _mm256_maddubs_epi16,
     };
     use core_simd::*;
 
+    let chunk: i8x32 = unsafe { _mm256_lddqu_si256(core::mem::transmute_copy(&s)).into() };
+    let chunk = chunk - ZEROS; //will wrap
+    let chunk_og = chunk;
+    let digits_at_lowest = chunk_og + ZERO_TO_LOWEST;
+    let chunk: i16x16 = unsafe { _mm256_maddubs_epi16(chunk.into(), MULT10.into()).into() };
+    let chunk: i32x8 = unsafe { _mm256_madd_epi16(chunk.into(), MULT100.into()).into() };
+    let res = chunk * MULT10000;
+    let chunk: i32x8 = unsafe { _mm256_hadd_epi32(res.into(), res.into()).into() };
+    let range_chk1 = i8x32::lanes_lt(digits_at_lowest, UPPER_BOUND);
+
+    let upper = chunk[2] as u64 * 10000_0000_u64 + chunk[3] as u64;
+    let is_valid = range_chk1.all();
+    let lower = chunk[4] as u64 * 10000_0000_u64 + chunk[5] as u64;
+
+    let result = upper as u128 * 1_0000_0000_0000_0000_u128 + lower as u128;
+
+    if likely!(is_valid) {
+        Ok(result as u128)
+    } else {
+        Err(Pie {
+            kind: IntErrorKind::InvalidDigit,
+        })
+    }
+}
+
+/// Parse the first 16 chars in a u8 slice as a base 10 integer.
+/// SAFETY: Do not call with a string length less than that.
+#[cfg(all(target_feature = "sse2", feature = "simd"))]
+#[inline]
+#[doc(hidden)]
+pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
+    debug_assert!(s.len() >= 16);
+
+    use core::arch::x86_64::{
+        __m128i, _mm_lddqu_si128, _mm_madd_epi16, _mm_maddubs_epi16, _mm_packus_epi32,
+    };
+    use core_simd::*;
     unsafe {
-        let chunk = _mm256_lddqu_si256(core::mem::transmute_copy(&s));
-        let zeros = _mm256_set1_epi8(b'0' as i8);
-        let chunk = _mm256_sub_epi16(chunk, zeros); //will wrap
+        //TODO: waiting on https://github.com/rust-lang/stdsimd/issues/102
+        let chunk: i8x16 = _mm_lddqu_si128(core::mem::transmute_copy(&s)).into(); //) _mm_lddqu_si128
+                                                                                  //        let chunk:  = chunk.into(); //) _mm_lddqu_si128
+        let zeros = i8x16::splat(b'0' as i8);
 
-        let zero_to_lowest = i8x32::splat(-128);
-        let chunkk: i8x32 = chunk.into();
-        let digits_at_lowest = chunkk + zero_to_lowest;
+        let chunk = chunk - zeros; //will wrap
 
-        let upper_bound = i8x32::splat(-128 + 10);
-        let range_chk1 = i8x32::lanes_lt(digits_at_lowest, upper_bound);
+        let zero_to_lowest = i8x16::splat(-128);
+        let digits_at_lowest = chunk + zero_to_lowest;
 
+        let upper_bound = i8x16::splat(-128 + 10);
+        let range_chk1 = i8x16::lanes_lt(digits_at_lowest, upper_bound);
         let is_valid = range_chk1.all();
 
-        let mult = _mm256_set_epi8(
-            1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1,
-            10, 1, 10, 1, 10, 1, 10,
-        );
-        let chunk = _mm256_maddubs_epi16(chunk, mult);
+        let mult = i8x16::from_array([10_i8, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1]);
 
-        let mult = _mm256_set_epi16(
-            1, 100, 1, 100, 1, 100, 1, 100, 1, 100, 1, 100, 1, 100, 1, 100,
-        );
-        let chunk = _mm256_madd_epi16(chunk, mult);
+        let chunk: i8x16 = _mm_maddubs_epi16(chunk.into(), mult.into()).into();
 
-        let chunk = _mm256_packus_epi32(chunk, chunk);
-        let mult = _mm256_set_epi16(
-            0, 0, 0, 0, 0, 0, 0, 0, 1, 10000, 1, 10000, 1, 10000, 1, 10000,
-        );
-        let chunk: __m256i = _mm256_madd_epi16(chunk, mult);
+        let mult: i16x8 = i16x8::from_array([100, 1, 100, 1, 100, 1, 100, 1]);
+        let chunk: __m128i = chunk.into();
+        let chunk: i16x8 = chunk.into();
 
-        let chunk: i64x4 = chunk.into();
+        let chunk: i16x8 = _mm_madd_epi16(chunk.into(), mult.into()).into();
 
-//        let chunk: u128 = *(chunk.to_array().as_ptr() as *const u128);
-        let chunk: u64 = chunk.to_array()[3].unsigned_abs() * 1_0000_0000_0000_0000
-           + chunk.to_array()[2].unsigned_abs();
+        let chunk = _mm_packus_epi32(chunk.into(), chunk.into());
+        let mult = i16x8::from_array([10000, 1, 10000, 1, 10000, 1, 10000, 1]);
 
-        if is_valid {
-            Ok(chunk as u128)
+        let chunk: i16x8 = _mm_madd_epi16(chunk, mult.into()).into();
+        let chunk: __m128i = chunk.into();
+        let chunk: i64x2 = chunk.into();
+        let chunk: u64 = chunk.to_array()[1].unsigned_abs(); //this could just be a transmute
+
+        let chunk = ((chunk & 0xffffffff) * 1_0000_0000) + (chunk >> 32);
+        if likely!(is_valid) {
+            Ok(chunk)
         } else {
             Err(Pie {
                 kind: IntErrorKind::InvalidDigit,
@@ -165,65 +226,6 @@ pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
         Err(Pie {
             kind: IntErrorKind::InvalidDigit,
         })
-    }
-}
-
-/// Parse the first 16 chars in a u8 slice as a base 10 integer.
-/// SAFETY: Do not call with a string length less than that.
-#[cfg(all(target_feature = "sse2", feature = "simd"))]
-#[inline]
-#[doc(hidden)]
-pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
-    debug_assert!(s.len() >= 16);
-
-    use core::arch::x86_64::{
-        __m128i, _mm_lddqu_si128, _mm_madd_epi16, _mm_maddubs_epi16, _mm_packus_epi32,
-    };
-    use core_simd::*;
-    unsafe {
-        //TODO: waiting on https://github.com/rust-lang/stdsimd/issues/102
-        let chunk: __m128i = _mm_lddqu_si128(core::mem::transmute_copy(&s)); //) _mm_lddqu_si128
-        let chunk: i8x16 = chunk.into(); //) _mm_lddqu_si128
-        let zeros = i8x16::splat(b'0' as i8);
-
-        let chunk = chunk - zeros; //will wrap
-
-        let zero_to_lowest = i8x16::splat(-128);
-        let digits_at_lowest = chunk + zero_to_lowest;
-
-        let upper_bound = i8x16::splat(-128 + 10);
-        let range_chk1 = i8x16::lanes_lt(digits_at_lowest, upper_bound);
-        let is_valid = range_chk1.all();
-
-        let mult = i8x16::from_array([10_i8, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1]);
-
-        let chunk: __m128i = _mm_maddubs_epi16(chunk.into(), mult.into());
-        let chunk: i8x16 = chunk.into();
-
-        let mult: i16x8 = i16x8::from_array([100, 1, 100, 1, 100, 1, 100, 1]);
-        let chunk: __m128i = chunk.into();
-        let chunk: i16x8 = chunk.into();
-
-        let chunk: __m128i = _mm_madd_epi16(chunk.into(), mult.into());
-        let chunk: i16x8 = chunk.into();
-
-        let chunk = _mm_packus_epi32(chunk.into(), chunk.into());
-        let mult = i16x8::from_array([10000, 1, 10000, 1, 10000, 1, 10000, 1]);
-
-        let chunk: __m128i = _mm_madd_epi16(chunk, mult.into());
-        let chunk: i16x8 = chunk.into();
-        let chunk: __m128i = chunk.into();
-        let chunk: i64x2 = chunk.into();
-        let chunk: u64 = chunk.to_array()[1].unsigned_abs(); //this could just be a transmute
-
-        let chunk = ((chunk & 0xffffffff) * 1_0000_0000) + (chunk >> 32);
-        if likely!(is_valid) {
-            Ok(chunk)
-        } else {
-            Err(Pie {
-                kind: IntErrorKind::InvalidDigit,
-            })
-        }
     }
 }
 
@@ -338,6 +340,7 @@ pub fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "std")]
     use crate::parse::FromStrRadixHelper;
 
     use super::*;

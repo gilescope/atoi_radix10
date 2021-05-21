@@ -55,16 +55,21 @@ macro_rules! ok_bench {
 }
 
 fn parse_chars_bench(c: &mut Criterion) {
-    let mut group = c.benchmark_group("parse_16_chars_bench_group");
+    let mut group = c.benchmark_group("parse_chars_bench_group");
     //group //.sample_size(30)
     //    .warm_up_time(core::time::Duration::from_millis(1000))
     //    .measurement_time(core::time::Duration::from_millis(2000));
     let num_str = "12345678123456781234567812345678";
+    assert_eq!(
+        parse_32_chars(num_str.as_bytes()),
+        Ok(12345678123456781234567812345678)
+    );
     group.throughput(Throughput::Bytes(num_str.len() as u64));
     group.bench_with_input(BenchmarkId::new("32", num_str), &num_str, |b, &_val| {
         b.iter(|| parse_32_chars(black_box(num_str.as_bytes())));
     });
     let num_str = "1234567812345678";
+    assert_eq!(parse_16_chars(num_str.as_bytes()), Ok(1234567812345678));
     group.throughput(Throughput::Bytes(num_str.len() as u64));
     group.bench_with_input(BenchmarkId::new("16", num_str), &num_str, |b, &_val| {
         b.iter(|| parse_16_chars(black_box(num_str.as_bytes())));
@@ -82,11 +87,13 @@ fn parse_chars_bench(c: &mut Criterion) {
     //     b.iter(|| parse_6_chars(black_box(num_str.as_bytes())));
     // });
     let num_str = "1234";
+    assert_eq!(parse_4_chars(num_str.as_bytes()), Ok(1234));
     group.throughput(Throughput::Bytes(num_str.len() as u64));
     group.bench_with_input(BenchmarkId::new("4", num_str), &num_str, |b, &_val| {
         b.iter(|| parse_4_chars(black_box(num_str.as_bytes())));
     });
     let num_str = "12";
+    assert_eq!(parse_2_chars(num_str.as_bytes()), Ok(12));
     group.throughput(Throughput::Bytes(num_str.len() as u64));
     group.bench_with_input(BenchmarkId::new("2", num_str), &num_str, |b, &_val| {
         b.iter(|| parse_2_chars(black_box(num_str.as_bytes())));
