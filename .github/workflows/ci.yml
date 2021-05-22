@@ -13,7 +13,7 @@ jobs:
         include:
           # beta and stable have to wait till 1.54
           - rust: nightly
-            args: --features std
+            args: ""
           - rust: nightly
             args: --features nightly
           - rust: nightly
@@ -22,7 +22,7 @@ jobs:
             args: --features nightly,simd
             RUSTFLAGS: "-C target-cpu=native"
           # - rust: "1.54.0"
-          #   args: --features std
+          #   args: ""
 
     env:
       RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
