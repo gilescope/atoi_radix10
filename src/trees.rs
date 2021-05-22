@@ -40,6 +40,24 @@ pub(crate) const TENS_U64: &[u64] = &[
     10_000_000_000_000_000_000,
 ];
 
+#[cfg(target_pointer_width = "16")]
+pub(crate) const TENS_USIZE: &[usize] = &[1, 10, 100, 1_000, 10_000];
+
+#[cfg(target_pointer_width = "32")]
+pub(crate) const TENS_USIZE: &[usize] = &[
+    1,
+    10,
+    100,
+    1_000,
+    10_000,
+    100_000,
+    1_000_000,
+    10_000_000,
+    100_000_000,
+    1_000_000_000,
+];
+
+#[cfg(target_pointer_width = "64")]
 pub(crate) const TENS_USIZE: &[usize] = &[
     1,
     10,
@@ -146,6 +164,24 @@ pub(crate) const TENS_I64: &[i64] = &[
     1_000_000_000_000_000_000,
 ];
 
+#[cfg(target_pointer_width = "16")]
+pub(crate) const TENS_ISIZE: &[isize] = &[1, 10, 100, 1_000, 10_000];
+
+#[cfg(target_pointer_width = "32")]
+pub(crate) const TENS_ISIZE: &[isize] = &[
+    1,
+    10,
+    100,
+    1_000,
+    10_000,
+    100_000,
+    1_000_000,
+    10_000_000,
+    100_000_000,
+    1_000_000_000,
+];
+
+#[cfg(target_pointer_width = "64")]
 pub(crate) const TENS_ISIZE: &[isize] = &[
     1,
     10,

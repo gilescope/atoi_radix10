@@ -75,11 +75,20 @@ FAQ
 
    * Why not include this in the std library? The std library parsing code isn't radix specific. As the num parsing is in core, code size is important for embedded systems. This implementation is definitely more code than std.
 
+   * If you want to run the tests under wasm you need to install:
+   ```
+   cargo install wasm-bindgen-cli
+   ```
+
 TODO
 ====
 
    - [x] make all the tests work in no_std mode.
-   - [ ] Could check if works / performs well on wasm?
+   - [x] Compile for wasm
+   - [ ] Bench on wasm?
+   - [x] Run tests under wasm: `cargo test --features nightly --target=wasm32-unknown-unknown`
+   - [ ] and have all wasm tests pass (18 fail)
+   - [ ] Wasm + Simd???
    - [ ] use no non-portable simd commands (so simd feature works on arm/neon).
    - [ ] core::num::bignum
    - [ ] make work on big-endian ( See https://github.com/BurntSushi/rust-memchr/commit/059d0c63d30a37783b9a98bef7daf780524a3a6e )

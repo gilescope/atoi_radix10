@@ -341,6 +341,7 @@ mod tests {
     macro_rules! gen_tests {
         ($target_type:ty, $min:expr, $max:expr, $step: expr, $max_chars: literal,$postfix: literal, $specific: literal) => {
             paste! {
+                #[wasm_bindgen_test]
                 #[test]
                 fn [<test_ $target_type _specific $postfix>]() {
                     let s = $specific;
@@ -348,6 +349,7 @@ mod tests {
                     assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                 }
 
+                #[wasm_bindgen_test]
                 #[test]
                 fn [<test_invalid_ascii_ $target_type $postfix>]() {
                     let mut vec = Vec::<_, 42>::new();
@@ -367,6 +369,7 @@ mod tests {
                     }
                 }
 
+                #[wasm_bindgen_test]
                 #[test]
                 fn [<test_invalid_too_big_ $target_type $postfix>]() {
                     let mut s = [0u8; 42];
@@ -382,6 +385,7 @@ mod tests {
                     );
                 }
 
+                #[wasm_bindgen_test]
                 #[test]
                 fn [<test_empty_ $target_type $postfix>]() {
                     assert_eq!(
@@ -392,6 +396,7 @@ mod tests {
                     );
                 }
 
+                //#[wasm_bindgen_test] step too small for wasm
                 #[test]
                 fn [<test_ $target_type $postfix>]() {
                     let mut s = [0u8; 42];
@@ -403,6 +408,7 @@ mod tests {
                     }
                 }
 
+                //#[wasm_bindgen_test] step too small for wasm
                 #[test]
                 fn [<test_ $target_type _plus $postfix>]() {
                     for i in ($min..$max as $target_type).step_by($step) {
@@ -416,6 +422,7 @@ mod tests {
                     }
                 }
 
+                #[wasm_bindgen_test]
                 #[test]
                 fn [<test_does_not_accept_plus_after_zero_ $target_type _plus $postfix>]() {
                     let mut s = [0u8; 42];
@@ -425,6 +432,7 @@ mod tests {
                     assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{:?}'", &s);
                 }
 
+                #[wasm_bindgen_test]
                 #[test]
                 fn [<test_accepts_many_zeros_ $target_type _plus $postfix>]() {
                     //let i = $max;
@@ -434,6 +442,7 @@ mod tests {
                     assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                 }
 
+                #[wasm_bindgen_test]
                 #[test]
                 fn [<test_accepts_many_leading_zeros_ $target_type _plus $postfix>]() {
                     let mut s = [0u8; 142];
@@ -474,11 +483,21 @@ mod tests {
     gen_tests!(i32, i32::MIN, i32::MAX, 10_301, 10, "", "-2147483648");
     gen_tests!(i32, i32::MIN, i32::MAX, 10_301, 10, "_challenger", "1");
 
+
+    #[cfg(target_pointer_width = "16")]
+    const LARGE_STEP: usize = 12345;
+
+    #[cfg(target_pointer_width = "32")]
+    const LARGE_STEP: usize = usize::MAX;
+
+    #[cfg(target_pointer_width = "64")]
+    const LARGE_STEP: usize = 100_301_000_000_000;
+
     gen_tests!(
         u64,
         u64::MIN,
         u64::MAX,
-        100_301_000_000_000,
+        LARGE_STEP,
         20,
         "",
         "0000000000000000018446744073709551615"
@@ -487,7 +506,7 @@ mod tests {
         u64,
         u64::MIN,
         u64::MAX,
-        100_301_000_000_000,
+        LARGE_STEP,
         20,
         "_challenger",
         "10000009700000000000"
@@ -497,7 +516,7 @@ mod tests {
         i64,
         i64::MIN,
         i64::MAX,
-        100_301_000_000_000,
+        LARGE_STEP,
         19,
         "",
         "-999993949854775808"
@@ -507,7 +526,7 @@ mod tests {
         i64,
         i64::MIN,
         i64::MAX,
-        100_301_000_000_000,
+        LARGE_STEP,
         19,
         "_challenger",
         "1"
@@ -517,7 +536,7 @@ mod tests {
         u128,
         u64::MIN as u128,
         u64::MAX,
-        100_301_000_000_000,
+        LARGE_STEP,
         39,
         "",
         "10000009700000000000"
@@ -527,7 +546,7 @@ mod tests {
         u128,
         u64::MIN as u128,
         u64::MAX,
-        100_301_000_000_000,
+        LARGE_STEP,
         39,
         "_challenger",
         "123456789012345678901234567890123456789"
@@ -537,7 +556,7 @@ mod tests {
         i128,
         u64::MIN as i128,
         u64::MAX,
-        100_301_000_000_000,
+        LARGE_STEP,
         39,
         "",
         "1701411834604692317316873037158841057271" // "1:11111111111111"
@@ -547,23 +566,29 @@ mod tests {
         i128,
         u64::MIN as i128,
         u64::MAX,
-        100_301_000_000_000,
+        LARGE_STEP,
         39,
         "_challenger",
         "123456789012345678901234567890123456789"
     );
 
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    #[wasm_bindgen_test]
     #[test]
     fn test_fuzz1() {
         // needed checked add when checking digits in range.
         check::<u32, 4>([50, 35, 43, 120]);
     }
 
+    #[wasm_bindgen_test]
     #[test]
     fn test_fuzz2() {
         // Too long is defined by std as invalid digit error rather than overflow.
         check::<u32, 11>([48, 48, 54, 54, 49, 54, 56, 57, 54, 49, 51]);
     }
+
+    #[wasm_bindgen_test]
 
     #[test]
     fn test_fuzz3() {
@@ -572,11 +597,13 @@ mod tests {
         check::<u32, 11>([54, 48, 48, 48, 54, 48, 54, 48, 54, 48, 54]);
     }
 
+    #[wasm_bindgen_test]
     #[test]
     fn test_fuzz4() {
         //leading zeros then plus: "0000+6600660"
         check::<u32, 12>([48, 48, 48, 48, 43, 54, 54, 48, 48, 54, 54, 48]);
     }
+    #[wasm_bindgen_test]
 
     #[test]
     fn test_fuzz5() {
@@ -589,6 +616,7 @@ mod tests {
             48, 48, 48, 48, 48, 48,
         ]);
     }
+    #[wasm_bindgen_test]
     #[test]
     fn test_fuzz6() {
         check::<u64, 21>([
