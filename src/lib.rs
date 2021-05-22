@@ -483,7 +483,6 @@ mod tests {
     gen_tests!(i32, i32::MIN, i32::MAX, 10_301, 10, "", "-2147483648");
     gen_tests!(i32, i32::MIN, i32::MAX, 10_301, 10, "_challenger", "1");
 
-
     #[cfg(target_pointer_width = "16")]
     const LARGE_STEP: usize = 12345;
 
@@ -522,15 +521,7 @@ mod tests {
         "-999993949854775808"
     );
 
-    gen_tests!(
-        i64,
-        i64::MIN,
-        i64::MAX,
-        LARGE_STEP,
-        19,
-        "_challenger",
-        "1"
-    );
+    gen_tests!(i64, i64::MIN, i64::MAX, LARGE_STEP, 19, "_challenger", "1");
 
     gen_tests!(
         u128,
@@ -589,7 +580,6 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
-
     #[test]
     fn test_fuzz3() {
         //"00661689613" std can deal with any number of leading zeros
@@ -604,7 +594,6 @@ mod tests {
         check::<u32, 12>([48, 48, 48, 48, 43, 54, 54, 48, 48, 54, 54, 48]);
     }
     #[wasm_bindgen_test]
-
     #[test]
     fn test_fuzz5() {
         //leading zeros then plus: "0000+6600660"
