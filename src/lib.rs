@@ -111,13 +111,14 @@ pub fn parse_32_chars(s: &[u8]) -> Result<u128, Pie> {
     let chunk: i32x8 = unsafe { _mm256_hadd_epi32(res.into(), res.into()).into() };
     let range_chk1 = i8x32::lanes_lt(digits_at_lowest, UPPER_BOUND);
 
-    let upper = chunk[2] as u64 * 10000_0000_u64 + chunk[3] as u64;
     let is_valid = range_chk1.all();
-    let lower = chunk[4] as u64 * 10000_0000_u64 + chunk[5] as u64;
-
-    let result = upper as u128 * 1_0000_0000_0000_0000_u128 + lower as u128;
 
     if likely!(is_valid) {
+        let upper = chunk[2] as u64 * 10000_0000_u64 + chunk[3] as u64;
+        let lower = chunk[4] as u64 * 10000_0000_u64 + chunk[5] as u64;
+
+        let result = upper as u128 * 1_0000_0000_0000_0000_u128 + lower as u128;
+
         Ok(result as u128)
     } else {
         Err(Pie {
@@ -353,7 +354,7 @@ mod tests {
                     for &ascii in [b':', b'/'].iter() {
                         for i in 1..$max_chars {
                             vec.clear();
-                            for j in 0..i {
+                            for _ in 0..i {
                                 vec.push(b'1').unwrap();
                             }
                             for j in 1..i {
@@ -404,22 +405,19 @@ mod tests {
 
                 #[test]
                 fn [<test_ $target_type _plus $postfix>]() {
-
                     for i in ($min..$max as $target_type).step_by($step) {
                         let mut s = [0u8; 42];
-                        //s[0] = b'+';
-                        //let ss = i.numtoa(10, &mut s[1..]);
-                        let ss = i.numtoa(10, &mut s);
-                        //let len = ss.len();
-                        //let s = unsafe { core::str::from_utf8_unchecked(&s[0..len+1]) };
-                        //let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
-                        //assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
+                        s[0] = b'+';
+                        let ss = i.numtoa(10, &mut s[1..]);
+                        let len = ss.len();
+                        let s = unsafe { core::str::from_utf8_unchecked(&s[0..len+1]) };
+                        let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
+                        assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                     }
                 }
 
                 #[test]
                 fn [<test_does_not_accept_plus_after_zero_ $target_type _plus $postfix>]() {
-                    let i = $max;
                     let mut s = [0u8; 42];
                     s[s.len() - 1] = b'+';
                     let s = unsafe { core::str::from_utf8_unchecked(&s) };
@@ -438,7 +436,6 @@ mod tests {
 
                 #[test]
                 fn [<test_accepts_many_leading_zeros_ $target_type _plus $postfix>]() {
-                    let i = $max;
                     let mut s = [0u8; 142];
                     let ss = ($target_type::MAX as $target_type).numtoa(10, &mut s[100..]);
                     let len = ss.len();
@@ -453,14 +450,6 @@ mod tests {
 
     gen_tests!(u8, u8::MIN, u8::MAX, 1, 3, "", "1");
     gen_tests!(u8, u8::MIN, u8::MAX, 1, 3, "_challenger", "+200");
-
-    #[test]
-    fn test_postfix() {
-        for i in (i8::MIN..i8::MAX as i8).step_by(1) {
-            let mut s = [0u8; 40];
-            let ss = i.numtoa(10, &mut s);
-        }
-    }
 
     gen_tests!(i8, i8::MIN, i8::MAX, 1, 3, "", "1");
     gen_tests!(i8, i8::MIN, i8::MAX, 1, 3, "_challenger", "-99");
