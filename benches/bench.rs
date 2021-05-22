@@ -7,7 +7,6 @@ use paste::paste;
 
 use atoi_radix10::*;
 
-#[cfg(feature = "std")]
 pub fn std_parse<T>(s: &str) -> Result<T, ()>
 where
     T: core::str::FromStr,
@@ -28,7 +27,6 @@ macro_rules! ok_bench {
                 for num_str in $values.iter() {
                     let num : $target_type = num_str.parse().unwrap();
                     group.throughput(Throughput::Bytes(num_str.len() as u64));
-                    #[cfg(feature="std")]
                     group.bench_with_input(BenchmarkId::new(format!("{}std",$prefix), num), &num_str, |b, &val| {
                         b.iter(|| std_parse::<$target_type>(&val).map_err(|_| ()));
                     });

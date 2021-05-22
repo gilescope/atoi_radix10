@@ -1,4 +1,4 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 #![feature(int_error_matching)]
 //#![feature(unchecked_math)]
 #![cfg_attr(feature = "nightly", feature(core_intrinsics))]
@@ -331,10 +331,10 @@ pub fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "std")]
-    use crate::parse::FromStrRadixHelper;
-
     use super::*;
+    use crate::parse::FromStrRadixHelper;
+    use heapless::Vec;
+    use numtoa::NumToA;
     use paste::paste;
 
     macro_rules! gen_tests {
@@ -347,27 +347,32 @@ mod tests {
                     assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                 }
 
-                #[cfg(feature="std")]
                 #[test]
                 fn [<test_invalid_ascii_ $target_type $postfix>]() {
+                    let mut vec = Vec::<_, 42>::new();
                     for &ascii in [b':', b'/'].iter() {
                         for i in 1..$max_chars {
-                            let vec = vec![b'1'; i];
+                            vec.clear();
+                            for j in 0..i {
+                                vec.push(b'1').unwrap();
+                            }
                             for j in 1..i {
                                 let mut v = vec.clone();
                                 v[j] = ascii;
-                                let s = String::from_utf8_lossy(&v[..]);
+                                let s = unsafe { core::str::from_utf8_unchecked(&v[..]) };
                                 assert_eq!(Err(()), [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "parsing `{}`", s);
                             }
                         }
                     }
                 }
 
-                #[cfg(feature="std")]
                 #[test]
                 fn [<test_invalid_too_big_ $target_type $postfix>]() {
-                    let mut s = ($target_type::MAX as $target_type).to_string();
-                    s.push('1');
+                    let mut s = [0u8; 42];
+                    let ss = ($target_type::MAX as $target_type).numtoa(10, &mut s);
+                    let len = ss.len();
+                    s[len] = b'1';
+                    let s = unsafe { core::str::from_utf8_unchecked(&s[..len + 1]) };
                     assert_eq!(
                         Err(()),
                         [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_|()),
@@ -386,48 +391,59 @@ mod tests {
                     );
                 }
 
-                #[cfg(feature="std")]
                 #[test]
                 fn [<test_ $target_type $postfix>]() {
+                    let mut s = [0u8; 42];
+
                     for i in ($min..$max as $target_type).step_by($step) {
-                        let s = i.to_string();
+                        let s = unsafe { core::str::from_utf8_unchecked(i.numtoa(10, &mut s)) };
                         let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                         assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                     }
                 }
 
-                #[cfg(feature="std")]
                 #[test]
                 fn [<test_ $target_type _plus $postfix>]() {
+                    
                     for i in ($min..$max as $target_type).step_by($step) {
-                        let mut s = i.to_string();
-                        s.insert(0, '+');
-                        let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
-                        assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
+                        let mut s = [0u8; 42];
+                        //s[0] = b'+';
+                        //let ss = i.numtoa(10, &mut s[1..]);
+                        let ss = i.numtoa(10, &mut s);
+                        //let len = ss.len();
+                        //let s = unsafe { core::str::from_utf8_unchecked(&s[0..len+1]) };
+                        //let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
+                        //assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                     }
                 }
 
-                #[cfg(feature="std")]
                 #[test]
-                fn [<test_doesnt_accept_plus_after_zero_ $target_type _plus $postfix>]() {
+                fn [<test_does_not_accept_plus_after_zero_ $target_type _plus $postfix>]() {
                     let i = $max;
-                    let mut s = i.to_string();
-                    s.insert(0, '+');
-                    for _ in 1..100 {
-                        s.insert(0, '0');
-                    }
+                    let mut s = [0u8; 42];
+                    s[s.len() - 1] = b'+';
+                    let s = unsafe { core::str::from_utf8_unchecked(&s) };
+                    let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
+                    assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{:?}'", &s);
+                }
+
+                #[test]
+                fn [<test_accepts_many_zeros_ $target_type _plus $postfix>]() {
+                    //let i = $max;
+                    let s = [0u8; 142];
+                    let s = unsafe { core::str::from_utf8_unchecked(&s) };
                     let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                     assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                 }
 
-                #[cfg(feature="std")]
                 #[test]
                 fn [<test_accepts_many_leading_zeros_ $target_type _plus $postfix>]() {
                     let i = $max;
-                    let mut s = i.to_string();
-                    for _ in 1..100 {
-                        s.insert(0, '0');
-                    }
+                    let mut s = [0u8; 142];
+                    let ss = ($target_type::MAX as $target_type).numtoa(10, &mut s[100..]);
+                    let len = ss.len();
+
+                    let s = unsafe { core::str::from_utf8_unchecked(&s[..100 + len]) };
                     let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                     assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                 }
@@ -438,8 +454,17 @@ mod tests {
     gen_tests!(u8, u8::MIN, u8::MAX, 1, 3, "", "1");
     gen_tests!(u8, u8::MIN, u8::MAX, 1, 3, "_challenger", "+200");
 
+
+    #[test]
+    fn test_postfix() {
+        for i in (i8::MIN..i8::MAX as i8).step_by(1) {
+            let mut s = [0u8; 40];
+            let ss = i.numtoa(10, &mut s);
+        }
+    }
+
     gen_tests!(i8, i8::MIN, i8::MAX, 1, 3, "", "1");
-    gen_tests!(i8, i8::MIN, i8::MAX, 1, 3, "_challenger", "-127");
+    gen_tests!(i8, i8::MIN, i8::MAX, 1, 3, "_challenger", "-99");
 
     gen_tests!(u16, u16::MIN, u16::MAX, 1, 5, "", "1");
     gen_tests!(u16, u16::MIN, u16::MAX, 1, 5, "_challenger", "1");
@@ -540,40 +565,35 @@ mod tests {
         "123456789012345678901234567890123456789"
     );
 
-    #[cfg(feature = "std")]
     #[test]
     fn test_fuzz1() {
         // needed checked add when checking digits in range.
-        check(&[50, 35, 43, 173]);
+        check::<u32, 4>([50, 35, 43, 120]);
     }
 
-    #[cfg(feature = "std")]
     #[test]
     fn test_fuzz2() {
         // Too long is defined by std as invalid digit error rather than overflow.
-        check(&[48, 48, 54, 54, 49, 54, 56, 57, 54, 49, 51]);
+        check::<u32, 11>([48, 48, 54, 54, 49, 54, 56, 57, 54, 49, 51]);
     }
 
-    #[cfg(feature = "std")]
     #[test]
     fn test_fuzz3() {
         //"00661689613" std can deal with any number of leading zeros
         // as it keeps multiplying them by 10...
-        check(&[54, 48, 48, 48, 54, 48, 54, 48, 54, 48, 54]);
+        check::<u32, 11>([54, 48, 48, 48, 54, 48, 54, 48, 54, 48, 54]);
     }
 
-    #[cfg(feature = "std")]
     #[test]
     fn test_fuzz4() {
         //leading zeros then plus: "0000+6600660"
-        check(&[48, 48, 48, 48, 43, 54, 54, 48, 48, 54, 54, 48]);
+        check::<u32, 12>([48, 48, 48, 48, 43, 54, 54, 48, 48, 54, 54, 48]);
     }
 
-    #[cfg(feature = "std")]
     #[test]
     fn test_fuzz5() {
         //leading zeros then plus: "0000+6600660"
-        check(&[
+        check::<u32, 94>([
             43, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48,
             48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48,
             48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48,
@@ -582,45 +602,31 @@ mod tests {
         ]);
     }
     #[test]
-    #[cfg(feature = "std")]
     fn test_fuzz6() {
-        check_generic::<u64>(&[
+        check::<u64, 21>([
             43, 49, 43, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48,
         ]);
     }
 
-    #[cfg(feature = "std")]
-
-    fn check(data: &[u8]) {
-        if let Ok(s) = String::from_utf8(data.to_vec()) {
-            let spec: Result<u32, _> = s.parse();
-            let expected = spec.map_err(|_| ());
-            assert_eq!(expected, parse::<u32>(&data).map_err(|_| ()));
-            // let expected = spec.map_err(|e| e.kind().clone());
-            // assert_eq!(expected, parse_u32(&data).map_err(|e| e.kind));
-        } else {
-            //just make sure doesn't panic:
-            let _ = parse::<u32>(&data);
-        }
-    }
-
-    #[cfg(feature = "std")]
-
-    fn check_generic<T>(data: &[u8])
+    fn check<T, const N: usize>(data: [u8; N])
     where
         T: FromStrRadixHelper,
         T: core::str::FromStr,
         T: core::fmt::Debug,
     {
-        if let Ok(s) = String::from_utf8(data.to_vec()) {
-            let spec: Result<T, _> = s.parse::<T>();
-            let expected = spec.map_err(|_| ());
-            assert_eq!(expected, parse::<T>(&data).map_err(|_| ()));
-            // let expected = spec.map_err(|e| e.kind().clone());
-            // assert_eq!(expected, parse_u32(&data).map_err(|e| e.kind));
-        } else {
-            //just make sure doesn't panic:
-            let _ = parse::<T>(&data);
+        let mut s = heapless::String::<N>::new();
+        for c in &data {
+            s.push(*c as char).unwrap();
         }
+        //if let Ok(s) = heapless::String<N>::from_utf8(data.to_vec()) {
+        let spec: Result<T, _> = s.parse();
+        let expected = spec.map_err(|_| ());
+        assert_eq!(expected, parse::<T>(&data).map_err(|_| ()));
+        // let expected = spec.map_err(|e| e.kind().clone());
+        // assert_eq!(expected, parse_u32(&data).map_err(|e| e.kind));
+        // } else {
+        //     //just make sure doesn't panic:
+        //     let _ = parse::<u32>(&data);
+        // }
     }
 }
