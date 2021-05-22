@@ -404,7 +404,7 @@ mod tests {
 
                 #[test]
                 fn [<test_ $target_type _plus $postfix>]() {
-                    
+
                     for i in ($min..$max as $target_type).step_by($step) {
                         let mut s = [0u8; 42];
                         //s[0] = b'+';
@@ -453,7 +453,6 @@ mod tests {
 
     gen_tests!(u8, u8::MIN, u8::MAX, 1, 3, "", "1");
     gen_tests!(u8, u8::MIN, u8::MAX, 1, 3, "_challenger", "+200");
-
 
     #[test]
     fn test_postfix() {
