@@ -78,12 +78,8 @@ FAQ
 TODO
 ====
 
-   [x] make all the tests work in no_std mode.
-
-   [ ] Could check if works / performs well on wasm?
-
-   [ ] use no non-portable simd commands (so simd feature works on arm/neon).
-
-   [ ] core::num::bignum
-   
-   [ ] make work on big-endian ( See https://github.com/BurntSushi/rust-memchr/commit/059d0c63d30a37783b9a98bef7daf780524a3a6e )
+   - [x] make all the tests work in no_std mode.
+   - [ ] Could check if works / performs well on wasm?
+   - [ ] use no non-portable simd commands (so simd feature works on arm/neon).
+   - [ ] core::num::bignum
+   - [ ] make work on big-endian ( See https://github.com/BurntSushi/rust-memchr/commit/059d0c63d30a37783b9a98bef7daf780524a3a6e )
