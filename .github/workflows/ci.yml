@@ -19,6 +19,8 @@ jobs:
           - rust: nightly
             args: --features nightly,simd
           - rust: nightly
+            args: --features nightly --target=wasm32-unknown-unknown
+          - rust: nightly
             args: --features nightly,simd
             RUSTFLAGS: "-C target-cpu=native"
           # - rust: "1.54.0"

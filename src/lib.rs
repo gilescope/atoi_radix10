@@ -285,7 +285,10 @@ pub fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
     let chunk = lower_digits + ((chunk1 & 0x000f000f) << 3) + ((chunk1 & 0x000f000f) << 1);
 
     let masked = chunk as u16; // & 0x00ff;
-    let cond = (chunk1 & MASK_HI) | sum == 0;
+    //Next line should be:
+    // let cond = (chunk1 & MASK_HI) | sum == 0;
+    // but hit a wasm bug: https://github.com/rust-lang/rust/issues/85580
+    let cond = (chunk1 & MASK_HI) == 0 && sum == 0;
 
     let m1 = masked << 6;
     let m2 = masked << 5;
@@ -363,7 +366,7 @@ mod tests {
                                 let mut v = vec.clone();
                                 v[j] = ascii;
                                 let s = unsafe { core::str::from_utf8_unchecked(&v[..]) };
-                                assert_eq!(Err(()), [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "parsing `{}`", s);
+                                assert_eq!(Err(ParseIntErrorPublic{kind:IntErrorKind::InvalidDigit}), [<parse $postfix>]::<$target_type>(s.as_bytes()), "parsing `{}`", s);
                             }
                         }
                     }
