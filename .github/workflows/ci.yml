@@ -54,8 +54,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        RUSTFLAGS: [""]
         rust: ["nightly"]
         args: ["--features nightly --target=wasm32-unknown-unknown"]
+        include:
+          - RUSTFLAGS: "-C target-feature=+simd128"
+    env:
+      RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
     steps:
       - uses: actions/checkout@v2
 
