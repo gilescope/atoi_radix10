@@ -7,10 +7,8 @@
 #[macro_use]
 mod parse;
 
-// mod parse_i128;
 // mod parse_i16;
 // mod parse_i32;
-// mod parse_i64;
 // mod parse_i8;
 // mod parse_u128;
 // mod parse_u16;
@@ -19,15 +17,11 @@ mod parse;
 // mod parse_u8;
 mod trees;
 
-//pub(crate) use tree::*;
-
 pub use parse::{parse, parse_challenger, FromStrRadixHelper};
-// pub use parse_i128::{parse_i128, parse_i128_challenger};
 // pub use parse_i16::{parse_i16, parse_i16_challenger};
 // pub use parse_i32::{parse_i32, parse_i32_challenger};
 // pub use parse_i64::{parse_i64, parse_i64_challenger};
 // pub use parse_i8::{parse_i8, parse_i8_challenger};
-// pub use parse_u128::{parse_u128, parse_u128_challenger};
 // pub use parse_u16::{parse_u16, parse_u16_challenger};
 // pub use parse_u32::{parse_u32, parse_u32_challenger};
 // pub use parse_u64::{parse_u64, parse_u64_challenger};
@@ -61,20 +55,6 @@ pub fn parse_32_chars(mut s: &[u8]) -> Result<u128, Pie> {
     let val16 = parse_16_chars(&s)? as u128;
     Ok(res + val16)
 }
-
-// #[cfg(target_feature = "avx")]
-// use core::arch::x86_64::{
-//     __m256i, _mm256_lddqu_si256, _mm256_madd_epi16, _mm256_maddubs_epi16,
-//      _mm256_set_epi16,
-// };
-// #[cfg(target_feature = "avx")]
-// fn print(label: &str, chunk: __m256i) {
-//     use core_simd::*;
-
-//     let chunk: i64x4 = chunk.into();
-//     let a = chunk.to_array();
-//     //println!("{}\n{:64b}\n{:64b}\n{:64b}\n{:64b}\n", label, a[0], a[1], a[2], a[3]);
-// }
 
 /// Parse the first 32 chars in a u8 slice as a base 10 integer.
 /// SAFETY: Do not call with a string length less than that.
