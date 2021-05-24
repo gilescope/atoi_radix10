@@ -55,7 +55,7 @@ jobs:
     strategy:
       matrix:
         rust: ["nightly"]
-        args: --features nightly --target=wasm32-unknown-unknown
+        args: ["--features nightly --target=wasm32-unknown-unknown"]
     steps:
       - uses: actions/checkout@v2
 
