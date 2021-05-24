@@ -169,7 +169,7 @@ pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     const MASK_HI: u128 = 0xf0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0u128;
     const ASCII_ZEROS: u128 = 0x30303030303030303030303030303030u128;
 
-    let chunk = unsafe { *(s.as_ptr() as *const u128) ^ ASCII_ZEROS };
+    let chunk = unsafe { core::ptr::read_unaligned(s.as_ptr() as *const u128) ^ ASCII_ZEROS };
     let chunk_og = chunk;
 
     // 1-byte mask trick (works on 8 pairs of single digits)
@@ -212,7 +212,7 @@ pub fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
     const MASK_HI: u64 = 0xf0f0f0f0f0f0f0f0u64;
     const ASCII_ZEROS: u64 = 0x3030303030303030u64;
 
-    let chunk = unsafe { *(s.as_ptr() as *const u64) ^ ASCII_ZEROS };
+    let chunk = unsafe { core::ptr::read_unaligned(s.as_ptr() as *const u64) ^ ASCII_ZEROS };
     let valid = (chunk & MASK_HI)
         | (chunk.wrapping_add(0x7676767676767676u64) & 0x8080808080808080u64)
         == 0;
@@ -256,7 +256,7 @@ pub fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
     const MASK_HI: u32 = 0xf0f0f0f0u32;
     const ASCII_ZEROS: u32 = 0x30303030u32;
 
-    let chunk1 = unsafe { *(s.as_ptr() as *const u32) ^ ASCII_ZEROS };
+    let chunk1 = unsafe { core::ptr::read_unaligned(s.as_ptr() as *const u32) ^ ASCII_ZEROS };
     // 1-byte mask trick (works on 4 pairs of single digits)
     let lower_digits = (chunk1 & 0x0f000f00) >> 8; // => 0x00f000f0
 
@@ -298,7 +298,7 @@ pub fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
     //SAFETY:
     debug_assert!(s.len() >= 2);
 
-    let chunk = unsafe { *(s.as_ptr() as *const u16) ^ 0x3030u16 };
+    let chunk = unsafe { core::ptr::read_unaligned(s.as_ptr() as *const u16) ^ 0x3030u16 };
     //Early add
     let ch = chunk.wrapping_add(0x7676u16);
     //Early calc result before use
