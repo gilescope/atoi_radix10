@@ -83,3 +83,23 @@ jobs:
         with:
           command: test
           args: ${{ matrix.args }}
+  miri:
+    runs-on: ubuntu-latest
+    env:
+      MIRIFLAGS: "-Zmiri-symbolic-alignment-check"
+      RUSTFLAGS: ""
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: "nightly"
+          override: true
+          target: mips64-unknown-linux-gnuabi64
+          components: miri
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: miri
+          args: test --features=nightly
