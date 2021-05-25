@@ -83,7 +83,7 @@ jobs:
         with:
           command: test
           args: ${{ matrix.args }}
-  wasm:
+  miri:
     runs-on: ubuntu-latest
     env:
       MIRIFLAGS: "-Zmiri-symbolic-alignment-check"
