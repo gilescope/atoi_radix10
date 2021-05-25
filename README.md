@@ -87,11 +87,10 @@ TODO
    - [x] Compile for wasm
    - [ ] Bench on wasm?
    - [x] Run tests under wasm: `cargo test --features nightly --target=wasm32-unknown-unknown`
-   - [ ] and have all wasm tests pass (18 fail)
-   - [ ] Wasm + Simd???
+   - [x] have all wasm tests pass.
+   - [ ] Wasm + Simd - can I use core simd and things just work with simulation for 256bits?
    - [ ] use no non-portable simd commands (so simd feature works on arm/neon).
-   - [ ] core::num::bignum
-   - [ ] make work on big-endian ( See https://github.com/BurntSushi/rust-memchr/commit/059d0c63d30a37783b9a98bef7daf780524a3a6e )
+   - [x] make work on big-endian
 
 ## Big-endien
 

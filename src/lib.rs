@@ -53,7 +53,22 @@ pub unsafe fn parse_32_chars(mut s: &[u8]) -> Result<u128, Pie> {
     let res = val16 * 1_0000_0000_0000_0000;
 
     // Do the same thing again as a parse_32_chars fn would need 256bits.
-    let val16 = unsafe { parse_16_chars(&s)? as u128} ;
+    let val16 = unsafe { parse_16_chars(&s)? as u128 };
+    Ok(res + val16)
+}
+
+//For now not going to do simd stuff for big-endien...
+#[doc(hidden)]
+#[cfg(not(target_endian = "little"))]
+#[inline]
+pub unsafe fn parse_32_chars(mut s: &[u8]) -> Result<u128, Pie> {
+    debug_assert!(s.len() >= 32);
+    let val16 = unsafe { parse_16_chars(&s)? as u128 };
+    s = &s[16..];
+    let res = val16 * 1_0000_0000_0000_0000;
+
+    // Do the same thing again as a parse_32_chars fn would need 256bits.
+    let val16 = unsafe { parse_16_chars(&s)? as u128 };
     Ok(res + val16)
 }
 
@@ -203,6 +218,51 @@ pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     }
 }
 
+/// Parse the first 16 chars in a u8 slice as a base 10 integer.
+/// SAFETY: Do not call with a string length less than that.
+/// (Almost as good as the simd feature...)
+#[cfg(not(all(target_feature = "sse2", feature = "simd")))]
+#[cfg(not(target_endian = "little"))]
+#[inline]
+#[doc(hidden)]
+pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
+    debug_assert!(s.len() >= 16);
+    const MASK_HI: u128 = 0xf0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0u128;
+    const ASCII_ZEROS: u128 = 0x30303030303030303030303030303030u128;
+
+    let chunk = unsafe { core::ptr::read_unaligned(s.as_ptr() as *const u128) ^ ASCII_ZEROS };
+    let chunk_og = chunk;
+
+    // 1-byte mask trick (works on 8 pairs of single digits)
+    let lower_digits = ((chunk & 0x0f000f000f000f000f000f000f000f00) >> 8) * 10;
+    let upper_digits = chunk & 0x000f000f000f000f000f000f000f000f;
+    let chunk = lower_digits + upper_digits;
+
+    // 2-byte mask trick (works on 4 pairs of two digits)
+    let lower_digits = ((chunk & 0x00ff000000ff000000ff000000ff0000) >> 16) * 100;
+    let upper_digits = chunk & 0x000000ff000000ff000000ff000000ff;
+    let chunk = lower_digits + upper_digits;
+
+    // 4-byte mask trick (works on 2 pair of four digits)
+    let lower_digits = ((chunk & 0x0000ffff000000000000ffff00000000) >> 32) * 100_00;
+    let upper_digits = chunk & 0x000000000000ffff000000000000ffff;
+    let chunk = lower_digits + upper_digits;
+
+    let chk = chunk_og.wrapping_add(0x76767676767676767676767676767676u128);
+    // 8-byte mask trick (works on a pair of eight digits)
+    let lower_digits = (((chunk & 0x00000000ffffffff0000000000000000) >> 64) as u64) * 100_00_00_00;
+    let upper_digits = chunk as u64; //& 0x00000000ffffffff
+    let chunk = lower_digits + upper_digits;
+
+    if likely!((chunk_og & MASK_HI) | (chk & 0x80808080808080808080808080808080u128) == 0) {
+        Ok(chunk) //u64 can guarantee to contain 19 digits.
+    } else {
+        Err(Pie {
+            kind: IntErrorKind::InvalidDigit,
+        })
+    }
+}
+
 /// Parse the first 8 chars in a u8 slice as a base 10 integer.
 /// SAFETY: Do not call with a string length less than that.
 #[cfg(target_endian = "little")]
@@ -245,6 +305,47 @@ pub unsafe fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
     }
 }
 
+/// Parse the first 8 chars in a u8 slice as a base 10 integer.
+/// SAFETY: Do not call with a string length less than that.
+#[cfg(not(target_endian = "little"))]
+#[inline]
+#[doc(hidden)]
+pub unsafe fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
+    debug_assert!(s.len() >= 8);
+    const MASK_HI: u64 = 0xf0f0f0f0f0f0f0f0u64;
+    const ASCII_ZEROS: u64 = 0x3030303030303030u64;
+
+    let chunk = unsafe { core::ptr::read_unaligned(s.as_ptr() as *const u64) ^ ASCII_ZEROS };
+    let valid = (chunk & MASK_HI)
+        | (chunk.wrapping_add(0x7676767676767676u64) & 0x8080808080808080u64)
+        == 0;
+
+    // 1-byte mask trick (works on 4 pairs of single digits)
+    let lower_digits = ((chunk & 0x0f000f000f000f00) >> 8) * 10; //Compiler does *8 + *2
+    let upper_digits = chunk & 0x000f000f000f000f;
+    let chunk = lower_digits + upper_digits;
+
+    // 2-byte mask trick (works on 2 pairs of two digits)
+    let lower_digits = ((chunk & 0x00ff000000ff0000) >> 16) * 100; //TODO: decompose * 100 to shifts
+    let upper_digits = chunk & 0x000000ff000000ff;
+    let chunk = lower_digits + upper_digits;
+
+    // 4-byte mask trick (works on a pair of four digits)
+    let lower_digits = (((chunk & 0x0000ffff00000000) >> 32) * 10000) as u32;
+    let upper_digits = chunk as u32;
+
+    //We do this before the if shaving 300ps.
+    let chunk = lower_digits + upper_digits;
+
+    if likely!(valid) {
+        Ok(chunk) //u32 can guarantee to contain 9 digits.
+    } else {
+        Err(Pie {
+            kind: IntErrorKind::InvalidDigit,
+        })
+    }
+}
+
 /// Parse the first 4 chars in a u8 slice as a base 10 integer.
 /// SAFETY: Do not call with a string length less than that.
 #[cfg(target_endian = "little")]
@@ -263,7 +364,7 @@ pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
 
     let sum = chunk1.wrapping_add(0x76767676u32) & 0x80808080u32;
 
-    let chunk = lower_digits + ((chunk1 & 0x000f000f) << 3) + ((chunk1 & 0x000f000f) << 1);
+    let chunk = lower_digits + (chunk1 & 0x000f000f) * 10;
 
     let masked = chunk as u16; // & 0x00ff;
                                //Next line should be:
@@ -271,6 +372,7 @@ pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
                                // but hit a wasm bug: https://github.com/rust-lang/rust/issues/85580
     let cond = (chunk1 & MASK_HI) == 0 && sum == 0;
 
+    // Multiply by 100 via shifts
     let m1 = masked << 6;
     let m2 = masked << 5;
     let m3 = masked << 2;
@@ -279,6 +381,61 @@ pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
 
     // 2-byte mask trick (works on 2 pairs of two digits)
     let chunk = r + m1 + m2 + m3;
+
+    if likely!(cond) {
+        Ok(chunk) //u16 can guarantee to hold 4 digits
+    } else {
+        Err(Pie {
+            kind: IntErrorKind::InvalidDigit,
+        })
+    }
+}
+
+/// Big-endien: test with:
+/// ```
+/// cargo miri test --target mips64-unknown-linux-gnuabi64
+/// ```
+/// E.g. "1234" is represented as:
+///  0x31323334
+///
+/// For big endien it's in the right order.
+
+#[cfg(not(target_endian = "little"))]
+#[inline]
+#[doc(hidden)]
+pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
+    //SAFETY:
+    debug_assert!(s.len() >= 4);
+
+    const MASK_HI: u32 = 0xf0f0f0f0u32;
+    const ASCII_ZEROS: u32 = 0x30303030u32;
+
+    let chunk1 = unsafe { core::ptr::read_unaligned(s.as_ptr() as *const u32) ^ ASCII_ZEROS };
+    //1234
+
+    // 1-byte mask trick (works on 4 pairs of single digits)
+    let tens = (chunk1 & 0x0f000f00) >> 8; // => 0x00f000f0
+
+    let sum = chunk1.wrapping_add(0x76767676u32) & 0x80808080u32;
+
+    let units = chunk1 & 0x000f000f;
+    let chunk = tens * 10 + (units);
+
+    let masked = chunk; // & 0x00ff;
+                        //Next line should be:
+                        // let cond = (chunk1 & MASK_HI) | sum == 0;
+                        // but hit a wasm bug: https://github.com/rust-lang/rust/issues/85580
+    let cond = (chunk1 & MASK_HI) == 0 && sum == 0;
+
+    // Multiply by 100!
+    let m1 = (masked & 0x00ff0000) >> 10; //16 - 6
+    let m2 = (masked & 0x00ff0000) >> 11; //16 - 5
+    let m3 = (masked & 0x00ff0000) >> 14; //16 - 2
+
+    let r = (chunk & 0x000000ff) as u16;
+
+    // 2-byte mask trick (works on 2 pairs of two digits)
+    let chunk = r + (m1 + m2 + m3) as u16;
 
     if likely!(cond) {
         Ok(chunk) //u16 can guarantee to hold 4 digits
@@ -304,6 +461,29 @@ pub unsafe fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
     let ch = chunk.wrapping_add(0x7676u16);
     //Early calc result before use
     let res = ((chunk & 0x000f) << 1) + ((chunk & 0x000f) << 3) + ((chunk & 0x0f00) >> 8);
+
+    if likely!((chunk & 0xf0f0u16) | (ch & 0x8080u16) == 0) {
+        Ok(res)
+    } else {
+        Err(Pie {
+            kind: IntErrorKind::InvalidDigit,
+        })
+    }
+}
+
+#[cfg(not(target_endian = "little"))]
+#[inline]
+#[doc(hidden)]
+pub unsafe fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
+    //SAFETY:
+    debug_assert!(s.len() >= 2);
+
+    let chunk = unsafe { core::ptr::read_unaligned(s.as_ptr() as *const u16) ^ 0x3030u16 };
+    //Early add
+    let ch = chunk.wrapping_add(0x7676u16);
+    //Early calc result before use
+    //Shift >> 8 is consolidated with *10 shifts: *10 = << 3 +  << 1
+    let res = (chunk & 0x000f) + ((chunk & 0x0f00) >> 5) + ((chunk & 0x0f00) >> 7);
 
     if likely!((chunk & 0xf0f0u16) | (ch & 0x8080u16) == 0) {
         Ok(res)
