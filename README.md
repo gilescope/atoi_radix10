@@ -92,3 +92,12 @@ TODO
    - [ ] use no non-portable simd commands (so simd feature works on arm/neon).
    - [ ] core::num::bignum
    - [ ] make work on big-endian ( See https://github.com/BurntSushi/rust-memchr/commit/059d0c63d30a37783b9a98bef7daf780524a3a6e )
+
+## Big-endien
+
+We can run the tests on big-endien via MIRI:
+
+```sh
+rustup +nightly component add miri    
+MIRIFLAGS="-Zmiri-symbolic-alignment-check" cargo miri test --target mips64-unknown-linux-gnuabi64
+```

@@ -3,7 +3,7 @@
 //#![feature(unchecked_math)]
 #![cfg_attr(feature = "nightly", feature(core_intrinsics))]
 #![allow(clippy::inconsistent_digit_grouping)]
-
+#![warn(unsafe_op_in_unsafe_fn)]
 #[macro_use]
 mod parse;
 
@@ -46,13 +46,14 @@ type Pie = ParseIntErrorPublic;
 #[cfg(not(all(target_feature = "avx", feature = "simd")))]
 #[cfg(target_endian = "little")]
 #[inline]
-pub fn parse_32_chars(mut s: &[u8]) -> Result<u128, Pie> {
-    let val16 = parse_16_chars(&s)? as u128;
+pub unsafe fn parse_32_chars(mut s: &[u8]) -> Result<u128, Pie> {
+    debug_assert!(s.len() >= 32);
+    let val16 = unsafe { parse_16_chars(&s)? as u128 };
     s = &s[16..];
     let res = val16 * 1_0000_0000_0000_0000;
 
     // Do the same thing again as a parse_32_chars fn would need 256bits.
-    let val16 = parse_16_chars(&s)? as u128;
+    let val16 = unsafe { parse_16_chars(&s)? as u128} ;
     Ok(res + val16)
 }
 
@@ -61,7 +62,7 @@ pub fn parse_32_chars(mut s: &[u8]) -> Result<u128, Pie> {
 #[doc(hidden)]
 #[cfg(all(target_feature = "avx", feature = "simd"))]
 #[inline]
-pub fn parse_32_chars(s: &[u8]) -> Result<u128, Pie> {
+pub unsafe fn parse_32_chars(s: &[u8]) -> Result<u128, Pie> {
     debug_assert!(s.len() >= 32);
 
     use core::arch::x86_64::{
@@ -112,7 +113,7 @@ pub fn parse_32_chars(s: &[u8]) -> Result<u128, Pie> {
 #[cfg(all(target_feature = "sse2", feature = "simd"))]
 #[inline]
 #[doc(hidden)]
-pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
+pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     debug_assert!(s.len() >= 16);
 
     use core::arch::x86_64::{
@@ -164,7 +165,7 @@ pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
 #[cfg(target_endian = "little")]
 #[inline]
 #[doc(hidden)]
-pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
+pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     debug_assert!(s.len() >= 16);
     const MASK_HI: u128 = 0xf0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0u128;
     const ASCII_ZEROS: u128 = 0x30303030303030303030303030303030u128;
@@ -207,7 +208,7 @@ pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
 #[cfg(target_endian = "little")]
 #[inline]
 #[doc(hidden)]
-pub fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
+pub unsafe fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
     debug_assert!(s.len() >= 8);
     const MASK_HI: u64 = 0xf0f0f0f0f0f0f0f0u64;
     const ASCII_ZEROS: u64 = 0x3030303030303030u64;
@@ -249,7 +250,7 @@ pub fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
 #[cfg(target_endian = "little")]
 #[inline]
 #[doc(hidden)]
-pub fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
+pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
     //SAFETY:
     debug_assert!(s.len() >= 4);
 
@@ -294,7 +295,7 @@ pub fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
 #[cfg(target_endian = "little")]
 #[inline]
 #[doc(hidden)]
-pub fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
+pub unsafe fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
     //SAFETY:
     debug_assert!(s.len() >= 2);
 
@@ -380,6 +381,7 @@ mod tests {
                 }
 
                 //#[wasm_bindgen_test] step too small for wasm
+                #[cfg_attr(miri, ignore)]
                 #[test]
                 fn [<test_ $target_type $postfix>]() {
                     let mut s = [0u8; 42];
@@ -392,6 +394,7 @@ mod tests {
                 }
 
                 //#[wasm_bindgen_test] step too small for wasm
+                #[cfg_attr(miri, ignore)]
                 #[test]
                 fn [<test_ $target_type _plus $postfix>]() {
                     for i in ($min..$max as $target_type).step_by($step) {
