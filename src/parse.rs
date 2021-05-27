@@ -180,7 +180,7 @@ macro_rules! neg_overflow {
     };
 }
 
-/// Parses a UTF8 String as a number.
+/// Parses a UTF8 &str as a number.
 ///
 /// It has exactly the same semantics as `std::str::parse`,
 /// but faster. (compiled with nightly,simd features
@@ -200,7 +200,7 @@ pub fn parse_from_str<T: FromStrRadixHelper, S:AsRef<str>>(s: S) -> Result<T, Pi
     parse(s.as_ref().as_bytes())
 }
 
-/// Parses a UTF8 String as a number.
+/// Parses a UTF8 &[u8] slice as a number.
 ///
 /// Takes a `&[u8]` because any non-utf/non-ascii will fail parsing as an integer.
 ///
