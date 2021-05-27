@@ -182,8 +182,27 @@ macro_rules! neg_overflow {
 
 /// Parses a UTF8 String as a number.
 ///
-/// Takes a `&[u8]` so that it can be used in no_std contexts also
-/// (Call `.as_bytes()` on the String).
+/// It has exactly the same semantics as `std::str::parse`,
+/// but faster. (compiled with nightly,simd features
+/// and target native cpu will get the absolute fastest result.)
+///
+/// Positives are slightly faster than negatives when parsing and
+/// if you don't need to put a leading `+` then that will be faster too.
+/// # Examples
+///
+/// ```rust
+/// let s = "+000123";
+/// assert_eq!(atoi_radix10::parse_from_str(s), Ok(123));
+/// ```
+#[inline(always)]
+pub fn parse_from_str<T: FromStrRadixHelper, S:AsRef<str>>(s: S) -> Result<T, Pie>
+{
+    parse(s.as_ref().as_bytes())
+}
+
+/// Parses a UTF8 String as a number.
+///
+/// Takes a `&[u8]` because any non-utf/non-ascii will fail parsing as an integer.
 ///
 /// It has exactly the same semantics as `std::str::parse`,
 /// but faster. (compiled with nightly,simd features

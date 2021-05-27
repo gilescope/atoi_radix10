@@ -10,21 +10,17 @@ mod parse;
 // mod parse_i16;
 // mod parse_i32;
 // mod parse_i8;
-// mod parse_u128;
 // mod parse_u16;
 // mod parse_u32;
-// mod parse_u64;
 // mod parse_u8;
 mod trees;
 
-pub use parse::{parse, parse_challenger, FromStrRadixHelper};
+pub use parse::{parse, parse_from_str, parse_challenger, FromStrRadixHelper};
 // pub use parse_i16::{parse_i16, parse_i16_challenger};
 // pub use parse_i32::{parse_i32, parse_i32_challenger};
-// pub use parse_i64::{parse_i64, parse_i64_challenger};
 // pub use parse_i8::{parse_i8, parse_i8_challenger};
 // pub use parse_u16::{parse_u16, parse_u16_challenger};
 // pub use parse_u32::{parse_u32, parse_u32_challenger};
-// pub use parse_u64::{parse_u64, parse_u64_challenger};
 // pub use parse_u8::{parse_u8, parse_u8_challenger};
 
 const PLUS: u8 = b'+'.wrapping_sub(b'0');
