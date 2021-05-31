@@ -15,7 +15,7 @@ mod parse;
 // mod parse_u8;
 mod trees;
 
-pub use parse::{parse, parse_from_str, parse_challenger, FromStrRadixHelper};
+pub use parse::{parse, parse_challenger, parse_from_str, FromStrRadixHelper};
 // pub use parse_i16::{parse_i16, parse_i16_challenger};
 // pub use parse_i32::{parse_i32, parse_i32_challenger};
 // pub use parse_i8::{parse_i8, parse_i8_challenger};

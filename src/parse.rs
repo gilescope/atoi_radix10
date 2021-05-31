@@ -195,8 +195,7 @@ macro_rules! neg_overflow {
 /// assert_eq!(atoi_radix10::parse_from_str(s), Ok(123));
 /// ```
 #[inline(always)]
-pub fn parse_from_str<T: FromStrRadixHelper, S:AsRef<str>>(s: S) -> Result<T, Pie>
-{
+pub fn parse_from_str<T: FromStrRadixHelper, S: AsRef<str>>(s: S) -> Result<T, Pie> {
     parse(s.as_ref().as_bytes())
 }
 
