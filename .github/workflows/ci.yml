@@ -43,6 +43,11 @@ jobs:
 
       - uses: actions-rs/cargo@v1
         with:
+          command: build
+          args: ${{ matrix.args }} --all-targets --release
+
+      - uses: actions-rs/cargo@v1
+        with:
           command: test
           args: ${{ matrix.args }}
 
