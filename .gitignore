@@ -4,3 +4,4 @@ fuzz/Cargo.lock
 .gitignore
 tags
 Cargo.lock
+tags
