@@ -59,24 +59,24 @@ fn parse_chars_bench(c: &mut Criterion) {
     //    .measurement_time(core::time::Duration::from_millis(2000));
     let num_str = "12345678123456781234567812345678";
     assert_eq!(
-        parse_32_chars(num_str.as_bytes()),
+        unsafe{parse_32_chars(num_str.as_bytes())},
         Ok(12345678123456781234567812345678)
     );
     group.throughput(Throughput::Bytes(num_str.len() as u64));
     group.bench_with_input(BenchmarkId::new("32", num_str), &num_str, |b, &_val| {
-        b.iter(|| parse_32_chars(black_box(num_str.as_bytes())));
+        b.iter(|| unsafe{parse_32_chars(black_box(num_str.as_bytes()))});
     });
     let num_str = "1234567812345678";
-    assert_eq!(parse_16_chars(num_str.as_bytes()), Ok(1234567812345678));
+    assert_eq!(unsafe{parse_16_chars(num_str.as_bytes())}, Ok(1234567812345678));
     group.throughput(Throughput::Bytes(num_str.len() as u64));
     group.bench_with_input(BenchmarkId::new("16", num_str), &num_str, |b, &_val| {
-        b.iter(|| parse_16_chars(black_box(num_str.as_bytes())));
+        b.iter(|| unsafe{parse_16_chars(black_box(num_str.as_bytes()))});
     });
     let num_str = "12345678";
-    assert_eq!(parse_8_chars(num_str.as_bytes()), Ok(12345678));
+    assert_eq!(unsafe{parse_8_chars(num_str.as_bytes())}, Ok(12345678));
     group.throughput(Throughput::Bytes(num_str.len() as u64));
     group.bench_with_input(BenchmarkId::new("8", num_str), &num_str, |b, &_val| {
-        b.iter(|| parse_8_chars(black_box(num_str.as_bytes())));
+        b.iter(|| unsafe{parse_8_chars(black_box(num_str.as_bytes()))});
     });
     // let num_str = "123456";
     // assert_eq!(parse_6_chars(num_str.as_bytes()), Ok(123456));
@@ -85,16 +85,16 @@ fn parse_chars_bench(c: &mut Criterion) {
     //     b.iter(|| parse_6_chars(black_box(num_str.as_bytes())));
     // });
     let num_str = "1234";
-    assert_eq!(parse_4_chars(num_str.as_bytes()), Ok(1234));
+    assert_eq!(unsafe {parse_4_chars(num_str.as_bytes())}, Ok(1234));
     group.throughput(Throughput::Bytes(num_str.len() as u64));
     group.bench_with_input(BenchmarkId::new("4", num_str), &num_str, |b, &_val| {
-        b.iter(|| parse_4_chars(black_box(num_str.as_bytes())));
+        b.iter(|| unsafe {parse_4_chars(black_box(num_str.as_bytes()))});
     });
     let num_str = "12";
-    assert_eq!(parse_2_chars(num_str.as_bytes()), Ok(12));
+    assert_eq!(unsafe {parse_2_chars(num_str.as_bytes())}, Ok(12));
     group.throughput(Throughput::Bytes(num_str.len() as u64));
     group.bench_with_input(BenchmarkId::new("2", num_str), &num_str, |b, &_val| {
-        b.iter(|| parse_2_chars(black_box(num_str.as_bytes())));
+        b.iter(|| unsafe { parse_2_chars(black_box(num_str.as_bytes())) });
     });
 
     group.finish();
