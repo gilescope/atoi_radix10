@@ -105,9 +105,6 @@ jobs:
           args: test --features=nightly
   fuzz:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        args: ["fuzz_u32"]
 
     steps:
       - uses: actions/checkout@v2
@@ -117,7 +114,7 @@ jobs:
           profile: minimal
           toolchain: nightly
           override: true
-  
+
       - uses: actions-rs/cargo@v1
         with:
           command: install
@@ -126,4 +123,60 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: fuzz
-          args: run ${{ matrix.args }} -- -max_len=42 -max_total_time=30s
+          args: run fuzz_u8 -- -max_len=42 -max_total_time=20s
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fuzz
+          args: run fuzz_i8 -- -max_len=42 -max_total_time=20s
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fuzz
+          args: run fuzz_u16 -- -max_len=42 -max_total_time=20s
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fuzz
+          args: run fuzz_i16 -- -max_len=42 -max_total_time=20s
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fuzz
+          args: run fuzz_u32 -- -max_len=42 -max_total_time=20s
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fuzz
+          args: run fuzz_i32 -- -max_len=42 -max_total_time=20s
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fuzz
+          args: run fuzz_u64 -- -max_len=42 -max_total_time=20s
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fuzz
+          args: run fuzz_i64 -- -max_len=42 -max_total_time=20s
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fuzz
+          args: run fuzz_u128 -- -max_len=42 -max_total_time=20s
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fuzz
+          args: run fuzz_i128 -- -max_len=42 -max_total_time=20s
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fuzz
+          args: run fuzz_usize -- -max_len=42 -max_total_time=20s
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fuzz
+          args: run fuzz_isize -- -max_len=42 -max_total_time=20s
+
