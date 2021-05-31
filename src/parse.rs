@@ -234,6 +234,7 @@ where
 
                         unsafe {
                             for _ in 0..1 {
+                                // Align so that s ptr ends b0
                                 if s.as_ptr() as usize & 1 != 0 {
                                     let val_t = T::from_u8(val);
                                     s = &s.get_unchecked(1..);
@@ -244,6 +245,7 @@ where
                                     res = val_t.mul_unchecked(*T::TREE.get_unchecked(s.len()));
                                 }
                                 if s.len() >= 2 && T::BITS_COUNT >= 8 {
+                                    // Align so that s ptr ends b00
                                     if s.as_ptr() as usize & 2 != 0 {
                                         let val = T::from_u16(parse_2_chars(&s)?);
                                         s = &s.get_unchecked(2..);
@@ -256,6 +258,7 @@ where
                                         );
                                     }
                                     if s.len() >= 4 && T::BITS_COUNT >= 16 {
+                                        // Align so that s ptr ends b000
                                         if s.as_ptr() as usize & 4 != 0 {
                                             let val = T::from_u16(parse_4_chars(&s)?);
                                             s = &s.get_unchecked(4..);
@@ -268,6 +271,7 @@ where
                                             );
                                         }
                                         if s.len() >= 8 && T::BITS_COUNT >= 32 {
+                                            // Align so that s ptr ends b0000
                                             if s.as_ptr() as usize & 8 != 0 {
                                                 let val = T::from_u32(parse_8_chars(&s)?);
                                                 s = &s.get_unchecked(8..);
@@ -282,6 +286,7 @@ where
                                                 );
                                             }
                                             if s.len() >= 16 && T::BITS_COUNT >= 64 {
+                                                // Align so that s ptr ends b00000
                                                 if s.as_ptr() as usize & 16 != 0 {
                                                     let val = T::from_u64(parse_16_chars(&s)?);
                                                     s = &s.get_unchecked(16..);
@@ -296,6 +301,8 @@ where
                                                     );
                                                 }
 
+                                                // Did you see what we did there? at this point,
+                                                // s is aligned for reading as a u128.
                                                 if s.len() >= 32 && T::BITS_COUNT >= 128 {
                                                     let val = T::from_u128(parse_32_chars(&s)?);
                                                     s = &s.get_unchecked(32..);
@@ -310,6 +317,7 @@ where
                                                     );
                                                 }
 
+                                                //Even if we couldn't take 32 chars, 16 chars is aligned
                                                 if s.len() >= 16 {
                                                     let val = T::from_u64(parse_16_chars(&s)?);
                                                     s = &s.get_unchecked(16..);
@@ -422,6 +430,7 @@ where
                         let mut res = T::from_u8(0);
                         unsafe {
                             for _ in 0..1 {
+                                // Align so that s ptr ends b0
                                 if s.as_ptr() as usize & 1 != 0 {
                                     let val = s.get_unchecked(0).wrapping_sub(b'0');
                                     res = res.sub_unchecked(T::from_u8(val));
@@ -435,6 +444,7 @@ where
                                     };
                                 }
                                 if s.len() >= 2 && T::BITS_COUNT >= 8 {
+                                    // Align so that s ptr ends b00
                                     if s.as_ptr() as usize & 2 != 0 {
                                         let val = T::from_u16(parse_2_chars(&s)?);
                                         s = &s.get_unchecked(2..);
@@ -447,6 +457,7 @@ where
                                         );
                                     }
                                     if s.len() >= 4 && T::BITS_COUNT >= 16 {
+                                        // Align so that s ptr ends b000
                                         if s.as_ptr() as usize & 4 != 0 {
                                             let val = T::from_u16(parse_4_chars(&s)?);
                                             s = &s.get_unchecked(4..);
@@ -459,6 +470,7 @@ where
                                             );
                                         }
                                         if s.len() >= 8 && T::BITS_COUNT >= 32 {
+                                            // Align so that s ptr ends b0000
                                             if s.as_ptr() as usize & 8 != 0 {
                                                 let val = T::from_u32(parse_8_chars(&s)?);
                                                 s = &s.get_unchecked(8..);
@@ -473,6 +485,7 @@ where
                                                 );
                                             }
                                             if s.len() >= 16 && T::BITS_COUNT >= 64 {
+                                                // Align so that s ptr ends b00000
                                                 if s.as_ptr() as usize & 16 != 0 {
                                                     let val = T::from_u64(parse_16_chars(&s)?);
                                                     s = &s.get_unchecked(16..);
@@ -486,6 +499,8 @@ where
                                                             .mul_unchecked(val),
                                                     );
                                                 }
+
+                                                // s is aligned so that we can read u128
                                                 if s.len() >= 32 && T::BITS_COUNT >= 128 {
                                                     let val = T::from_u128(parse_32_chars(&s)?);
                                                     s = &s[32..];
@@ -499,6 +514,7 @@ where
                                                             .mul_unchecked(val),
                                                     );
                                                 }
+                                                // all the following are now aligned.
                                                 if s.len() >= 16 {
                                                     let val = T::from_u64(parse_16_chars(&s)?);
                                                     s = &s[16..];
