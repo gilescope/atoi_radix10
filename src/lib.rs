@@ -232,10 +232,10 @@ pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     const MASK_HI: u128 = 0xf0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0u128;
     const ASCII_ZEROS: u128 = 0x30303030303030303030303030303030u128;
 
-    let chunk = unsafe { 
+    let chunk = unsafe {
         let ptr = s.as_ptr();
         debug_assert!(ptr as usize % core::mem::size_of::<u128>() == 0);
-            *(ptr as *const u128)
+        *(ptr as *const u128)
         // } else {
         //     panic!("swoops16");
 
@@ -285,11 +285,11 @@ pub unsafe fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
     const MASK_HI: u64 = 0xf0f0f0f0f0f0f0f0u64;
     const ASCII_ZEROS: u64 = 0x3030303030303030u64;
 
-    let chunk = unsafe { 
+    let chunk = unsafe {
         let ptr = s.as_ptr();
         debug_assert!(ptr as usize % core::mem::size_of::<u64>() == 0);
         // (if ptr as usize % core::mem::size_of::<u64>() == 0 {
-            *(ptr as *const u64)
+        *(ptr as *const u64)
         // } else {
         //     panic!("swoops8");
 
@@ -338,11 +338,11 @@ pub unsafe fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
     const MASK_HI: u64 = 0xf0f0f0f0f0f0f0f0u64;
     const ASCII_ZEROS: u64 = 0x3030303030303030u64;
 
-    let chunk = unsafe { 
+    let chunk = unsafe {
         let ptr = s.as_ptr();
         debug_assert!(ptr as usize % core::mem::size_of::<u64>() == 0);
-//        (if ptr as usize % core::mem::size_of::<u64>() == 0 {
-            *(ptr as *const u64)
+        //        (if ptr as usize % core::mem::size_of::<u64>() == 0 {
+        *(ptr as *const u64)
         // } else {
         //     panic!("swoops8");
 
@@ -397,7 +397,7 @@ pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
         let ptr = s.as_ptr() as usize;
         debug_assert!(ptr as usize % core::mem::size_of::<u32>() == 0);
         // (if ptr % size == 0 {
-            *(s.as_ptr() as *const u32)
+        *(s.as_ptr() as *const u32)
         // } else {
         //     panic!("swoops4");
         //     core::ptr::read_unaligned(ptr as *const u32)
@@ -459,7 +459,7 @@ pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
         let ptr = s.as_ptr();
         debug_assert!(ptr as usize % core::mem::size_of::<u32>() == 0);
         //(if ptr as usize % core::mem::size_of::<u32>() == 0 {
-            *(ptr as *const u32)
+        *(ptr as *const u32)
         // } else {
         //     panic!("swoops4");
         //     core::ptr::read_unaligned(ptr as *const u32)
@@ -514,7 +514,7 @@ pub unsafe fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
         let ptr = s.as_ptr();
         debug_assert!(ptr as usize % core::mem::size_of::<u16>() == 0);
         //(if ptr as usize % core::mem::size_of::<u16>() == 0 {
-            *(ptr as *const u16)
+        *(ptr as *const u16)
         // } else {
         //     panic!("swoops2");
         //     core::ptr::read_unaligned(ptr as *const u16)
@@ -546,7 +546,7 @@ pub unsafe fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
         let ptr = s.as_ptr();
         debug_assert!(ptr as usize % core::mem::size_of::<u16>() == 0);
         //(if ptr as usize % core::mem::size_of::<u16>() == 0 {
-            *(ptr as *const u16)
+        *(ptr as *const u16)
         // } else {
         //     panic!("swoops2");
         //     core::ptr::read_unaligned(ptr as *const u16)
@@ -581,7 +581,12 @@ mod tests {
     fn test_uu128_specific() {
         let s = "+000123";
         let p: Result<u128, ()> = s.parse().map_err(|_| ());
-        assert_eq!(p, super::parse::<u128>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
+        assert_eq!(
+            p,
+            super::parse::<u128>(s.as_bytes()).map_err(|_| ()),
+            "fail to parse: '{}'",
+            &s
+        );
     }
 
     macro_rules! gen_tests {
