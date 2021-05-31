@@ -103,3 +103,26 @@ jobs:
         with:
           command: miri
           args: test --features=nightly
+  fuzz:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        args: ["fuzz_u32"]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+  
+      - uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: -f cargo-fuzz
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fuzz
+          args: run ${{ matrix.args }} -- -max_len=42 -max_total_time=30s
