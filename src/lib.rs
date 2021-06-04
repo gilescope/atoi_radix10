@@ -519,18 +519,8 @@ pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
 pub unsafe fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
     //SAFETY:
     debug_assert!(s.len() >= 2);
-
-    let chunk = unsafe {
-        let ptr = s.as_ptr();
-        debug_assert!(ptr as usize % core::mem::size_of::<u16>() == 0);
-        //(if ptr as usize % core::mem::size_of::<u16>() == 0 {
-        *(ptr as *const u16)
-        // } else {
-        //     panic!("swoops2");
-        //     core::ptr::read_unaligned(ptr as *const u16)
-        // }) 
-        ^ 0x3030u16
-    };
+    debug_assert_eq!(s.as_ptr() as usize % core::mem::size_of::<u16>(), 0);
+    let chunk = unsafe { *(s.as_ptr() as *const u16) ^ 0x3030u16 };
     //Early add
     let ch = chunk.wrapping_add(0x7676u16);
     //Early calc result before use
