@@ -38,6 +38,7 @@ type Pie = ParseIntErrorPublic;
 
 /// Parse the first 32 chars in a u8 slice as a base 10 integer.
 /// SAFETY: Do not call with a string length less than that.
+/// SAFETY: slice must be 16 byte aligned.
 #[doc(hidden)]
 #[cfg(not(all(target_feature = "avx", feature = "simd")))]
 #[cfg(target_endian = "little")]
@@ -53,7 +54,9 @@ pub unsafe fn parse_32_chars(mut s: &[u8]) -> Result<u128, Pie> {
     Ok(res + val16)
 }
 
-//For now not going to do simd stuff for big-endien...
+/// For now not going to do simd stuff for big-endien...
+/// SAFETY: Do not call with a string length less than that.
+/// SAFETY: slice must be 16 byte aligned.
 #[doc(hidden)]
 #[cfg(not(target_endian = "little"))]
 #[inline]
@@ -170,8 +173,9 @@ pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
 }
 
 /// Parse the first 16 chars in a u8 slice as a base 10 integer.
-/// SAFETY: Do not call with a string length less than that.
 /// (Almost as good as the simd feature...)
+/// SAFETY: Do not call with a string length less than that.
+/// SAFETY: slice must be 16 byte aligned.
 #[cfg(not(all(target_feature = "sse2", feature = "simd")))]
 #[cfg(target_endian = "little")]
 #[inline]
@@ -221,8 +225,9 @@ pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
 }
 
 /// Parse the first 16 chars in a u8 slice as a base 10 integer.
-/// SAFETY: Do not call with a string length less than that.
 /// (Almost as good as the simd feature...)
+/// SAFETY: Do not call with a string length less than that.
+/// SAFETY: slice must be 16 byte aligned.
 #[cfg(not(all(target_feature = "sse2", feature = "simd")))]
 #[cfg(not(target_endian = "little"))]
 #[inline]
@@ -277,6 +282,7 @@ pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
 
 /// Parse the first 8 chars in a u8 slice as a base 10 integer.
 /// SAFETY: Do not call with a string length less than that.
+/// SAFETY: slice must be 8 byte aligned.
 #[cfg(target_endian = "little")]
 #[inline]
 #[doc(hidden)]
@@ -330,6 +336,7 @@ pub unsafe fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
 
 /// Parse the first 8 chars in a u8 slice as a base 10 integer.
 /// SAFETY: Do not call with a string length less than that.
+/// SAFETY: slice must be 8 byte aligned.
 #[cfg(not(target_endian = "little"))]
 #[inline]
 #[doc(hidden)]
@@ -383,6 +390,7 @@ pub unsafe fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
 
 /// Parse the first 4 chars in a u8 slice as a base 10 integer.
 /// SAFETY: Do not call with a string length less than that.
+/// SAFETY: slice must be 4 byte aligned.
 #[cfg(target_endian = "little")]
 #[inline]
 #[doc(hidden)]
@@ -444,7 +452,8 @@ pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
 ///  0x31323334
 ///
 /// For big endien it's in the right order.
-
+/// SAFETY: minimum of string len 4.
+/// SAFETY: slice must be 8 byte aligned.
 #[cfg(not(target_endian = "little"))]
 #[inline]
 #[doc(hidden)]
@@ -501,8 +510,9 @@ pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
 }
 
 /// Parse the first 2 chars in a u8 slice as a base 10 integer.
+/// (Returning u16 rather than u8 as faster.)
 /// SAFETY: Do not call with a string length less than that.
-/// Returning u16 rather than u8 as faster.
+/// SAFETY: slice must be 2 byte aligned.
 #[cfg(target_endian = "little")]
 #[inline]
 #[doc(hidden)]
@@ -535,11 +545,12 @@ pub unsafe fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
     }
 }
 
+/// SAFETY: Do not call with a string length less than that.
+/// SAFETY: slice must be 2 byte aligned.
 #[cfg(not(target_endian = "little"))]
 #[inline]
 #[doc(hidden)]
 pub unsafe fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
-    //SAFETY:
     debug_assert!(s.len() >= 2);
 
     let chunk = unsafe {
