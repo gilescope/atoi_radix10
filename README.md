@@ -30,8 +30,8 @@ We try to obey the rule of small numbers and make sure single digit numbers are 
 Performance
 ===========
 
-If you have to parse u128 and i128 numbers this crate does any number in under 20ns
-(and if you target a specific cpu with avx then maybe all under 15ns). It is hands down many many times faster than std rust (especially i128) across all the numbers.
+If you have to parse u128 and i128 numbers this crate does any number in under 25ns
+(and if you target a specific cpu with avx then maybe all under 15ns-20ns). It is hands down many many times faster than std rust (especially i128) across all the numbers.
 
 For u8/i8 it's about the same as std.
 
@@ -40,9 +40,9 @@ For u16, u32, u64 it's around 1/3 faster than std.
 Usage and Features
 ==================
 
-`nightly` and `simd` features for highest speed.
+`nightly` and `simd` features for highest speed (and target your specific cpu).
 
-`std` feature required if you want to run all the tests. 
+`std` feature required if you want to run all the tests.
 It's `no_std` by default and will parse from any `[u8]` slice.
 
 How this works
@@ -64,14 +64,14 @@ Things that didn't seem to have any effect:
 
    * Compiler breaks down *10 to *8 + *2 behind the scenes so we don't have to.
      (It seems to resort to imul for 100 so replacing shifts for that might make
-     slight gain)
+     a slight gain)
    * casting len from usize to u8.
 
 FAQ
 ===
 
    * Should I use this in production? As it's a new crate I would treat it with caution,
-   there could still be a bug or two lurking despite tests and some light fuzzing.
+   there could still be a bug or two lurking despite tests and some light fuzzing. It's had one `reddit review` from which I've hopefully plugged a soundness hole around alignment.
 
    * Why not include this in the std library? The std library parsing code isn't radix specific. As the num parsing is in core, code size is important for embedded systems. This implementation is definitely more code than std.
 

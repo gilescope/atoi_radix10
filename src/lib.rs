@@ -38,6 +38,7 @@ type Pie = ParseIntErrorPublic;
 
 /// Parse the first 32 chars in a u8 slice as a base 10 integer.
 /// SAFETY: Do not call with a string length less than that.
+/// SAFETY: slice must be 16 byte aligned.
 #[doc(hidden)]
 #[cfg(not(all(target_feature = "avx", feature = "simd")))]
 #[cfg(target_endian = "little")]
@@ -53,7 +54,9 @@ pub unsafe fn parse_32_chars(mut s: &[u8]) -> Result<u128, Pie> {
     Ok(res + val16)
 }
 
-//For now not going to do simd stuff for big-endien...
+/// For now not going to do simd stuff for big-endien...
+/// SAFETY: Do not call with a string length less than that.
+/// SAFETY: slice must be 16 byte aligned.
 #[doc(hidden)]
 #[cfg(not(target_endian = "little"))]
 #[inline]
@@ -170,8 +173,9 @@ pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
 }
 
 /// Parse the first 16 chars in a u8 slice as a base 10 integer.
-/// SAFETY: Do not call with a string length less than that.
 /// (Almost as good as the simd feature...)
+/// SAFETY: Do not call with a string length less than that.
+/// SAFETY: slice must be 16 byte aligned.
 #[cfg(not(all(target_feature = "sse2", feature = "simd")))]
 #[cfg(target_endian = "little")]
 #[inline]
@@ -181,7 +185,13 @@ pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     const MASK_HI: u128 = 0xf0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0u128;
     const ASCII_ZEROS: u128 = 0x30303030303030303030303030303030u128;
 
-    let chunk = unsafe { core::ptr::read_unaligned(s.as_ptr() as *const u128) ^ ASCII_ZEROS };
+    let chunk = unsafe {
+        let ptr = s.as_ptr();
+        debug_assert!(ptr as usize % core::mem::size_of::<u128>() == 0);
+        *(ptr as *const u128)
+        //    core::ptr::read_unaligned(ptr as *const u128)
+        ^ ASCII_ZEROS
+    };
     let chunk_og = chunk;
 
     // 1-byte mask trick (works on 8 pairs of single digits)
@@ -215,8 +225,9 @@ pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
 }
 
 /// Parse the first 16 chars in a u8 slice as a base 10 integer.
-/// SAFETY: Do not call with a string length less than that.
 /// (Almost as good as the simd feature...)
+/// SAFETY: Do not call with a string length less than that.
+/// SAFETY: slice must be 16 byte aligned.
 #[cfg(not(all(target_feature = "sse2", feature = "simd")))]
 #[cfg(not(target_endian = "little"))]
 #[inline]
@@ -226,7 +237,17 @@ pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     const MASK_HI: u128 = 0xf0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0u128;
     const ASCII_ZEROS: u128 = 0x30303030303030303030303030303030u128;
 
-    let chunk = unsafe { core::ptr::read_unaligned(s.as_ptr() as *const u128) ^ ASCII_ZEROS };
+    let chunk = unsafe {
+        let ptr = s.as_ptr();
+        debug_assert!(ptr as usize % core::mem::size_of::<u128>() == 0);
+        *(ptr as *const u128)
+        // } else {
+        //     panic!("swoops16");
+
+        //     core::ptr::read_unaligned(ptr as *const u128)
+        //}) 
+        ^ ASCII_ZEROS
+    };
     let chunk_og = chunk;
 
     // 1-byte mask trick (works on 8 pairs of single digits)
@@ -261,6 +282,7 @@ pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
 
 /// Parse the first 8 chars in a u8 slice as a base 10 integer.
 /// SAFETY: Do not call with a string length less than that.
+/// SAFETY: slice must be 8 byte aligned.
 #[cfg(target_endian = "little")]
 #[inline]
 #[doc(hidden)]
@@ -269,7 +291,18 @@ pub unsafe fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
     const MASK_HI: u64 = 0xf0f0f0f0f0f0f0f0u64;
     const ASCII_ZEROS: u64 = 0x3030303030303030u64;
 
-    let chunk = unsafe { core::ptr::read_unaligned(s.as_ptr() as *const u64) ^ ASCII_ZEROS };
+    let chunk = unsafe {
+        let ptr = s.as_ptr();
+        debug_assert!(ptr as usize % core::mem::size_of::<u64>() == 0);
+        // (if ptr as usize % core::mem::size_of::<u64>() == 0 {
+        *(ptr as *const u64)
+        // } else {
+        //     panic!("swoops8");
+
+        //     core::ptr::read_unaligned(ptr as *const u64)
+        // })
+         ^ ASCII_ZEROS
+    };
     let valid = (chunk & MASK_HI)
         | (chunk.wrapping_add(0x7676767676767676u64) & 0x8080808080808080u64)
         == 0;
@@ -303,6 +336,7 @@ pub unsafe fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
 
 /// Parse the first 8 chars in a u8 slice as a base 10 integer.
 /// SAFETY: Do not call with a string length less than that.
+/// SAFETY: slice must be 8 byte aligned.
 #[cfg(not(target_endian = "little"))]
 #[inline]
 #[doc(hidden)]
@@ -311,7 +345,19 @@ pub unsafe fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
     const MASK_HI: u64 = 0xf0f0f0f0f0f0f0f0u64;
     const ASCII_ZEROS: u64 = 0x3030303030303030u64;
 
-    let chunk = unsafe { core::ptr::read_unaligned(s.as_ptr() as *const u64) ^ ASCII_ZEROS };
+    let chunk = unsafe {
+        let ptr = s.as_ptr();
+        debug_assert!(ptr as usize % core::mem::size_of::<u64>() == 0);
+        //        (if ptr as usize % core::mem::size_of::<u64>() == 0 {
+        *(ptr as *const u64)
+        // } else {
+        //     panic!("swoops8");
+
+        //     core::ptr::read_unaligned(ptr as *const u64)
+        // })
+         ^ ASCII_ZEROS
+    };
+
     let valid = (chunk & MASK_HI)
         | (chunk.wrapping_add(0x7676767676767676u64) & 0x8080808080808080u64)
         == 0;
@@ -344,6 +390,7 @@ pub unsafe fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
 
 /// Parse the first 4 chars in a u8 slice as a base 10 integer.
 /// SAFETY: Do not call with a string length less than that.
+/// SAFETY: slice must be 4 byte aligned.
 #[cfg(target_endian = "little")]
 #[inline]
 #[doc(hidden)]
@@ -354,7 +401,17 @@ pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
     const MASK_HI: u32 = 0xf0f0f0f0u32;
     const ASCII_ZEROS: u32 = 0x30303030u32;
 
-    let chunk1 = unsafe { core::ptr::read_unaligned(s.as_ptr() as *const u32) ^ ASCII_ZEROS };
+    let chunk1 = unsafe {
+        let ptr = s.as_ptr() as usize;
+        debug_assert!(ptr as usize % core::mem::size_of::<u32>() == 0);
+        // (if ptr % size == 0 {
+        *(s.as_ptr() as *const u32)
+        // } else {
+        //     panic!("swoops4");
+        //     core::ptr::read_unaligned(ptr as *const u32)
+        // }) 
+        ^ ASCII_ZEROS
+    };
     // 1-byte mask trick (works on 4 pairs of single digits)
     let lower_digits = (chunk1 & 0x0f000f00) >> 8; // => 0x00f000f0
 
@@ -395,7 +452,8 @@ pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
 ///  0x31323334
 ///
 /// For big endien it's in the right order.
-
+/// SAFETY: minimum of string len 4.
+/// SAFETY: slice must be 8 byte aligned.
 #[cfg(not(target_endian = "little"))]
 #[inline]
 #[doc(hidden)]
@@ -406,8 +464,17 @@ pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
     const MASK_HI: u32 = 0xf0f0f0f0u32;
     const ASCII_ZEROS: u32 = 0x30303030u32;
 
-    let chunk1 = unsafe { core::ptr::read_unaligned(s.as_ptr() as *const u32) ^ ASCII_ZEROS };
-    //1234
+    let chunk1 = unsafe {
+        let ptr = s.as_ptr();
+        debug_assert!(ptr as usize % core::mem::size_of::<u32>() == 0);
+        //(if ptr as usize % core::mem::size_of::<u32>() == 0 {
+        *(ptr as *const u32)
+        // } else {
+        //     panic!("swoops4");
+        //     core::ptr::read_unaligned(ptr as *const u32)
+        // })
+         ^ ASCII_ZEROS
+    };
 
     // 1-byte mask trick (works on 4 pairs of single digits)
     let tens = (chunk1 & 0x0f000f00) >> 8; // => 0x00f000f0
@@ -443,16 +510,17 @@ pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
 }
 
 /// Parse the first 2 chars in a u8 slice as a base 10 integer.
+/// (Returning u16 rather than u8 as faster.)
 /// SAFETY: Do not call with a string length less than that.
-/// Returning u16 rather than u8 as faster.
+/// SAFETY: slice must be 2 byte aligned.
 #[cfg(target_endian = "little")]
 #[inline]
 #[doc(hidden)]
 pub unsafe fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
     //SAFETY:
     debug_assert!(s.len() >= 2);
-
-    let chunk = unsafe { core::ptr::read_unaligned(s.as_ptr() as *const u16) ^ 0x3030u16 };
+    debug_assert_eq!(s.as_ptr() as usize % core::mem::size_of::<u16>(), 0);
+    let chunk = unsafe { *(s.as_ptr() as *const u16) ^ 0x3030u16 };
     //Early add
     let ch = chunk.wrapping_add(0x7676u16);
     //Early calc result before use
@@ -467,14 +535,25 @@ pub unsafe fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
     }
 }
 
+/// SAFETY: Do not call with a string length less than that.
+/// SAFETY: slice must be 2 byte aligned.
 #[cfg(not(target_endian = "little"))]
 #[inline]
 #[doc(hidden)]
 pub unsafe fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
-    //SAFETY:
     debug_assert!(s.len() >= 2);
 
-    let chunk = unsafe { core::ptr::read_unaligned(s.as_ptr() as *const u16) ^ 0x3030u16 };
+    let chunk = unsafe {
+        let ptr = s.as_ptr();
+        debug_assert!(ptr as usize % core::mem::size_of::<u16>() == 0);
+        //(if ptr as usize % core::mem::size_of::<u16>() == 0 {
+        *(ptr as *const u16)
+        // } else {
+        //     panic!("swoops2");
+        //     core::ptr::read_unaligned(ptr as *const u16)
+        // })
+         ^ 0x3030u16
+    };
     //Early add
     let ch = chunk.wrapping_add(0x7676u16);
     //Early calc result before use
@@ -497,6 +576,19 @@ mod tests {
     use heapless::Vec;
     use numtoa::NumToA;
     use paste::paste;
+
+    #[wasm_bindgen_test]
+    #[test]
+    fn test_uu128_specific() {
+        let s = "+000123";
+        let p: Result<u128, ()> = s.parse().map_err(|_| ());
+        assert_eq!(
+            p,
+            super::parse::<u128>(s.as_bytes()).map_err(|_| ()),
+            "fail to parse: '{}'",
+            &s
+        );
+    }
 
     macro_rules! gen_tests {
         ($target_type:ty, $min:expr, $max:expr, $step: expr, $max_chars: literal,$postfix: literal, $specific: literal) => {

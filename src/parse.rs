@@ -221,7 +221,7 @@ where
     T: FromStrRadixHelper,
 {
     let is_signed_ty = T::from_u32(0) > T::MINIMUM;
-    let mut checked: Option<u8> = None;
+    let mut checked: Option<(u8, T)> = None;
     if let Some(val) = s.get(0) {
         let mut val = val.wrapping_sub(b'0');
         loop {
@@ -231,87 +231,159 @@ where
                     let l = s.len();
                     if likely!(l < T::CHARS) {
                         let mut res = T::from_u8(0);
-                        let l_1 = l & 1 != 0 && T::BITS_COUNT >= 4;
-                        let l_2 = l & 2 != 0 && T::BITS_COUNT >= 8;
-                        let l_4 = l & 4 != 0 && T::BITS_COUNT >= 16;
-                        let l_8 = l & 8 != 0 && T::BITS_COUNT >= 32;
-                        let l16 = l & 16 != 0 && T::BITS_COUNT >= 64;
-                        let l32 = l & 32 != 0 && T::BITS_COUNT >= 128;
 
                         unsafe {
-                            if l_1 {
-                                let val_t = T::from_u8(val);
-                                s = &s.get_unchecked(1..);
-                                if s.is_empty() {
-                                    return Ok(val_t);
-                                }
-                                res = val_t.mul_unchecked(*T::TREE.get_unchecked(s.len()));
-                            }
-                            if l_2 {
-                                let val = T::from_u16(parse_2_chars(&s)?);
-                                s = &s.get_unchecked(2..);
-                                if s.is_empty() {
-                                    res = res.add_unchecked(val);
-                                    if checked.is_none() {
-                                        return Ok(res);
+                            for _ in 0..1 {
+                                // Align so that s ptr ends b0
+                                if s.as_ptr() as usize & 1 != 0 {
+                                    let val_t = T::from_u8(val);
+                                    s = &s.get_unchecked(1..);
+                                    if s.is_empty() {
+                                        res = val_t;
+                                        break;
                                     }
-                                } else {
-                                    res = res.add_unchecked(
-                                        T::TREE.get_unchecked(s.len()).mul_unchecked(val),
-                                    );
+                                    res = val_t.mul_unchecked(*T::TREE.get_unchecked(s.len()));
                                 }
-                            }
-                            if l_4 {
-                                let val = T::from_u16(parse_4_chars(&s)?);
-                                s = &s.get_unchecked(4..);
-                                if s.is_empty() {
-                                    res = res.add_unchecked(val);
-                                    if checked.is_none() {
-                                        return Ok(res);
+                                if s.len() >= 2 && T::BITS_COUNT >= 8 {
+                                    // Align so that s ptr ends b00
+                                    if s.as_ptr() as usize & 2 != 0 {
+                                        let val = T::from_u16(parse_2_chars(&s)?);
+                                        s = &s.get_unchecked(2..);
+                                        if s.is_empty() {
+                                            res = res.add_unchecked(val);
+                                            break;
+                                        }
+                                        res = res.add_unchecked(
+                                            T::TREE.get_unchecked(s.len()).mul_unchecked(val),
+                                        );
                                     }
-                                } else {
-                                    res = res.add_unchecked(
-                                        T::TREE.get_unchecked(s.len()).mul_unchecked(val),
-                                    );
-                                }
-                            }
-                            if l_8 {
-                                let val = T::from_u32(parse_8_chars(&s)?);
-                                s = &s.get_unchecked(8..);
-                                if s.is_empty() {
-                                    res = res.add_unchecked(val);
-                                    if checked.is_none() {
-                                        return Ok(res);
+                                    if s.len() >= 4 && T::BITS_COUNT >= 16 {
+                                        // Align so that s ptr ends b000
+                                        if s.as_ptr() as usize & 4 != 0 {
+                                            let val = T::from_u16(parse_4_chars(&s)?);
+                                            s = &s.get_unchecked(4..);
+                                            if s.is_empty() {
+                                                res = res.add_unchecked(val);
+                                                break;
+                                            }
+                                            res = res.add_unchecked(
+                                                T::TREE.get_unchecked(s.len()).mul_unchecked(val),
+                                            );
+                                        }
+                                        if s.len() >= 8 && T::BITS_COUNT >= 32 {
+                                            // Align so that s ptr ends b0000
+                                            if s.as_ptr() as usize & 8 != 0 {
+                                                let val = T::from_u32(parse_8_chars(&s)?);
+                                                s = &s.get_unchecked(8..);
+                                                if s.is_empty() {
+                                                    res = res.add_unchecked(val);
+                                                    break;
+                                                }
+                                                res = res.add_unchecked(
+                                                    T::TREE
+                                                        .get_unchecked(s.len())
+                                                        .mul_unchecked(val),
+                                                );
+                                            }
+                                            if s.len() >= 16 && T::BITS_COUNT >= 64 {
+                                                // Align so that s ptr ends b00000
+                                                if s.as_ptr() as usize & 16 != 0 {
+                                                    let val = T::from_u64(parse_16_chars(&s)?);
+                                                    s = &s.get_unchecked(16..);
+                                                    if s.is_empty() {
+                                                        res = res.add_unchecked(val);
+                                                        break;
+                                                    }
+                                                    res = res.add_unchecked(
+                                                        T::TREE
+                                                            .get_unchecked(s.len())
+                                                            .mul_unchecked(val),
+                                                    );
+                                                }
+
+                                                // Did you see what we did there? at this point,
+                                                // s is aligned for reading as a u128.
+                                                if s.len() >= 32 && T::BITS_COUNT >= 128 {
+                                                    let val = T::from_u128(parse_32_chars(&s)?);
+                                                    s = &s.get_unchecked(32..);
+                                                    if s.is_empty() {
+                                                        res = res.add_unchecked(val);
+                                                        break;
+                                                    }
+                                                    res = res.add_unchecked(
+                                                        T::TREE
+                                                            .get_unchecked(s.len())
+                                                            .mul_unchecked(val),
+                                                    );
+                                                }
+
+                                                //Even if we couldn't take 32 chars, 16 chars is aligned
+                                                if s.len() >= 16 {
+                                                    let val = T::from_u64(parse_16_chars(&s)?);
+                                                    s = &s.get_unchecked(16..);
+                                                    if s.is_empty() {
+                                                        res = res.add_unchecked(val);
+                                                        break;
+                                                    }
+                                                    res = res.add_unchecked(
+                                                        T::TREE
+                                                            .get_unchecked(s.len())
+                                                            .mul_unchecked(val),
+                                                    );
+                                                }
+                                            }
+
+                                            if s.len() >= 8 {
+                                                let val = T::from_u32(parse_8_chars(&s)?);
+                                                s = &s.get_unchecked(8..);
+                                                if s.is_empty() {
+                                                    res = res.add_unchecked(val);
+                                                    break;
+                                                }
+                                                res = res.add_unchecked(
+                                                    T::TREE
+                                                        .get_unchecked(s.len())
+                                                        .mul_unchecked(val),
+                                                );
+                                            }
+                                        }
+
+                                        if s.len() >= 4 {
+                                            let val = T::from_u16(parse_4_chars(&s)?);
+                                            s = &s.get_unchecked(4..);
+                                            if s.is_empty() {
+                                                res = res.add_unchecked(val);
+                                                break;
+                                            }
+                                            res = res.add_unchecked(
+                                                T::TREE.get_unchecked(s.len()).mul_unchecked(val),
+                                            );
+                                        }
                                     }
-                                } else {
-                                    res = res.add_unchecked(
-                                        T::TREE.get_unchecked(s.len()).mul_unchecked(val),
-                                    );
-                                }
-                            }
-                            if l16 {
-                                let val = T::from_u64(parse_16_chars(&s)?);
-                                s = &s.get_unchecked(16..);
-                                if s.is_empty() {
-                                    res = res.add_unchecked(val);
-                                    if checked.is_none() {
-                                        return Ok(res);
+
+                                    if s.len() >= 2 {
+                                        let val = T::from_u16(parse_2_chars(&s)?);
+                                        s = &s.get_unchecked(2..);
+                                        if s.is_empty() {
+                                            res = res.add_unchecked(val);
+                                            break;
+                                        }
+                                        res = res.add_unchecked(
+                                            T::TREE.get_unchecked(s.len()).mul_unchecked(val),
+                                        );
                                     }
-                                } else {
-                                    res = res.add_unchecked(
-                                        T::TREE.get_unchecked(s.len()).mul_unchecked(val),
-                                    );
+                                }
+
+                                if let Some(val) = s.get(0) {
+                                    let val = val.wrapping_sub(b'0');
+                                    if val > 9 {
+                                        return Err(invalid!());
+                                    }
+                                    res = res.add_unchecked(T::from_u8(val));
                                 }
                             }
-                            if l32 {
-                                let val = T::from_u128(parse_32_chars(&s)?);
-                                res = res.add_unchecked(val);
-                            }
-                            return if let Some(checked) = checked {
-                                // SAFETY: mul is in range as `checked` is constrained to <= T::FIRST_SIG
-                                let checked = T::from_u8(checked)
-                                    .mul_unchecked(*T::TREE.get_unchecked(T::CHARS - 1));
-                                checked.add_checked(res).ok_or(pos_overflow!())
+                            return if let Some((_, checked_t)) = checked {
+                                checked_t.add_checked(res).ok_or(pos_overflow!())
                             } else {
                                 Ok(res)
                             };
@@ -319,10 +391,14 @@ where
                     }
                     // Deal with edge cases then get back to the top,
                     if l == T::CHARS && val <= T::FIRST_SIG {
-                        checked = Some(val);
+                        // SAFETY: mul is in range as `checked` is constrained to <= T::FIRST_SIG
+                        let v = T::from_u8(val);
+                        let mult = unsafe { v.mul_unchecked(*T::TREE.get_unchecked(T::CHARS - 1)) };
+                        let val_next = unsafe { s.get_unchecked(1) };
+                        checked = Some((val, mult));
+                        val = val_next.wrapping_sub(b'0');
                         s = &s[1..];
-                        val = unsafe { s.get_unchecked(0).wrapping_sub(b'0') };
-                        if val > 9 {
+                        if unlikely!(val > 9) {
                             return Err(invalid!());
                         }
                     } else if val == 0 {
@@ -342,7 +418,6 @@ where
                     } else {
                         return Err(pos_overflow!());
                     }
-
                     debug_assert!(val <= 9);
                 }
             } else if likely!(is_signed_ty && val == MINUS) {
@@ -354,86 +429,157 @@ where
                     if likely!(l < T::CHARS && l != 0) {
                         let mut res = T::from_u8(0);
                         unsafe {
-                            if (l & 1) != 0 && T::BITS_COUNT >= 4 {
-                                let val = s.get_unchecked(0).wrapping_sub(b'0');
-                                res = res.sub_unchecked(T::from_u8(val));
-                                if likely!(val <= 9 && l == 1) {
-                                    return Ok(res);
-                                } else if likely!(val <= 9) {
-                                    s = &s[1..];
-                                    res = res.mul_unchecked(*T::TREE.get_unchecked(s.len()));
-                                } else {
-                                    return Err(invalid!());
-                                };
-                            }
-                            if (l & 2 != 0) && T::BITS_COUNT >= 8 {
-                                let val = T::from_u16(parse_2_chars(&s)?);
-                                s = &s[2..];
-                                if s.is_empty() {
-                                    res = res.sub_unchecked(val);
-                                    if checked.is_none() {
+                            for _ in 0..1 {
+                                // Align so that s ptr ends b0
+                                if s.as_ptr() as usize & 1 != 0 {
+                                    let val = s.get_unchecked(0).wrapping_sub(b'0');
+                                    res = res.sub_unchecked(T::from_u8(val));
+                                    if likely!(val <= 9 && l == 1) {
                                         return Ok(res);
-                                    }
-                                } else {
-                                    res = res.sub_unchecked(
-                                        T::TREE.get_unchecked(s.len()).mul_unchecked(val),
-                                    );
+                                    } else if likely!(val <= 9) {
+                                        s = &s[1..];
+                                        res = res.mul_unchecked(*T::TREE.get_unchecked(s.len()));
+                                    } else {
+                                        return Err(invalid!());
+                                    };
                                 }
-                            }
-                            if (l & 4) != 0 && T::BITS_COUNT >= 16 {
-                                let val = T::from_u16(parse_4_chars(&s)?);
-                                s = &s[4..];
-                                if s.is_empty() {
-                                    res = res.sub_unchecked(val);
-                                    if checked.is_none() {
-                                        return Ok(res);
+                                if s.len() >= 2 && T::BITS_COUNT >= 8 {
+                                    // Align so that s ptr ends b00
+                                    if s.as_ptr() as usize & 2 != 0 {
+                                        let val = T::from_u16(parse_2_chars(&s)?);
+                                        s = &s.get_unchecked(2..);
+                                        if s.is_empty() {
+                                            res = res.sub_unchecked(val);
+                                            break;
+                                        }
+                                        res = res.sub_unchecked(
+                                            T::TREE.get_unchecked(s.len()).mul_unchecked(val),
+                                        );
                                     }
-                                } else {
-                                    res = res.sub_unchecked(
-                                        T::TREE.get_unchecked(s.len()).mul_unchecked(val),
-                                    );
-                                }
-                            }
-                            if (l & 8) != 0 && T::BITS_COUNT >= 32 {
-                                let val = T::from_u32(parse_8_chars(&s)?);
-                                s = &s[8..];
-                                if s.is_empty() {
-                                    res = res.sub_unchecked(val);
-                                    if checked.is_none() {
-                                        return Ok(res);
-                                    }
-                                } else {
-                                    res = res.sub_unchecked(
-                                        T::TREE.get_unchecked(s.len()).mul_unchecked(val),
-                                    );
-                                }
-                            }
-                            if (l & 16) != 0 && T::BITS_COUNT >= 64 {
-                                let val = T::from_u64(parse_16_chars(&s)?);
-                                s = &s[16..];
-                                if s.is_empty() {
-                                    res = res.sub_unchecked(val);
-                                    if checked.is_none() {
-                                        return Ok(res);
-                                    }
-                                } else {
-                                    res = res.sub_unchecked(
-                                        T::TREE.get_unchecked(s.len()).mul_unchecked(val),
-                                    );
-                                }
-                            }
-                            if (l & 32) != 0 && T::BITS_COUNT >= 128 {
-                                res = res.sub_unchecked(T::from_u128(parse_32_chars(&s)?));
-                            }
+                                    if s.len() >= 4 && T::BITS_COUNT >= 16 {
+                                        // Align so that s ptr ends b000
+                                        if s.as_ptr() as usize & 4 != 0 {
+                                            let val = T::from_u16(parse_4_chars(&s)?);
+                                            s = &s.get_unchecked(4..);
+                                            if s.is_empty() {
+                                                res = res.sub_unchecked(val);
+                                                break;
+                                            }
+                                            res = res.sub_unchecked(
+                                                T::TREE.get_unchecked(s.len()).mul_unchecked(val),
+                                            );
+                                        }
+                                        if s.len() >= 8 && T::BITS_COUNT >= 32 {
+                                            // Align so that s ptr ends b0000
+                                            if s.as_ptr() as usize & 8 != 0 {
+                                                let val = T::from_u32(parse_8_chars(&s)?);
+                                                s = &s.get_unchecked(8..);
+                                                if s.is_empty() {
+                                                    res = res.sub_unchecked(val);
+                                                    break;
+                                                }
+                                                res = res.sub_unchecked(
+                                                    T::TREE
+                                                        .get_unchecked(s.len())
+                                                        .mul_unchecked(val),
+                                                );
+                                            }
+                                            if s.len() >= 16 && T::BITS_COUNT >= 64 {
+                                                // Align so that s ptr ends b00000
+                                                if s.as_ptr() as usize & 16 != 0 {
+                                                    let val = T::from_u64(parse_16_chars(&s)?);
+                                                    s = &s.get_unchecked(16..);
+                                                    if s.is_empty() {
+                                                        res = res.sub_unchecked(val);
+                                                        break;
+                                                    }
+                                                    res = res.sub_unchecked(
+                                                        T::TREE
+                                                            .get_unchecked(s.len())
+                                                            .mul_unchecked(val),
+                                                    );
+                                                }
 
-                            return if let Some(chk) = checked {
+                                                // s is aligned so that we can read u128
+                                                if s.len() >= 32 && T::BITS_COUNT >= 128 {
+                                                    let val = T::from_u128(parse_32_chars(&s)?);
+                                                    s = &s[32..];
+                                                    if s.is_empty() {
+                                                        res = res.sub_unchecked(val);
+                                                        break;
+                                                    }
+                                                    res = res.sub_unchecked(
+                                                        T::TREE
+                                                            .get_unchecked(s.len())
+                                                            .mul_unchecked(val),
+                                                    );
+                                                }
+                                                // all the following are now aligned.
+                                                if s.len() >= 16 {
+                                                    let val = T::from_u64(parse_16_chars(&s)?);
+                                                    s = &s[16..];
+                                                    if s.is_empty() {
+                                                        res = res.sub_unchecked(val);
+                                                        break;
+                                                    }
+                                                    res = res.sub_unchecked(
+                                                        T::TREE
+                                                            .get_unchecked(s.len())
+                                                            .mul_unchecked(val),
+                                                    );
+                                                }
+                                            }
+                                            if s.len() >= 8 {
+                                                let val = T::from_u32(parse_8_chars(&s)?);
+                                                s = &s[8..];
+                                                if s.is_empty() {
+                                                    res = res.sub_unchecked(val);
+                                                    break;
+                                                }
+                                                res = res.sub_unchecked(
+                                                    T::TREE
+                                                        .get_unchecked(s.len())
+                                                        .mul_unchecked(val),
+                                                );
+                                            }
+                                        }
+                                        if s.len() >= 4 {
+                                            let val = T::from_u16(parse_4_chars(&s)?);
+                                            s = &s[4..];
+                                            if s.is_empty() {
+                                                res = res.sub_unchecked(val);
+                                                break;
+                                            }
+                                            res = res.sub_unchecked(
+                                                T::TREE.get_unchecked(s.len()).mul_unchecked(val),
+                                            );
+                                        }
+                                    }
+                                    if s.len() >= 2 {
+                                        let val = T::from_u16(parse_2_chars(&s)?);
+                                        s = &s[2..];
+                                        if s.is_empty() {
+                                            res = res.sub_unchecked(val);
+                                            break;
+                                        }
+                                        res = res.sub_unchecked(
+                                            T::TREE.get_unchecked(s.len()).mul_unchecked(val),
+                                        );
+                                    }
+                                }
+                                if let Some(val) = s.get(0) {
+                                    let val = val.wrapping_sub(b'0');
+                                    res = res.sub_unchecked(T::from_u8(val));
+                                    if unlikely!(val > 9) {
+                                        return Err(invalid!());
+                                    };
+                                }
+                            }
+                            return if let Some((chk, chk_t)) = checked {
                                 if unlikely!(res == T::TAIL && chk == T::FIRST_SIG) {
                                     return Ok(T::MINIMUM);
                                 }
-                                // SAFETY: mul is in range as `checked` is constrained to <= T::FIRST_SIG
-                                let val = T::from_u8(chk)
-                                    .mul_unchecked(*T::TREE.get_unchecked(T::CHARS - 1));
-                                res.sub_checked(val).ok_or(neg_overflow!())
+                                res.sub_checked(chk_t).ok_or(neg_overflow!())
                             } else {
                                 Ok(res)
                             };
@@ -446,7 +592,10 @@ where
                     };
                     val = val.wrapping_sub(b'0');
                     if l == T::CHARS && val <= T::FIRST_SIG {
-                        checked = Some(val);
+                        // SAFETY: mul is in range as `checked` is constrained to <= T::FIRST_SIG
+                        checked = Some((val, unsafe {
+                            T::from_u8(val).mul_unchecked(*T::TREE.get_unchecked(T::CHARS - 1))
+                        }));
                         s = &s[1..];
                     } else if val == 0 {
                         val = b'0';
