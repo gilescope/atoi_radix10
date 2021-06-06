@@ -8,11 +8,13 @@ edition = "2018"
 [features]
 default = []
 nightly = []
-simd = [ "core_simd" ]
+simd = [ "wide" ]
 # simd not available on stable till core_simd is.
 
 [dependencies]
-core_simd = { git="https://github.com/rust-lang/stdsimd.git", optional=true }
+# version="*", 
+wide = { git="https://github.com/gilescope/wide.git", branch="i16x16", optional=true }
+#core_simd = { git="https://github.com/rust-lang/stdsimd.git", optional=true }
 
 [dev-dependencies]
 # Creating good test names:
