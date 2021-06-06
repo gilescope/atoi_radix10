@@ -22,7 +22,7 @@ criterion = {version="0.3", features=["html_reports"]}
 #criterion-cycles-per-byte = "0.1"
 # These are for creating test strings (in no_std)
 heapless = "0.7"
-numtoa = { git="https://github.com/gilescope/numtoa.git", branch="master" }
+numtoa = "0.2.4"
 # Wasm testing:
 wasm-bindgen-test = "0.3"
 
