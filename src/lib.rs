@@ -82,8 +82,8 @@ pub unsafe fn parse_32_chars(s: &[u8]) -> Result<u128, Pie> {
     use core::arch::x86_64::{
         _mm256_hadd_epi32, _mm256_lddqu_si256, _mm256_madd_epi16, _mm256_maddubs_epi16,
     };
-    use wide::*;
     use core::mem::transmute;
+    use wide::*;
     let MULT10: i8x32 = i8x32::from([
         10_i8, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10_i8, 1, 10, 1, 10, 1, 10, 1,
         10, 1, 10, 1, 10, 1, 10, 1,
@@ -101,15 +101,17 @@ pub unsafe fn parse_32_chars(s: &[u8]) -> Result<u128, Pie> {
     let chunk = chunk - ZEROS; //will wrap
     let chunk_og = chunk;
     let digits_at_lowest = chunk_og + ZERO_TO_LOWEST;
-    let chunk: i16x16 = unsafe { transmute(_mm256_maddubs_epi16(transmute(chunk), transmute(MULT10))) };
-    let chunk: i32x8 = unsafe { transmute(_mm256_madd_epi16(transmute(chunk), transmute(MULT100))) };
+    let chunk: i16x16 =
+        unsafe { transmute(_mm256_maddubs_epi16(transmute(chunk), transmute(MULT10))) };
+    let chunk: i32x8 =
+        unsafe { transmute(_mm256_madd_epi16(transmute(chunk), transmute(MULT100))) };
     let res = chunk * MULT10000;
     let chunk: i32x8 = unsafe { transmute(_mm256_hadd_epi32(transmute(res), transmute(res))) };
-    let chunk: [i32;8] = unsafe { transmute(chunk) };
+    let chunk: [i32; 8] = unsafe { transmute(chunk) };
     let range_chk1 = i8x32::cmp_lt(digits_at_lowest, UPPER_BOUND);
 
-    let x: [u128;2] = transmute(range_chk1);
-    let is_valid = x[0] == 0 && x[1] == 0;//TODO invert?
+    let x: [u128; 2] = transmute(range_chk1);
+    let is_valid = x[0] == 0 && x[1] == 0; //TODO invert?
 
     if likely!(is_valid) {
         let upper = chunk[2] as u64 * 10000_0000_u64 + chunk[3] as u64;
@@ -136,8 +138,8 @@ pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     use core::arch::x86_64::{
         _mm_lddqu_si128, _mm_madd_epi16, _mm_maddubs_epi16, _mm_packus_epi32,
     };
-    use wide::*;
     use core::mem::transmute;
+    use wide::*;
     //TODO: waiting on https://github.com/rust-lang/stdsimd/issues/102
     let chunk: i8x16 = unsafe { transmute(_mm_lddqu_si128(core::mem::transmute_copy(&s))) };
     let ZEROS: i8x16 = i8x16::splat(b'0' as i8);
@@ -151,20 +153,20 @@ pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     let range_chk1 = i8x16::cmp_lt(digits_at_lowest, UPPER_BOUND);
     let is_valid = range_chk1.all();
 
-    let MULT10: i8x16 = unsafe {
-        i8x16::from([10_i8, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1])};
+    let MULT10: i8x16 =
+        unsafe { i8x16::from([10_i8, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1]) };
 
     let chunk: i8x16 = unsafe { transmute(_mm_maddubs_epi16(transmute(chunk), transmute(MULT10))) };
 
-    let MULT100: i16x8 = unsafe{ i16x8::from([100, 1, 100, 1, 100, 1, 100, 1])};
+    let MULT100: i16x8 = unsafe { i16x8::from([100, 1, 100, 1, 100, 1, 100, 1]) };
 
-    let chunk: i16x8 = unsafe { transmute( _mm_madd_epi16(transmute(chunk), transmute(MULT100))) };
+    let chunk: i16x8 = unsafe { transmute(_mm_madd_epi16(transmute(chunk), transmute(MULT100))) };
 
     let chunk = unsafe { _mm_packus_epi32(transmute(chunk), transmute(chunk)) };
-    let MULT10000: i16x8 = unsafe { i16x8::from([10000, 1, 10000, 1, 10000, 1, 10000, 1])};
+    let MULT10000: i16x8 = unsafe { i16x8::from([10000, 1, 10000, 1, 10000, 1, 10000, 1]) };
 
     let chunk: i64x2 = unsafe { transmute(_mm_madd_epi16(chunk, transmute(MULT10000))) };
-    let chunk: [u64;2] = transmute(chunk); //From::<[i64;2]>(chunk)[1].unsigned_abs(); //this could just be a transmute
+    let chunk: [u64; 2] = transmute(chunk); //From::<[i64;2]>(chunk)[1].unsigned_abs(); //this could just be a transmute
     let chunk = chunk[1];
     let chunk = ((chunk & 0xffffffff) * 1_0000_0000) + (chunk >> 32);
     if likely!(is_valid) {
