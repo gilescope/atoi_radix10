@@ -236,7 +236,7 @@ where
                                 // Align so that s ptr ends b0
                                 if s.as_ptr() as usize & 1 != 0 {
                                     let val_t = T::from_u8(val);
-                                    s = &s.get_unchecked(1..);
+                                    s = s.get_unchecked(1..);
                                     if s.is_empty() {
                                         res = val_t;
                                         break;
@@ -246,8 +246,8 @@ where
                                 if s.len() >= 2 && T::BITS_COUNT >= 8 {
                                     // Align so that s ptr ends b00
                                     if s.as_ptr() as usize & 2 != 0 {
-                                        let val = T::from_u16(parse_2_chars(&s)?);
-                                        s = &s.get_unchecked(2..);
+                                        let val = T::from_u16(parse_2_chars(s)?);
+                                        s = s.get_unchecked(2..);
                                         if s.is_empty() {
                                             res = res.add_unchecked(val);
                                             break;
@@ -259,8 +259,8 @@ where
                                     if s.len() >= 4 && T::BITS_COUNT >= 16 {
                                         // Align so that s ptr ends b000
                                         if s.as_ptr() as usize & 4 != 0 {
-                                            let val = T::from_u16(parse_4_chars(&s)?);
-                                            s = &s.get_unchecked(4..);
+                                            let val = T::from_u16(parse_4_chars(s)?);
+                                            s = s.get_unchecked(4..);
                                             if s.is_empty() {
                                                 res = res.add_unchecked(val);
                                                 break;
@@ -272,8 +272,8 @@ where
                                         if s.len() >= 8 && T::BITS_COUNT >= 32 {
                                             // Align so that s ptr ends b0000
                                             if s.as_ptr() as usize & 8 != 0 {
-                                                let val = T::from_u32(parse_8_chars(&s)?);
-                                                s = &s.get_unchecked(8..);
+                                                let val = T::from_u32(parse_8_chars(s)?);
+                                                s = s.get_unchecked(8..);
                                                 if s.is_empty() {
                                                     res = res.add_unchecked(val);
                                                     break;
@@ -287,8 +287,8 @@ where
                                             if s.len() >= 16 && T::BITS_COUNT >= 64 {
                                                 // Align so that s ptr ends b00000
                                                 if s.as_ptr() as usize & 16 != 0 {
-                                                    let val = T::from_u64(parse_16_chars(&s)?);
-                                                    s = &s.get_unchecked(16..);
+                                                    let val = T::from_u64(parse_16_chars(s)?);
+                                                    s = s.get_unchecked(16..);
                                                     if s.is_empty() {
                                                         res = res.add_unchecked(val);
                                                         break;
@@ -303,8 +303,8 @@ where
                                                 // Did you see what we did there? at this point,
                                                 // s is aligned for reading as a u128.
                                                 if s.len() >= 32 && T::BITS_COUNT >= 128 {
-                                                    let val = T::from_u128(parse_32_chars(&s)?);
-                                                    s = &s.get_unchecked(32..);
+                                                    let val = T::from_u128(parse_32_chars(s)?);
+                                                    s = s.get_unchecked(32..);
                                                     if s.is_empty() {
                                                         res = res.add_unchecked(val);
                                                         break;
@@ -318,8 +318,8 @@ where
 
                                                 //Even if we couldn't take 32 chars, 16 chars is aligned
                                                 if s.len() >= 16 {
-                                                    let val = T::from_u64(parse_16_chars(&s)?);
-                                                    s = &s.get_unchecked(16..);
+                                                    let val = T::from_u64(parse_16_chars(s)?);
+                                                    s = s.get_unchecked(16..);
                                                     if s.is_empty() {
                                                         res = res.add_unchecked(val);
                                                         break;
@@ -333,8 +333,8 @@ where
                                             }
 
                                             if s.len() >= 8 {
-                                                let val = T::from_u32(parse_8_chars(&s)?);
-                                                s = &s.get_unchecked(8..);
+                                                let val = T::from_u32(parse_8_chars(s)?);
+                                                s = s.get_unchecked(8..);
                                                 if s.is_empty() {
                                                     res = res.add_unchecked(val);
                                                     break;
@@ -348,8 +348,8 @@ where
                                         }
 
                                         if s.len() >= 4 {
-                                            let val = T::from_u16(parse_4_chars(&s)?);
-                                            s = &s.get_unchecked(4..);
+                                            let val = T::from_u16(parse_4_chars(s)?);
+                                            s = s.get_unchecked(4..);
                                             if s.is_empty() {
                                                 res = res.add_unchecked(val);
                                                 break;
@@ -361,8 +361,8 @@ where
                                     }
 
                                     if s.len() >= 2 {
-                                        let val = T::from_u16(parse_2_chars(&s)?);
-                                        s = &s.get_unchecked(2..);
+                                        let val = T::from_u16(parse_2_chars(s)?);
+                                        s = s.get_unchecked(2..);
                                         if s.is_empty() {
                                             res = res.add_unchecked(val);
                                             break;
@@ -445,8 +445,8 @@ where
                                 if s.len() >= 2 && T::BITS_COUNT >= 8 {
                                     // Align so that s ptr ends b00
                                     if s.as_ptr() as usize & 2 != 0 {
-                                        let val = T::from_u16(parse_2_chars(&s)?);
-                                        s = &s.get_unchecked(2..);
+                                        let val = T::from_u16(parse_2_chars(s)?);
+                                        s = s.get_unchecked(2..);
                                         if s.is_empty() {
                                             res = res.sub_unchecked(val);
                                             break;
@@ -458,8 +458,8 @@ where
                                     if s.len() >= 4 && T::BITS_COUNT >= 16 {
                                         // Align so that s ptr ends b000
                                         if s.as_ptr() as usize & 4 != 0 {
-                                            let val = T::from_u16(parse_4_chars(&s)?);
-                                            s = &s.get_unchecked(4..);
+                                            let val = T::from_u16(parse_4_chars(s)?);
+                                            s = s.get_unchecked(4..);
                                             if s.is_empty() {
                                                 res = res.sub_unchecked(val);
                                                 break;
@@ -471,8 +471,8 @@ where
                                         if s.len() >= 8 && T::BITS_COUNT >= 32 {
                                             // Align so that s ptr ends b0000
                                             if s.as_ptr() as usize & 8 != 0 {
-                                                let val = T::from_u32(parse_8_chars(&s)?);
-                                                s = &s.get_unchecked(8..);
+                                                let val = T::from_u32(parse_8_chars(s)?);
+                                                s = s.get_unchecked(8..);
                                                 if s.is_empty() {
                                                     res = res.sub_unchecked(val);
                                                     break;
@@ -486,8 +486,8 @@ where
                                             if s.len() >= 16 && T::BITS_COUNT >= 64 {
                                                 // Align so that s ptr ends b00000
                                                 if s.as_ptr() as usize & 16 != 0 {
-                                                    let val = T::from_u64(parse_16_chars(&s)?);
-                                                    s = &s.get_unchecked(16..);
+                                                    let val = T::from_u64(parse_16_chars(s)?);
+                                                    s = s.get_unchecked(16..);
                                                     if s.is_empty() {
                                                         res = res.sub_unchecked(val);
                                                         break;
@@ -501,7 +501,7 @@ where
 
                                                 // s is aligned so that we can read u128
                                                 if s.len() >= 32 && T::BITS_COUNT >= 128 {
-                                                    let val = T::from_u128(parse_32_chars(&s)?);
+                                                    let val = T::from_u128(parse_32_chars(s)?);
                                                     s = &s[32..];
                                                     if s.is_empty() {
                                                         res = res.sub_unchecked(val);
@@ -515,7 +515,7 @@ where
                                                 }
                                                 // all the following are now aligned.
                                                 if s.len() >= 16 {
-                                                    let val = T::from_u64(parse_16_chars(&s)?);
+                                                    let val = T::from_u64(parse_16_chars(s)?);
                                                     s = &s[16..];
                                                     if s.is_empty() {
                                                         res = res.sub_unchecked(val);
@@ -529,7 +529,7 @@ where
                                                 }
                                             }
                                             if s.len() >= 8 {
-                                                let val = T::from_u32(parse_8_chars(&s)?);
+                                                let val = T::from_u32(parse_8_chars(s)?);
                                                 s = &s[8..];
                                                 if s.is_empty() {
                                                     res = res.sub_unchecked(val);
@@ -543,7 +543,7 @@ where
                                             }
                                         }
                                         if s.len() >= 4 {
-                                            let val = T::from_u16(parse_4_chars(&s)?);
+                                            let val = T::from_u16(parse_4_chars(s)?);
                                             s = &s[4..];
                                             if s.is_empty() {
                                                 res = res.sub_unchecked(val);
@@ -555,7 +555,7 @@ where
                                         }
                                     }
                                     if s.len() >= 2 {
-                                        let val = T::from_u16(parse_2_chars(&s)?);
+                                        let val = T::from_u16(parse_2_chars(s)?);
                                         s = &s[2..];
                                         if s.is_empty() {
                                             res = res.sub_unchecked(val);
