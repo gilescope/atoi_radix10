@@ -66,6 +66,12 @@ jobs:
           - rust: nightly
             args: "--features nightly --target=wasm32-unknown-unknown"
             RUSTFLAGS: "-C target-feature=+simd128"
+          - rust: stable
+            args: "--target=wasm32-unknown-unknown"
+            RUSTFLAGS: "-C target-feature=+simd128"
+          - rust: stable
+            args: "--target=wasm32-unknown-unknown"
+            RUSTFLAGS: ""            
     env:
       RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
     steps:
