@@ -73,12 +73,12 @@ type Pie = ParseIntErrorPublic;
 #[inline]
 pub unsafe fn parse_32_chars(mut s: &[u8]) -> Result<u128, Pie> {
     debug_assert!(s.len() >= 32);
-    let val16 = unsafe { parse_16_chars(&s)? as u128 };
+    let val16 = unsafe { parse_16_chars(s)? as u128 };
     s = &s[16..];
     let res = val16 * 1_0000_0000_0000_0000;
 
     // Do the same thing again as a parse_32_chars fn would need 256bits.
-    let val16 = unsafe { parse_16_chars(&s)? as u128 };
+    let val16 = unsafe { parse_16_chars(s)? as u128 };
     Ok(res + val16)
 }
 
@@ -90,12 +90,12 @@ pub unsafe fn parse_32_chars(mut s: &[u8]) -> Result<u128, Pie> {
 #[inline]
 pub unsafe fn parse_32_chars(mut s: &[u8]) -> Result<u128, Pie> {
     debug_assert!(s.len() >= 32);
-    let val16 = unsafe { parse_16_chars(&s)? as u128 };
+    let val16 = unsafe { parse_16_chars(s)? as u128 };
     s = &s[16..];
     let res = val16 * 1_0000_0000_0000_0000;
 
     // Do the same thing again as a parse_32_chars fn would need 256bits.
-    let val16 = unsafe { parse_16_chars(&s)? as u128 };
+    let val16 = unsafe { parse_16_chars(s)? as u128 };
     Ok(res + val16)
 }
 
