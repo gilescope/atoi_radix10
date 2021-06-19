@@ -31,7 +31,7 @@ pub use core::num::IntErrorKind;
 
 //Just while waiting for stabilisation.
 #[cfg(not(feature = "nightly"))]
-#[derive(Debug,Eq,PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum IntErrorKind {
     /// Value being parsed is empty.
     ///
