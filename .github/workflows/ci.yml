@@ -55,7 +55,7 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
-  wasm:
+  wasm32:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -86,6 +86,39 @@ jobs:
           toolchain: ${{ matrix.rust }}
           override: true
           target: wasm32-unknown-unknown
+          components: rustfmt
+
+      - uses: jetli/wasm-bindgen-action@v0.1.0
+        with:
+          # Optional version of wasm-bindgen to install(eg. '0.2.68', 'latest')
+          version: '0.2.74'
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: ${{ matrix.args }}
+  wasm64:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        RUSTFLAGS: [""]
+        rust: ["nightly"]
+        args: ["--features nightly --target=wasm32-unknown-unknown"]
+        include:   
+          - rust: stable
+            args: "--target=wasm64-unknown-unknown"
+            RUSTFLAGS: ""            
+    env:
+      RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+          target: wasm64-unknown-unknown
           components: rustfmt
 
       - uses: jetli/wasm-bindgen-action@v0.1.0
