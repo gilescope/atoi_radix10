@@ -72,6 +72,9 @@ jobs:
           - rust: stable
             args: "--target=wasm32-unknown-unknown"
             RUSTFLAGS: ""            
+          - rust: stable
+            args: "--target=wasm64-unknown-unknown"
+            RUSTFLAGS: ""            
     env:
       RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
     steps:
