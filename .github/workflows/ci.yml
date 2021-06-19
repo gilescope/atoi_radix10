@@ -12,7 +12,7 @@ jobs:
         RUSTFLAGS: [""]
         include:
           # beta and stable have to wait till 1.54
-          - rust: nightly
+          - rust: stable
             args: ""
           - rust: nightly
             args: --features nightly
