@@ -1,6 +1,6 @@
 #![no_std]
-#![feature(int_error_matching)]
 //#![feature(unchecked_math)]
+#![cfg_attr(feature = "nightly", feature(int_error_matching))]
 #![cfg_attr(feature = "nightly", feature(core_intrinsics))]
 #![allow(clippy::inconsistent_digit_grouping)]
 #![warn(unsafe_op_in_unsafe_fn)]
@@ -26,7 +26,35 @@ pub use parse::{parse, parse_challenger, parse_from_str, FromStrRadixHelper};
 const PLUS: u8 = b'+'.wrapping_sub(b'0');
 const MINUS: u8 = b'-'.wrapping_sub(b'0');
 
-use core::num::IntErrorKind;
+#[cfg(feature = "nightly")]
+pub use core::num::IntErrorKind;
+
+//Just while waiting for stabilisation.
+#[cfg(not(feature = "nightly"))]
+#[derive(Debug,Eq,PartialEq)]
+pub enum IntErrorKind {
+    /// Value being parsed is empty.
+    ///
+    /// Among other causes, this variant will be constructed when parsing an empty string.
+    Empty,
+    /// Contains an invalid digit in its context.
+    ///
+    /// Among other causes, this variant will be constructed when parsing a string that
+    /// contains a non-ASCII char.
+    ///
+    /// This variant is also constructed when a `+` or `-` is misplaced within a string
+    /// either on its own or in the middle of a number.
+    InvalidDigit,
+    /// Integer is too large to store in target integer type.
+    PosOverflow,
+    /// Integer is too small to store in target integer type.
+    NegOverflow,
+    /// Value was Zero
+    ///
+    /// This variant will be emitted when the parsing string has a value of zero, which
+    /// would be illegal for non-zero types.
+    Zero,
+}
 
 /// A public version of `std::num::ParseIntError`
 #[derive(Debug, Eq, PartialEq)]

@@ -1,8 +1,7 @@
 use super::{
     parse_16_chars, parse_2_chars, parse_32_chars, parse_4_chars, parse_8_chars, trees::*,
-    ParseIntErrorPublic, MINUS, PLUS,
+    ParseIntErrorPublic, MINUS, PLUS, IntErrorKind
 };
-use core::num::IntErrorKind;
 
 #[cfg(feature = "core_intrinsics")]
 macro_rules! likely {
