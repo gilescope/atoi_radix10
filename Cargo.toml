@@ -29,6 +29,8 @@ heapless = "0.7"
 numtoa = "0.2.4"
 # Wasm testing:
 wasm-bindgen-test = "0.3"
+# We need to enable this as well for wasm:
+getrandom = { version = "0.2", features = ["js"] }
 rand = "0.8"
 
 [[bench]]
