@@ -739,7 +739,11 @@ mod tests {
     //     );
     // }
 
+    /// This test is ignored because it can only really call the fn when
+    /// the alignment is right and we're not currently setting up the alignment
+    /// so the test is not safe.
     #[test]
+    #[ignore]
     fn test_bench32() {
         // A way to dbg! in no_std:
         //        env_logger::init();
