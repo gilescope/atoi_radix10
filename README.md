@@ -42,7 +42,6 @@ Usage and Features
 
 `nightly` and `simd` features for highest speed (and target your specific cpu).
 
-`std` feature required if you want to run all the tests.
 It's `no_std` by default and will parse from any `[u8]` slice.
 
 How this works
