@@ -4,6 +4,8 @@
 Faster Integer Parsing (rust port)
 ==================================
 
+!! This crate does work on stable but only 1.55 and above !!
+
 This repository is the rust port of @KholdStare experimentation in
 https://kholdstare.github.io/technical/2020/05/26/faster-integer-parsing.html
 
