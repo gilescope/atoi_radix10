@@ -11,8 +11,8 @@ jobs:
         args: [""]
         RUSTFLAGS: [""]
         include:
-          # beta and stable have to wait till 1.54
-          - rust: beta
+          # beta and stable have to wait till 1.55
+          - rust: nightly
             args: ""
           - rust: nightly
             args: --features nightly
@@ -71,9 +71,6 @@ jobs:
             RUSTFLAGS: "-C target-feature=+simd128"
           - rust: stable
             args: "--target=wasm32-unknown-unknown"
-            RUSTFLAGS: ""            
-          - rust: stable
-            args: "--target=wasm64-unknown-unknown"
             RUSTFLAGS: ""            
     env:
       RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
