@@ -8,12 +8,14 @@ edition = "2018"
 [features]
 default = []
 nightly = []
-simd = [ "wide" ]
-# simd not available on stable till core_simd is.
+simd = []
 
 [dependencies]
-# version="*", 
-wide = { git="https://github.com/gilescope/wide.git", branch="i16x16", optional=true }
+# log = "*"
+# env_logger = "*"
+# version="*",
+# safe_arch={ version="0.6", optional=true }
+#wide = { git="https://github.com/gilescope/wide.git", branch="i16x16", optional=true }
 #core_simd = { git="https://github.com/rust-lang/stdsimd.git", optional=true }
 
 [dev-dependencies]
@@ -27,6 +29,7 @@ heapless = "0.7"
 numtoa = "0.2.4"
 # Wasm testing:
 wasm-bindgen-test = "0.3"
+rand = "0.8"
 
 [[bench]]
 name = "bench"

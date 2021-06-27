@@ -1,12 +1,12 @@
 #![no_std]
-//#![feature(unchecked_math)]
-#![cfg_attr(feature = "nightly", feature(int_error_matching))]
+//#![cfg_attr(all(feature = "nightly", feature = "simd"), feature(stdsimd))]
 #![cfg_attr(feature = "nightly", feature(core_intrinsics))]
 #![allow(clippy::inconsistent_digit_grouping)]
 #![warn(unsafe_op_in_unsafe_fn)]
 #[macro_use]
 mod parse;
 
+//use log::*;
 // mod parse_i16;
 // mod parse_i32;
 // mod parse_i8;
@@ -14,6 +14,8 @@ mod parse;
 // mod parse_u32;
 // mod parse_u8;
 mod trees;
+
+use core::num::IntErrorKind;
 
 pub use parse::{parse, parse_challenger, parse_from_str, FromStrRadixHelper};
 // pub use parse_i16::{parse_i16, parse_i16_challenger};
@@ -25,36 +27,6 @@ pub use parse::{parse, parse_challenger, parse_from_str, FromStrRadixHelper};
 
 const PLUS: u8 = b'+'.wrapping_sub(b'0');
 const MINUS: u8 = b'-'.wrapping_sub(b'0');
-
-#[cfg(feature = "nightly")]
-pub use core::num::IntErrorKind;
-
-//Just while waiting for stabilisation.
-#[cfg(not(feature = "nightly"))]
-#[derive(Debug, Eq, PartialEq)]
-pub enum IntErrorKind {
-    /// Value being parsed is empty.
-    ///
-    /// Among other causes, this variant will be constructed when parsing an empty string.
-    Empty,
-    /// Contains an invalid digit in its context.
-    ///
-    /// Among other causes, this variant will be constructed when parsing a string that
-    /// contains a non-ASCII char.
-    ///
-    /// This variant is also constructed when a `+` or `-` is misplaced within a string
-    /// either on its own or in the middle of a number.
-    InvalidDigit,
-    /// Integer is too large to store in target integer type.
-    PosOverflow,
-    /// Integer is too small to store in target integer type.
-    NegOverflow,
-    /// Value was Zero
-    ///
-    /// This variant will be emitted when the parsing string has a value of zero, which
-    /// would be illegal for non-zero types.
-    Zero,
-}
 
 /// A public version of `std::num::ParseIntError`
 #[derive(Debug, Eq, PartialEq)]
@@ -99,64 +71,206 @@ pub unsafe fn parse_32_chars(mut s: &[u8]) -> Result<u128, Pie> {
     Ok(res + val16)
 }
 
+// /// Parse the first 32 chars in a u8 slice as a base 10 integer.
+// /// SAFETY: Do not call with a string length less than that.
+// #[doc(hidden)]
+// #[cfg(all(target_feature = "avx", feature = "simd"))]
+// #[inline]
+// pub unsafe fn parse_32_chars(s: &[u8]) -> Result<u128, Pie> {
+//     debug_assert!(s.len() >= 32);
+
+//     use core::arch::x86_64::{
+//         _mm256_hadd_epi32, _mm256_lddqu_si256, _mm256_madd_epi16, _mm256_maddubs_epi16,
+//     };
+//     use core::mem::transmute;
+//     use wide::*;
+//     let MULT10: i8x32 = i8x32::from([
+//         10_i8, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10_i8, 1, 10, 1, 10, 1, 10, 1,
+//         10, 1, 10, 1, 10, 1, 10, 1,
+//     ]);
+
+//     let MULT100: i16x16 = i16x16::from([
+//         100, 1, 100, 1, 100, 1, 100, 1, 100, 1, 100, 1, 100, 1, 100, 1,
+//     ]);
+//     let MULT10000: i32x8 = i32x8::from([10000, 1, 10000, 1, 10000, 1, 10000, 1]);
+//     let ZEROS: i8x32 = i8x32::splat(b'0' as i8);
+//     let ZERO_TO_LOWEST: i8x32 = i8x32::splat(-128);
+//     let UPPER_BOUND: i8x32 = i8x32::splat(-128 + 10);
+
+//     let chunk: i8x32 = unsafe { transmute(_mm256_lddqu_si256(core::mem::transmute_copy(&s))) };
+//     let chunk = chunk - ZEROS; //will wrap
+// chunk stores individual digits
+//     let chunk_og = chunk;
+//     let digits_at_lowest = chunk_og + ZERO_TO_LOWEST;
+//     let range_chk1 = i8x32::cmp_lt(digits_at_lowest, UPPER_BOUND);
+//     let x: [u128; 2] = transmute(range_chk1);
+//     let is_valid = x[0] == 0 && x[1] == 0; //TODO invert?
+
+// chunk stores individual digits
+//     let chunk: i16x16 =
+//         unsafe { transmute(_mm256_maddubs_epi16(transmute(chunk), transmute(MULT10))) };
+// chunk stores pairs of digits
+//     let chunk: i32x8 =
+//         unsafe { transmute(_mm256_madd_epi16(transmute(chunk), transmute(MULT100))) };
+// chunk stores quads of digits
+//     let res = chunk * MULT10000;
+//     let chunk: i32x8 = unsafe { transmute(_mm256_hadd_epi32(transmute(res), transmute(res))) };
+// chunk stores octs of digits
+//     let chunk: [i32; 8] = unsafe { transmute(chunk) };
+
+//     if likely!(is_valid) {
+//         let upper = chunk[2] as u64 * 10000_0000_u64 + chunk[3] as u64;
+//         let lower = chunk[4] as u64 * 10000_0000_u64 + chunk[5] as u64;
+
+//         let result = upper as u128 * 1_0000_0000_0000_0000_u128 + lower as u128;
+
+//         Ok(result as u128)
+//     } else {
+//         Err(Pie {
+//             kind: IntErrorKind::InvalidDigit,
+//         })
+//     }
+// }
+
 /// Parse the first 32 chars in a u8 slice as a base 10 integer.
 /// SAFETY: Do not call with a string length less than that.
 #[doc(hidden)]
 #[cfg(all(target_feature = "avx", feature = "simd"))]
 #[inline]
-pub unsafe fn parse_32_chars(s: &[u8]) -> Result<u128, Pie> {
+pub fn parse_32_chars(s: &[u8]) -> Result<u128, Pie> {
     debug_assert!(s.len() >= 32);
 
     use core::arch::x86_64::{
-        _mm256_hadd_epi32, _mm256_lddqu_si256, _mm256_madd_epi16, _mm256_maddubs_epi16,
+        _mm256_add_epi8, _mm256_cmpgt_epi8, _mm256_hadd_epi32, _mm256_lddqu_si256,
+        _mm256_madd_epi16, _mm256_maddubs_epi16, _mm256_mullo_epi32, _mm256_set1_epi8,
+        _mm256_set_epi16, _mm256_set_epi32, _mm256_set_epi8, _mm256_sub_epi16, _mm256_testz_si256,
     };
-    use core::mem::transmute;
-    use wide::*;
-    let MULT10: i8x32 = i8x32::from([
-        10_i8, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10_i8, 1, 10, 1, 10, 1, 10, 1,
-        10, 1, 10, 1, 10, 1, 10, 1,
-    ]);
 
-    let MULT100: i16x16 = i16x16::from([
-        100, 1, 100, 1, 100, 1, 100, 1, 100, 1, 100, 1, 100, 1, 100, 1,
-    ]);
-    let MULT10000: i32x8 = i32x8::from([10000, 1, 10000, 1, 10000, 1, 10000, 1]);
-    let ZEROS: i8x32 = i8x32::splat(b'0' as i8);
-    let ZERO_TO_LOWEST: i8x32 = i8x32::splat(-128);
-    let UPPER_BOUND: i8x32 = i8x32::splat(-128 + 10);
+    unsafe {
+        let chunk = _mm256_lddqu_si256(core::mem::transmute_copy(&s));
+        let zeros = _mm256_set1_epi8(b'0' as i8);
+        let chunk = _mm256_sub_epi16(chunk, zeros); //will wrap
+                                                    // chunk stores individual digits
 
-    let chunk: i8x32 = unsafe { transmute(_mm256_lddqu_si256(core::mem::transmute_copy(&s))) };
-    let chunk = chunk - ZEROS; //will wrap
-    let chunk_og = chunk;
-    let digits_at_lowest = chunk_og + ZERO_TO_LOWEST;
-    let chunk: i16x16 =
-        unsafe { transmute(_mm256_maddubs_epi16(transmute(chunk), transmute(MULT10))) };
-    let chunk: i32x8 =
-        unsafe { transmute(_mm256_madd_epi16(transmute(chunk), transmute(MULT100))) };
-    let res = chunk * MULT10000;
-    let chunk: i32x8 = unsafe { transmute(_mm256_hadd_epi32(transmute(res), transmute(res))) };
-    let chunk: [i32; 8] = unsafe { transmute(chunk) };
-    let range_chk1 = i8x32::cmp_lt(digits_at_lowest, UPPER_BOUND);
+        let zero_to_lowest = _mm256_set1_epi8(-128);
+        let digits_at_lowest = _mm256_add_epi8(chunk, zero_to_lowest);
 
-    let x: [u128; 2] = transmute(range_chk1);
-    let is_valid = x[0] == 0 && x[1] == 0; //TODO invert?
+        let upper_bound = _mm256_set1_epi8(-128 + 9);
 
-    if likely!(is_valid) {
-        let upper = chunk[2] as u64 * 10000_0000_u64 + chunk[3] as u64;
-        let lower = chunk[4] as u64 * 10000_0000_u64 + chunk[5] as u64;
+        let is_valid = _mm256_cmpgt_epi8(digits_at_lowest, upper_bound);
+        let is_valid = _mm256_testz_si256(is_valid, is_valid) != 0;
 
-        let result = upper as u128 * 1_0000_0000_0000_0000_u128 + lower as u128;
+        let mult10 = _mm256_set_epi8(
+            1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1,
+            10, 1, 10, 1, 10, 1, 10,
+        );
+        let mult100 = _mm256_set_epi16(
+            1, 100, 1, 100, 1, 100, 1, 100, 1, 100, 1, 100, 1, 100, 1, 100,
+        );
+        let mult10000 = _mm256_set_epi32(1, 10000, 1, 10000, 1, 10000, 1, 10000);
 
-        Ok(result as u128)
-    } else {
-        Err(Pie {
-            kind: IntErrorKind::InvalidDigit,
-        })
+        // chunk stores individual digits
+        let chunk = _mm256_maddubs_epi16(chunk, mult10);
+
+        // chunk stores pairs of digits
+        //error!("chunk pair: {:?}",fmt_chunk(chunk));
+        let chunk = _mm256_madd_epi16(chunk, mult100);
+
+        // chunk stores quads of digits
+        // The fuzed mul-add instruction doesn't exist so we need to do it in two steps
+        let chunk = _mm256_mullo_epi32(chunk, mult10000);
+        let chunk = _mm256_hadd_epi32(chunk, chunk);
+        //error!("chunk hadd: {:?}", fmt_chunk32(chunk));
+
+        // chunk stores octs of digits
+        let chunk: [i32; 8] = core::mem::transmute(chunk);
+        if is_valid {
+            // If you're going to move these out of the is_valid block
+            // then watch for overflows.
+            let upper = chunk[2] as u64 * 10000_0000_u64 + chunk[3] as u64;
+            let lower = chunk[4] as u64 * 10000_0000_u64 + chunk[5] as u64;
+
+            let result = upper as u128 * 1_0000_0000_0000_0000_u128 + lower as u128;
+            Ok(result)
+        } else {
+            Err(Pie {
+                kind: IntErrorKind::InvalidDigit,
+            })
+        }
     }
 }
 
+// fn fmt_chunk(chunk: core::arch::x86_64::__m256i) -> [u8; 32] {
+//     unsafe {
+//         core::mem::transmute(chunk)
+//     }
+// }
+
+// fn fmt_chunk16(chunk: core::arch::x86_64::__m256i) -> [u16; 16] {
+//     unsafe {
+//         core::mem::transmute(chunk)
+//     }
+// }
+// fn fmt_chunk32(chunk: core::arch::x86_64::__m256i) -> [u32; 8] {
+//     unsafe {
+//         core::mem::transmute(chunk)
+//     }
+// }
+
 /// Parse the first 16 chars in a u8 slice as a base 10 integer.
 /// SAFETY: Do not call with a string length less than that.
+// #[cfg(all(target_feature = "sse2", feature = "simd"))]
+// #[inline]
+// #[doc(hidden)]
+// pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
+//     debug_assert!(s.len() >= 16);
+
+//     use core::arch::x86_64::{
+//         _mm_lddqu_si128, _mm_madd_epi16, _mm_maddubs_epi16, _mm_packus_epi32,
+//     };
+//     use core::mem::transmute;
+//     use safe_arch::*;
+//     //TODO: waiting on https://github.com/rust-lang/stdsimd/issues/102
+//     let chunk: i8x16 = unsafe { transmute(_mm_lddqu_si128(core::mem::transmute_copy(&s))) };
+//     let ZEROS: i8x16 = i8x16::splat(b'0' as i8);
+
+//     let chunk = chunk - ZEROS; //will wrap
+
+//     let ZERO_TO_LOWEST: i8x16 = i8x16::splat(-128);
+//     let digits_at_lowest = chunk + ZERO_TO_LOWEST;
+
+//     let UPPER_BOUND: i8x16 = i8x16::splat(-128 + 10);
+//     let range_chk1 = i8x16::cmp_lt(digits_at_lowest, UPPER_BOUND);
+//     let is_valid = range_chk1.all();
+
+//     let MULT10: i8x16 =
+//         unsafe { i8x16::from([10_i8, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1]) };
+
+//     let chunk: i8x16 = unsafe { transmute(_mm_maddubs_epi16(transmute(chunk), transmute(MULT10))) };
+
+//     let MULT100: i16x8 = unsafe { i16x8::from([100, 1, 100, 1, 100, 1, 100, 1]) };
+
+//     let chunk: i16x8 = unsafe { transmute(_mm_madd_epi16(transmute(chunk), transmute(MULT100))) };
+
+//     let chunk = unsafe { _mm_packus_epi32(transmute(chunk), transmute(chunk)) };
+//     let MULT10000: i16x8 = unsafe { i16x8::from([10000, 1, 10000, 1, 10000, 1, 10000, 1]) };
+
+//     let chunk: i64x2 = unsafe { transmute(_mm_madd_epi16(chunk, transmute(MULT10000))) };
+//     let chunk: [u64; 2] = transmute(chunk); //From::<[i64;2]>(chunk)[1].unsigned_abs(); //this could just be a transmute
+//     let chunk = chunk[1];
+//     let chunk = ((chunk & 0xffffffff) * 1_0000_0000) + (chunk >> 32);
+//     if likely!(is_valid) {
+//         Ok(chunk)
+//     } else {
+//         Err(Pie {
+//             kind: IntErrorKind::InvalidDigit,
+//         })
+//     }
+// }
+
+/// Parse the first 16 chars in a u8 slice as a base 10 integer.
+/// SAFETY: Do not call with a string length less than that.
+/// SAFETY: Aligned / unaligned is fine.
 #[cfg(all(target_feature = "sse2", feature = "simd"))]
 #[inline]
 #[doc(hidden)]
@@ -164,45 +278,46 @@ pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     debug_assert!(s.len() >= 16);
 
     use core::arch::x86_64::{
-        _mm_lddqu_si128, _mm_madd_epi16, _mm_maddubs_epi16, _mm_packus_epi32,
+        _mm_add_epi8, _mm_cmplt_epi8, _mm_cvtsi128_si64, _mm_lddqu_si128, _mm_madd_epi16,
+        _mm_maddubs_epi16, _mm_packus_epi32, _mm_set1_epi8, _mm_set_epi16, _mm_set_epi8,
+        _mm_sub_epi16, _mm_test_all_ones,
     };
-    use core::mem::transmute;
-    use wide::*;
-    //TODO: waiting on https://github.com/rust-lang/stdsimd/issues/102
-    let chunk: i8x16 = unsafe { transmute(_mm_lddqu_si128(core::mem::transmute_copy(&s))) };
-    let ZEROS: i8x16 = i8x16::splat(b'0' as i8);
 
-    let chunk = chunk - ZEROS; //will wrap
+    unsafe {
+        let chunk = _mm_lddqu_si128(core::mem::transmute_copy(&s));
+        let zeros = _mm_set1_epi8(b'0' as i8);
 
-    let ZERO_TO_LOWEST: i8x16 = i8x16::splat(-128);
-    let digits_at_lowest = chunk + ZERO_TO_LOWEST;
+        let chunk = _mm_sub_epi16(chunk, zeros); //will wrap
 
-    let UPPER_BOUND: i8x16 = i8x16::splat(-128 + 10);
-    let range_chk1 = i8x16::cmp_lt(digits_at_lowest, UPPER_BOUND);
-    let is_valid = range_chk1.all();
+        let zero_to_lowest = _mm_set1_epi8(-128);
 
-    let MULT10: i8x16 =
-        unsafe { i8x16::from([10_i8, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1]) };
+        // 0 => -128, 1 => -127...
+        let digits_at_lowest = _mm_add_epi8(chunk, zero_to_lowest);
+        let upper_bound = _mm_set1_epi8(-128 + 10);
+        let range_chk1 = _mm_cmplt_epi8(digits_at_lowest, upper_bound);
+        let range_chk = _mm_test_all_ones(range_chk1);
 
-    let chunk: i8x16 = unsafe { transmute(_mm_maddubs_epi16(transmute(chunk), transmute(MULT10))) };
+        let is_valid = range_chk != 0;
+        let mult = _mm_set_epi8(1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10);
+        let chunk = _mm_maddubs_epi16(chunk, mult);
 
-    let MULT100: i16x8 = unsafe { i16x8::from([100, 1, 100, 1, 100, 1, 100, 1]) };
+        let mult = _mm_set_epi16(1, 100, 1, 100, 1, 100, 1, 100);
+        let chunk = _mm_madd_epi16(chunk, mult);
 
-    let chunk: i16x8 = unsafe { transmute(_mm_madd_epi16(transmute(chunk), transmute(MULT100))) };
+        let chunk = _mm_packus_epi32(chunk, chunk);
+        let mult = _mm_set_epi16(0, 0, 0, 0, 1, 10000, 1, 10000);
+        let chunk = _mm_madd_epi16(chunk, mult);
 
-    let chunk = unsafe { _mm_packus_epi32(transmute(chunk), transmute(chunk)) };
-    let MULT10000: i16x8 = unsafe { i16x8::from([10000, 1, 10000, 1, 10000, 1, 10000, 1]) };
+        let chunk = _mm_cvtsi128_si64(chunk) as u64;
+        let chunk = ((chunk & 0xffffffff) * 1_0000_0000) + (chunk >> 32);
 
-    let chunk: i64x2 = unsafe { transmute(_mm_madd_epi16(chunk, transmute(MULT10000))) };
-    let chunk: [u64; 2] = transmute(chunk); //From::<[i64;2]>(chunk)[1].unsigned_abs(); //this could just be a transmute
-    let chunk = chunk[1];
-    let chunk = ((chunk & 0xffffffff) * 1_0000_0000) + (chunk >> 32);
-    if likely!(is_valid) {
-        Ok(chunk)
-    } else {
-        Err(Pie {
-            kind: IntErrorKind::InvalidDigit,
-        })
+        if is_valid {
+            Ok(chunk)
+        } else {
+            return Err(Pie {
+                kind: IntErrorKind::InvalidDigit,
+            });
+        }
     }
 }
 
@@ -611,11 +726,40 @@ mod tests {
     use numtoa::NumToA;
     use paste::paste;
 
-    #[wasm_bindgen_test]
+    // #[wasm_bindgen_test]
+    // #[test]
+    // fn test_uu128_specific() {
+    //     let s = "+000123";
+    //     let p: Result<u128, ()> = s.parse().map_err(|_| ());
+    //     assert_eq!(
+    //         p,
+    //         super::parse::<u128>(s.as_bytes()).map_err(|_| ()),
+    //         "fail to parse: '{}'",
+    //         &s
+    //     );
+    // }
+
     #[test]
-    fn test_uu128_specific() {
-        let s = "+000123";
+    fn test_bench32() {
+        // A way to dbg! in no_std:
+        //        env_logger::init();
+
+        let s = "34028236692093846346337460743176821145";
+        assert_eq!(
+            Ok(34028236692093846346337460743176_u128),
+            unsafe { super::parse_32_chars(s.as_bytes()).map_err(|_| ()) },
+            "fail to parse: '{}'",
+            &s
+        );
+    }
+
+    #[test]
+    fn test_uu12ddd8_specific() {
+        //             340282366920938463463374607431768211455
+        //let s = "34028236692093846346337460743176821145";
+        let s = "01234567890123456789012345678901234567";
         let p: Result<u128, ()> = s.parse().map_err(|_| ());
+        //assert_matches!(p, Ok(_));
         assert_eq!(
             p,
             super::parse::<u128>(s.as_bytes()).map_err(|_| ()),
@@ -695,6 +839,21 @@ mod tests {
                     }
                 }
 
+                #[cfg_attr(miri, ignore)]
+                #[test]
+                fn [<test_random_ $target_type $postfix>]() {
+                    use rand::prelude::*;
+                    let mut s = [0u8; 42];
+                    let mut rng = rand::thread_rng();
+
+                    for _ in 1..100_000 {
+                        let i = rng.gen::<$target_type>();
+                        let s = unsafe { core::str::from_utf8_unchecked(i.numtoa(10, &mut s)) };
+                        let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
+                        assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
+                    }
+                }
+
                 //#[wasm_bindgen_test] step too small for wasm
                 #[cfg_attr(miri, ignore)]
                 #[test]
@@ -713,7 +872,7 @@ mod tests {
                 #[wasm_bindgen_test]
                 #[test]
                 fn [<test_does_not_accept_plus_after_zero_ $target_type _plus $postfix>]() {
-                    let mut s = [0u8; 42];
+                    let mut s = [0u8; 50];
                     s[s.len() - 1] = b'+';
                     let s = unsafe { core::str::from_utf8_unchecked(&s) };
                     let p: Result<$target_type, ()> = s.parse().map_err(|_| ());

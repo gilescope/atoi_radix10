@@ -97,6 +97,6 @@ TODO
 We can run the tests on big-endien via MIRI:
 
 ```sh
-rustup +nightly component add miri    
+rustup +nightly component add miri
 MIRIFLAGS="-Zmiri-symbolic-alignment-check" cargo miri test --target mips64-unknown-linux-gnuabi64
 ```
