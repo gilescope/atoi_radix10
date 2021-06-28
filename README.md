@@ -4,6 +4,8 @@
 Faster Integer Parsing (rust port)
 ==================================
 
+!! This crate does work on stable but only 1.55 and above !!
+
 This repository is the rust port of @KholdStare experimentation in
 https://kholdstare.github.io/technical/2020/05/26/faster-integer-parsing.html
 
@@ -42,7 +44,6 @@ Usage and Features
 
 `nightly` and `simd` features for highest speed (and target your specific cpu).
 
-`std` feature required if you want to run all the tests.
 It's `no_std` by default and will parse from any `[u8]` slice.
 
 How this works
@@ -97,6 +98,6 @@ TODO
 We can run the tests on big-endien via MIRI:
 
 ```sh
-rustup +nightly component add miri    
+rustup +nightly component add miri
 MIRIFLAGS="-Zmiri-symbolic-alignment-check" cargo miri test --target mips64-unknown-linux-gnuabi64
 ```

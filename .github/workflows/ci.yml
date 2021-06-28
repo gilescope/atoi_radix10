@@ -11,8 +11,8 @@ jobs:
         args: [""]
         RUSTFLAGS: [""]
         include:
-          # beta and stable have to wait till 1.54
-          - rust: stable
+          # beta and stable have to wait till 1.55
+          - rust: nightly
             args: ""
           - rust: nightly
             args: --features nightly
@@ -21,7 +21,7 @@ jobs:
           - rust: nightly
             args: --features nightly,simd
             RUSTFLAGS: "-C target-cpu=native"
-          # - rust: "1.54.0"
+          # - rust: "1.55.0"
           #   args: ""
 
     env:
@@ -55,7 +55,7 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
-  wasm:
+  wasm32:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -66,6 +66,12 @@ jobs:
           - rust: nightly
             args: "--features nightly --target=wasm32-unknown-unknown"
             RUSTFLAGS: "-C target-feature=+simd128"
+          - rust: nightly
+            args: "--target=wasm32-unknown-unknown"
+            RUSTFLAGS: "-C target-feature=+simd128"
+          - rust: nightly
+            args: "--target=wasm32-unknown-unknown"
+            RUSTFLAGS: ""            
     env:
       RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
     steps:
