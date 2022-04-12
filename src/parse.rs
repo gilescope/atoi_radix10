@@ -36,8 +36,8 @@ type Pie = ParseIntErrorPublic;
 pub trait FromStrRadixHelper:
     PartialOrd + Copy + Add<Output = Self> + Mul<Output = Self> + Sub<Output = Self> + 'static
 {
-    const MINIMUM: Self;
-    const BITS_COUNT: u32;
+    const MIN: Self;
+    const BITS: u32;
     const FIRST_SIG: u8;
     const TAIL: Self;
     const TREE: &'static [Self];
@@ -55,10 +55,10 @@ pub trait FromStrRadixHelper:
 
 macro_rules! doit {
     ($($t:ty,$tr:expr,$chars:literal,$first_sig:literal,$tail:literal)*) => ($(impl FromStrRadixHelper for $t {
-        const MINIMUM: Self = Self::MIN;
+        const MIN: Self = Self::MIN;
         const FIRST_SIG: u8 = $first_sig;
         const TAIL: Self = $tail;
-        const BITS_COUNT: u32 = Self::BITS;
+        const BITS: u32 = Self::BITS;
         const TREE: &'static[Self] = $tr;
         const CHARS: usize = $chars;
         #[inline(always)]
@@ -201,7 +201,7 @@ pub fn parse<T>(mut s: &[u8]) -> Result<T, Pie>
 where
     T: FromStrRadixHelper,
 {
-    let is_signed_ty = T::from_u32(0) > T::MINIMUM;
+    let is_signed_ty = T::from_u32(0) > T::MIN;
     let mut checked: Option<(u8, T)> = None;
     if let Some(val) = s.get(0) {
         let mut val = val.wrapping_sub(b'0');
@@ -224,7 +224,7 @@ where
                                 }
                                 res = unsafe { val_t * *T::TREE.get_unchecked(s.len()) };
                             }
-                            if s.len() >= 2 && T::BITS_COUNT >= 8 {
+                            if s.len() >= 2 && T::BITS >= 8 {
                                 // Align so that s ptr ends b00
                                 if s.as_ptr() as usize & 2 != 0 {
                                     let val = T::from_u16(unsafe { parse_2_chars(s) }?);
@@ -235,7 +235,7 @@ where
                                     }
                                     res = unsafe { res + (*T::TREE.get_unchecked(s.len()) * val) };
                                 }
-                                if s.len() >= 4 && T::BITS_COUNT >= 16 {
+                                if s.len() >= 4 && T::BITS >= 16 {
                                     // Align so that s ptr ends b000
                                     if s.as_ptr() as usize & 4 != 0 {
                                         let val = T::from_u16(unsafe { parse_4_chars(s) }?);
@@ -248,7 +248,7 @@ where
                                             res + (*T::TREE.get_unchecked(s.len()) * val)
                                         };
                                     }
-                                    if s.len() >= 8 && T::BITS_COUNT >= 32 {
+                                    if s.len() >= 8 && T::BITS >= 32 {
                                         // Align so that s ptr ends b0000
                                         if s.as_ptr() as usize & 8 != 0 {
                                             let val = T::from_u32(unsafe { parse_8_chars(s) }?);
@@ -261,7 +261,7 @@ where
                                                 res + (*T::TREE.get_unchecked(s.len()) * val)
                                             };
                                         }
-                                        if s.len() >= 16 && T::BITS_COUNT >= 64 {
+                                        if s.len() >= 16 && T::BITS >= 64 {
                                             // Align so that s ptr ends b00000
                                             if s.as_ptr() as usize & 16 != 0 {
                                                 let val =
@@ -278,7 +278,7 @@ where
 
                                             // Did you see what we did there? at this point,
                                             // s is aligned for reading as a u128.
-                                            if s.len() >= 32 && T::BITS_COUNT >= 128 {
+                                            if s.len() >= 32 && T::BITS >= 128 {
                                                 let val =
                                                     T::from_u128(unsafe { parse_32_chars(s) }?);
                                                 s = unsafe { s.get_unchecked(32..) };
@@ -410,7 +410,7 @@ where
                                     return Err(invalid!());
                                 };
                             }
-                            if s.len() >= 2 && T::BITS_COUNT >= 8 {
+                            if s.len() >= 2 && T::BITS >= 8 {
                                 // Align so that s ptr ends b00
                                 if s.as_ptr() as usize & 2 != 0 {
                                     let val = unsafe { T::from_u16(parse_2_chars(s)?) };
@@ -421,7 +421,7 @@ where
                                     }
                                     res = unsafe { res - *T::TREE.get_unchecked(s.len()) * val };
                                 }
-                                if s.len() >= 4 && T::BITS_COUNT >= 16 {
+                                if s.len() >= 4 && T::BITS >= 16 {
                                     // Align so that s ptr ends b000
                                     if s.as_ptr() as usize & 4 != 0 {
                                         let val = unsafe { T::from_u16(parse_4_chars(s)?) };
@@ -433,7 +433,7 @@ where
                                         res =
                                             unsafe { res - *T::TREE.get_unchecked(s.len()) * val };
                                     }
-                                    if s.len() >= 8 && T::BITS_COUNT >= 32 {
+                                    if s.len() >= 8 && T::BITS >= 32 {
                                         // Align so that s ptr ends b0000
                                         if s.as_ptr() as usize & 8 != 0 {
                                             let val = unsafe { T::from_u32(parse_8_chars(s)?) };
@@ -446,7 +446,7 @@ where
                                                 res - *T::TREE.get_unchecked(s.len()) * val
                                             };
                                         }
-                                        if s.len() >= 16 && T::BITS_COUNT >= 64 {
+                                        if s.len() >= 16 && T::BITS >= 64 {
                                             // Align so that s ptr ends b00000
                                             if s.as_ptr() as usize & 16 != 0 {
                                                 let val =
@@ -462,7 +462,7 @@ where
                                             }
 
                                             // s is aligned so that we can read u128
-                                            if s.len() >= 32 && T::BITS_COUNT >= 128 {
+                                            if s.len() >= 32 && T::BITS >= 128 {
                                                 let val =
                                                     T::from_u128(unsafe { parse_32_chars(s) }?);
                                                 s = &s[32..];
@@ -531,7 +531,7 @@ where
                         }
                         return if let Some((chk, chk_t)) = checked {
                             if unlikely!(res == T::TAIL && chk == T::FIRST_SIG) {
-                                return Ok(T::MINIMUM);
+                                return Ok(T::MIN);
                             }
                             res.sub_checked(chk_t).ok_or(neg_overflow!())
                         } else {
