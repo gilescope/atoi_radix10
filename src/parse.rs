@@ -347,8 +347,8 @@ where
                     if l == T::CHARS && val <= T::FIRST_SIG {
                         // SAFETY: mul is in range as `checked` is constrained to <= T::FIRST_SIG
                         let v = T::from_u8(val);
-                        let mult = unsafe { v * *T::TREE.get_unchecked(T::CHARS - 1) };
-                        let val_next = unsafe { s.get_unchecked(1) };
+                        let mult = v * T::TREE[T::CHARS - 1];
+                        let val_next = s[1];
                         checked = Some((val, mult));
                         val = val_next.wrapping_sub(b'0');
                         s = &s[1..];
