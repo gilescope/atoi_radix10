@@ -1079,7 +1079,7 @@ mod tests {
         let mut s = heapless::String::<N>::new();
         for c in &data {
             if (*c as char).len_utf8() != 1 {
-                return
+                return;
             }
             s.push(*c as char).unwrap();
         }
