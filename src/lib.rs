@@ -1064,6 +1064,12 @@ mod tests {
         ]);
     }
 
+    #[wasm_bindgen_test]
+    #[test]
+    fn test_fuzz7() {
+        check::<u64, 3>([45, 57, 166]);
+    }
+
     fn check<T, const N: usize>(data: [u8; N])
     where
         T: FromStrRadixHelper,
@@ -1072,6 +1078,9 @@ mod tests {
     {
         let mut s = heapless::String::<N>::new();
         for c in &data {
+            if (*c as char).len_utf8() != 1 {
+                return
+            }
             s.push(*c as char).unwrap();
         }
         //if let Ok(s) = heapless::String<N>::from_utf8(data.to_vec()) {

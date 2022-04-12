@@ -1,5 +1,4 @@
 #![no_main]
-#![feature(int_error_matching)]
 use std::fmt::Debug;
 use std::str::FromStr;
 
