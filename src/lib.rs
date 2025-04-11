@@ -552,7 +552,7 @@ pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
 
     let chunk1 = unsafe {
         let ptr = s.as_ptr() as usize;
-        debug_assert!(ptr as usize % core::mem::size_of::<u32>() == 0);
+        debug_assert!(ptr % core::mem::size_of::<u32>() == 0);
         // (if ptr % size == 0 {
         *(s.as_ptr() as *const u32)
         // } else {

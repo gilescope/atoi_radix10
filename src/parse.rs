@@ -203,7 +203,7 @@ where
 {
     let is_signed_ty = T::from_u32(0) > T::MIN;
     let mut checked: Option<(u8, T)> = None;
-    if let Some(val) = s.get(0) {
+    if let Some(val) = s.first() {
         let mut val = val.wrapping_sub(b'0');
         loop {
             if likely!(val <= 9) {
@@ -329,7 +329,7 @@ where
                                 }
                             }
 
-                            if let Some(val) = s.get(0) {
+                            if let Some(val) = s.first() {
                                 let val = val.wrapping_sub(b'0');
                                 if val > 9 {
                                     return Err(invalid!());
@@ -360,7 +360,7 @@ where
                         val = b'0';
                         while val == b'0' {
                             s = &s[1..];
-                            val = match s.get(0) {
+                            val = match s.first() {
                                 Some(val) => *val,
                                 None => return Ok(T::from_u8(0)),
                             }
@@ -495,7 +495,7 @@ where
                                     res = res - T::TREE[s.len()] * val;
                                 }
                             }
-                            if let Some(val) = s.get(0) {
+                            if let Some(val) = s.first() {
                                 let val = val.wrapping_sub(b'0');
                                 res = res - T::from_u8(val);
                                 if unlikely!(val > 9) {
@@ -512,7 +512,7 @@ where
                             Ok(res)
                         };
                     }
-                    val = if let Some(val) = s.get(0) {
+                    val = if let Some(val) = s.first() {
                         *val
                     } else {
                         return Err(empty!());
@@ -526,7 +526,7 @@ where
                         val = b'0';
                         while val == b'0' {
                             s = &s[1..];
-                            val = match s.get(0) {
+                            val = match s.first() {
                                 Some(val) => *val,
                                 None => return Ok(T::from_u8(0)),
                             }
@@ -537,7 +537,7 @@ where
                 }
             } else if val == PLUS {
                 s = &s[1..];
-                val = match s.get(0) {
+                val = match s.first() {
                     Some(value) => {
                         let value = value.wrapping_sub(b'0');
                         if likely!(value <= 9) {
