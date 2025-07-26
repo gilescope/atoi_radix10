@@ -1078,7 +1078,7 @@ mod tests {
     fn test_fuzz9() {
         check::<u64, 3>([45, 49, 170]);
     }
-  
+
     fn test_invalid_after_plus() {
         assert_eq!(
             parse::<u32>(b"+/"),
