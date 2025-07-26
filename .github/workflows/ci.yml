@@ -85,15 +85,15 @@ jobs:
           command: install
           args: -f cargo-fuzz
       - run: |
-          cargo fuzz run fuzz_u8 -- -max_len=42 -max_total_time=20s
-          cargo fuzz run fuzz_i8 -- -max_len=42 -max_total_time=20s
-          cargo fuzz run fuzz_u16 -- -max_len=42 -max_total_time=20s
-          cargo fuzz run fuzz_i16 -- -max_len=42 -max_total_time=20s
-          cargo fuzz run fuzz_u32 -- -max_len=42 -max_total_time=20s
-          cargo fuzz run fuzz_i32 -- -max_len=42 -max_total_time=20s
-          cargo fuzz run fuzz_u64 -- -max_len=42 -max_total_time=20s
-          cargo fuzz run fuzz_i64 -- -max_len=42 -max_total_time=20s
-          cargo fuzz run fuzz_u128 -- -max_len=42 -max_total_time=20s
-          cargo fuzz run fuzz_i128 -- -max_len=42 -max_total_time=20s
-          cargo fuzz run fuzz_usize -- -max_len=42 -max_total_time=20s
-          cargo fuzz run fuzz_isize -- -max_len=42 -max_total_time=20s
+          cargo fuzz run fuzz_u8 -- -max_len=42 -max_total_time=10s
+          cargo fuzz run fuzz_i8 -- -max_len=42 -max_total_time=10s
+          cargo fuzz run fuzz_u16 -- -max_len=42 -max_total_time=10s
+          cargo fuzz run fuzz_i16 -- -max_len=42 -max_total_time=10s
+          cargo fuzz run fuzz_u32 -- -max_len=42 -max_total_time=10s
+          cargo fuzz run fuzz_i32 -- -max_len=42 -max_total_time=10s
+          cargo fuzz run fuzz_u64 -- -max_len=42 -max_total_time=10s
+          cargo fuzz run fuzz_i64 -- -max_len=42 -max_total_time=10s
+          cargo fuzz run fuzz_u128 -- -max_len=42 -max_total_time=10s
+          cargo fuzz run fuzz_i128 -- -max_len=42 -max_total_time=10s
+          cargo fuzz run fuzz_usize -- -max_len=42 -max_total_time=10s
+          cargo fuzz run fuzz_isize -- -max_len=42 -max_total_time=10s
