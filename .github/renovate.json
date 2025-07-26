@@ -4,6 +4,10 @@
     {
       "matchManagers": ["cargo"],
       "groupName": "cargo dependencies"
+    },
+    {
+      "managers": ["github-actions"],
+      "pinVersions": true
     }
   ]
 }
