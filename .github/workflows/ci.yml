@@ -68,7 +68,7 @@ jobs:
           components: miri
 
       - run: cargo miri test
-  fuzz:
+  fuzz-unsigned:
     runs-on: ubuntu-latest
 
     steps:
@@ -86,14 +86,32 @@ jobs:
           args: -f cargo-fuzz
       - run: |
           cargo fuzz run fuzz_u8 -- -max_len=42 -max_total_time=10s
-          cargo fuzz run fuzz_i8 -- -max_len=42 -max_total_time=10s
           cargo fuzz run fuzz_u16 -- -max_len=42 -max_total_time=10s
-          cargo fuzz run fuzz_i16 -- -max_len=42 -max_total_time=10s
           cargo fuzz run fuzz_u32 -- -max_len=42 -max_total_time=10s
-          cargo fuzz run fuzz_i32 -- -max_len=42 -max_total_time=10s
           cargo fuzz run fuzz_u64 -- -max_len=42 -max_total_time=10s
-          cargo fuzz run fuzz_i64 -- -max_len=42 -max_total_time=10s
           cargo fuzz run fuzz_u128 -- -max_len=42 -max_total_time=10s
-          cargo fuzz run fuzz_i128 -- -max_len=42 -max_total_time=10s
           cargo fuzz run fuzz_usize -- -max_len=42 -max_total_time=10s
+
+  fuzz-sign:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: -f cargo-fuzz
+      - run: |
+          cargo fuzz run fuzz_i8 -- -max_len=42 -max_total_time=10s
+          cargo fuzz run fuzz_i16 -- -max_len=42 -max_total_time=10s
+          cargo fuzz run fuzz_i32 -- -max_len=42 -max_total_time=10s
+          cargo fuzz run fuzz_i64 -- -max_len=42 -max_total_time=10s
+          cargo fuzz run fuzz_i128 -- -max_len=42 -max_total_time=10s
           cargo fuzz run fuzz_isize -- -max_len=42 -max_total_time=10s
