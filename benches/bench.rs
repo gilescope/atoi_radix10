@@ -1,7 +1,7 @@
-use std::hint::black_box;
 use criterion::BenchmarkId;
 use criterion::Throughput;
 use criterion::{criterion_group, criterion_main, Criterion};
+use std::hint::black_box;
 //use criterion_cycles_per_byte::CyclesPerByte;
 use paste::paste;
 
