@@ -4,29 +4,17 @@ use super::{
 };
 use core::ops::{Add, Mul, Sub};
 
-#[cfg(feature = "core_intrinsics")]
-macro_rules! likely {
-    ($e:expr) => {
-        core::intrinsics::likely($e)
-    };
-}
-#[cfg(not(feature = "core_intrinsics"))]
 macro_rules! likely {
     ($e:expr) => {
         $e
+        //TODO: use core::intrinsics::likely($e) when stable
     };
 }
 
-#[cfg(feature = "core_intrinsics")]
-macro_rules! unlikely {
-    ($e:expr) => {
-        core::intrinsics::unlikely($e)
-    };
-}
-#[cfg(not(feature = "core_intrinsics"))]
 macro_rules! unlikely {
     ($e:expr) => {
         $e
+        //TODO: use core::intrinsics::unlikely($e) when stable
     };
 }
 

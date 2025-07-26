@@ -1,6 +1,5 @@
 #![no_std]
 //#![cfg_attr(all(feature = "nightly", feature = "simd"), feature(stdsimd))]
-#![cfg_attr(feature = "nightly", feature(core_intrinsics))]
 #![allow(clippy::inconsistent_digit_grouping)]
 #![warn(unsafe_op_in_unsafe_fn)]
 #[macro_use]
@@ -441,7 +440,6 @@ pub unsafe fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
     const ASCII_ZEROS: u64 = 0x3030303030303030u64;
     let ptr = s.as_ptr();
     let chunk = unsafe {
-        
         debug_assert!(ptr as usize % core::mem::size_of::<u64>() == 0);
         // (if ptr as usize % core::mem::size_of::<u64>() == 0 {
         *(ptr as *const u64)

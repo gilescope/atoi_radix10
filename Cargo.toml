@@ -12,9 +12,7 @@ repository = "https://github.com/gilescope/atoi_radix10"
 
 [features]
 default = []
-nightly = []
 simd = []
-core_intrinsics = []
 
 [dependencies]
 # log = "*"
