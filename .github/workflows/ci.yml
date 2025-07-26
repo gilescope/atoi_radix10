@@ -21,29 +21,33 @@ jobs:
           cargo test --release
           cargo clippy -- -D warnings
 
-  wasm32:
+  wasi:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        RUSTFLAGS: [""]
-        rust: ["1.87.0"]
-        args: ["--target=wasm32-unknown-unknown"]
-        include:
-          - rust: 1.87.0
-            args: "--target=wasm32-unknown-unknown"
-            RUSTFLAGS: "-C target-feature=+simd128"
-          - rust: 1.87.0
-            args: "--target=wasm32-unknown-unknown"
-            RUSTFLAGS: ""
-    env:
-      RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
     steps:
       - uses: actions/checkout@v2
 
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: ${{ matrix.rust }}
+          toolchain: stable
+          override: true
+          target: wasm32-wasi
+          components: rustfmt
+
+      - run: |
+         cargo install wasm-pack
+         wasm-pack test --node
+  wasm32:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
           override: true
           target: wasm32-unknown-unknown
           components: rustfmt
@@ -51,8 +55,6 @@ jobs:
       - run: |
          cargo install wasm-pack
          wasm-pack test --node
-
-      - run: cargo test ${{ matrix.args }}
   miri:
     runs-on: ubuntu-latest
     env:
