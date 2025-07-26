@@ -374,10 +374,11 @@ where
                             // Align so that s ptr ends b0
                             if s.as_ptr() as usize & 1 != 0 {
                                 let val = s[0].wrapping_sub(b'0');
-                                res = res - T::from_u8(val);
                                 if likely!(val <= 9 && l == 1) {
+                                    res = res - T::from_u8(val);
                                     return Ok(res);
                                 } else if likely!(val <= 9) {
+                                    res = res - T::from_u8(val);
                                     s = &s[1..];
                                     res = res * T::TREE[s.len()];
                                 } else {
@@ -485,10 +486,10 @@ where
                             }
                             if let Some(val) = s.first() {
                                 let val = val.wrapping_sub(b'0');
-                                res = res - T::from_u8(val);
                                 if unlikely!(val > 9) {
                                     return Err(invalid!());
                                 };
+                                res = res - T::from_u8(val);
                             }
                         }
                         return if let Some((chk, chk_t)) = checked {
