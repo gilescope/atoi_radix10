@@ -31,7 +31,7 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-          target: wasm32-wasi
+          target: wasm32-wasip1
           components: rustfmt
 
       - run: |
