@@ -35,7 +35,7 @@ jobs:
       #     command: clippy
       #     args: -- -D warnings
       - run: |
-          clippy -- -D warnings
+          cargo clippy -- -D warnings
   wasm32:
     runs-on: ubuntu-latest
     strategy:
@@ -83,10 +83,8 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: "1.55.0"
-          # toolchain: "nightly"
+          toolchain: "nightly"
           override: true
-          # target: mips64-unknown-linux-gnuabi64
           components: miri
 
       - uses: actions-rs/cargo@v1
