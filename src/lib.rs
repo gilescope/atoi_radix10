@@ -1070,6 +1070,23 @@ mod tests {
         check::<u64, 3>([45, 57, 166]);
     }
 
+    #[wasm_bindgen_test]
+    #[test]
+    fn test_invalid_after_plus() {
+        assert_eq!(
+            parse::<u32>(b"+/"),
+            Err(ParseIntErrorPublic {
+                kind: IntErrorKind::InvalidDigit,
+            })
+        );
+        assert_eq!(
+            parse::<u32>(b"+a"),
+            Err(ParseIntErrorPublic {
+                kind: IntErrorKind::InvalidDigit,
+            })
+        );
+    }
+
     fn check<T, const N: usize>(data: [u8; N])
     where
         T: FromStrRadixHelper,
