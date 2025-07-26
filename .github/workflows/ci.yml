@@ -48,10 +48,9 @@ jobs:
           target: wasm32-unknown-unknown
           components: rustfmt
 
-      - uses: jetli/wasm-bindgen-action@v0.1.0
-        with:
-          # Optional version of wasm-bindgen to install(eg. '0.2.68', 'latest')
-          version: '0.2.74'
+      - run: |
+         cargo install wasm-pack
+         wasm-pack test --node
 
       - run: cargo test ${{ matrix.args }}
   miri:
