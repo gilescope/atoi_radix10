@@ -23,6 +23,8 @@ jobs:
 
   wasi:
     runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: "--cfg=wasm_js"
     steps:
       - uses: actions/checkout@v2
 
@@ -39,6 +41,8 @@ jobs:
          wasm-pack test --node
   wasm32:
     runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: "--cfg=wasm_js"
     steps:
       - uses: actions/checkout@v2
 
