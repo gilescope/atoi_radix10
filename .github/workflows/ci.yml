@@ -83,9 +83,10 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: "nightly"
+          toolchain: "1.55.0"
+          # toolchain: "nightly"
           override: true
-          target: mips64-unknown-linux-gnuabi64
+          # target: mips64-unknown-linux-gnuabi64
           components: miri
 
       - uses: actions-rs/cargo@v1
