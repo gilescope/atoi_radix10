@@ -1,4 +1,4 @@
-use criterion::black_box;
+use std::hint::black_box;
 use criterion::BenchmarkId;
 use criterion::Throughput;
 use criterion::{criterion_group, criterion_main, Criterion};
