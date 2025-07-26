@@ -39,8 +39,6 @@ jobs:
          wasm-pack test --node
   wasm32:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
     steps:
       - uses: actions/checkout@v2
 
