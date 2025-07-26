@@ -24,7 +24,7 @@ jobs:
   wasi:
     runs-on: ubuntu-latest
     env:
-      RUSTFLAGS: "--cfg=wasm_js"
+      RUSTFLAGS: "--cfg getrandom_backend='wasm_js'"
     steps:
       - uses: actions/checkout@v2
 
@@ -42,7 +42,7 @@ jobs:
   wasm32:
     runs-on: ubuntu-latest
     env:
-      RUSTFLAGS: "--cfg=wasm_js"
+      RUSTFLAGS: "--cfg getrandom_backend='wasm_js'"
     steps:
       - uses: actions/checkout@v2
 
