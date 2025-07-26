@@ -1,6 +1,8 @@
 on: push
 
 name: Continuous integration
+permissions:
+  contents: read
 
 jobs:
   ci:
