@@ -26,16 +26,21 @@ simd = []
 # Creating good test names:
 paste = "1.0"
 # Benchmarking:
-criterion = {version="0.3", features=["html_reports"]}
 #criterion-cycles-per-byte = "0.1"
 # These are for creating test strings (in no_std)
-heapless = "0.7"
-numtoa = "0.2.4"
+heapless = "0.8"
+numtoa = "0.3.0"
 # Wasm testing:
 wasm-bindgen-test = "0.3"
 # We need to enable this as well for wasm:
-getrandom = { version = "0.2", features = ["js"] }
-rand = "0.8"
+getrandom = "0.3"
+rand = "0.9"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = {version = "0.3", features = ["wasm_js"]}
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+criterion = {version="0.7", features=["html_reports"]}
 
 [[bench]]
 name = "bench"
