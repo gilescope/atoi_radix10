@@ -5,99 +5,57 @@ name: Continuous integration
 jobs:
   ci:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        rust: ["nightly"]
-        args: [""]
-        RUSTFLAGS: [""]
-        include:
-          # beta and stable have to wait till 1.55
-          - rust: nightly
-            args: ""
-          - rust: nightly
-            args: --features nightly
-          - rust: nightly
-            args: --features nightly,simd
-          - rust: nightly
-            args: --features nightly,simd
-            RUSTFLAGS: "-C target-cpu=native"
-          # - rust: "1.55.0"
-          #   args: ""
-
-    env:
-      RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
     steps:
       - uses: actions/checkout@v2
 
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: ${{ matrix.rust }}
+          toolchain: "1.87.0"
           override: true
           components: rustfmt, clippy
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+      - run: |
+          cargo fmt --all -- --check
+          cargo build --all-targets --release
+          cargo test --release
+          cargo clippy -- -D warnings
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: ${{ matrix.args }} --all-targets --release
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: ${{ matrix.args }}
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
-  wasm32:
+  wasi:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        RUSTFLAGS: [""]
-        rust: ["nightly"]
-        args: ["--features nightly --target=wasm32-unknown-unknown"]
-        include:
-          - rust: nightly
-            args: "--features nightly --target=wasm32-unknown-unknown"
-            RUSTFLAGS: "-C target-feature=+simd128"
-          - rust: nightly
-            args: "--target=wasm32-unknown-unknown"
-            RUSTFLAGS: "-C target-feature=+simd128"
-          - rust: nightly
-            args: "--target=wasm32-unknown-unknown"
-            RUSTFLAGS: ""            
-    env:
-      RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
     steps:
       - uses: actions/checkout@v2
 
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: ${{ matrix.rust }}
+          toolchain: stable
+          override: true
+          target: wasm32-wasip1
+          components: rustfmt
+
+      - run: |
+         cargo install wasm-pack
+         wasm-pack test --node
+  wasm32:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
           override: true
           target: wasm32-unknown-unknown
           components: rustfmt
 
-      - uses: jetli/wasm-bindgen-action@v0.1.0
-        with:
-          # Optional version of wasm-bindgen to install(eg. '0.2.68', 'latest')
-          version: '0.2.74'
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: ${{ matrix.args }}
+      - run: |
+         cargo install wasm-pack
+         wasm-pack test --node
   miri:
     runs-on: ubuntu-latest
     env:
-      MIRIFLAGS: ""
       RUSTFLAGS: ""
     steps:
       - uses: actions/checkout@v2
@@ -107,13 +65,9 @@ jobs:
           profile: minimal
           toolchain: "nightly"
           override: true
-          target: mips64-unknown-linux-gnuabi64
           components: miri
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: miri
-          args: test --features=nightly
+      - run: cargo miri test
   fuzz:
     runs-on: ubuntu-latest
 
@@ -130,64 +84,16 @@ jobs:
         with:
           command: install
           args: -f cargo-fuzz
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fuzz
-          args: run fuzz_u8 -- -max_len=42 -max_total_time=20s
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fuzz
-          args: run fuzz_i8 -- -max_len=42 -max_total_time=20s
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fuzz
-          args: run fuzz_u16 -- -max_len=42 -max_total_time=20s
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fuzz
-          args: run fuzz_i16 -- -max_len=42 -max_total_time=20s
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fuzz
-          args: run fuzz_u32 -- -max_len=42 -max_total_time=20s
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fuzz
-          args: run fuzz_i32 -- -max_len=42 -max_total_time=20s
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fuzz
-          args: run fuzz_u64 -- -max_len=42 -max_total_time=20s
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fuzz
-          args: run fuzz_i64 -- -max_len=42 -max_total_time=20s
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fuzz
-          args: run fuzz_u128 -- -max_len=42 -max_total_time=20s
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fuzz
-          args: run fuzz_i128 -- -max_len=42 -max_total_time=20s
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fuzz
-          args: run fuzz_usize -- -max_len=42 -max_total_time=20s
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fuzz
-          args: run fuzz_isize -- -max_len=42 -max_total_time=20s
-
+      - run: |
+          cargo fuzz run fuzz_u8 -- -max_len=42 -max_total_time=20s
+          cargo fuzz run fuzz_i8 -- -max_len=42 -max_total_time=20s
+          cargo fuzz run fuzz_u16 -- -max_len=42 -max_total_time=20s
+          cargo fuzz run fuzz_i16 -- -max_len=42 -max_total_time=20s
+          cargo fuzz run fuzz_u32 -- -max_len=42 -max_total_time=20s
+          cargo fuzz run fuzz_i32 -- -max_len=42 -max_total_time=20s
+          cargo fuzz run fuzz_u64 -- -max_len=42 -max_total_time=20s
+          cargo fuzz run fuzz_i64 -- -max_len=42 -max_total_time=20s
+          cargo fuzz run fuzz_u128 -- -max_len=42 -max_total_time=20s
+          cargo fuzz run fuzz_i128 -- -max_len=42 -max_total_time=20s
+          cargo fuzz run fuzz_usize -- -max_len=42 -max_total_time=20s
+          cargo fuzz run fuzz_isize -- -max_len=42 -max_total_time=20s

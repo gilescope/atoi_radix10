@@ -1,6 +1,5 @@
 #![no_std]
 //#![cfg_attr(all(feature = "nightly", feature = "simd"), feature(stdsimd))]
-#![cfg_attr(feature = "nightly", feature(core_intrinsics))]
 #![allow(clippy::inconsistent_digit_grouping)]
 #![warn(unsafe_op_in_unsafe_fn)]
 #[macro_use]
@@ -441,7 +440,6 @@ pub unsafe fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
     const ASCII_ZEROS: u64 = 0x3030303030303030u64;
     let ptr = s.as_ptr();
     let chunk = unsafe {
-        
         debug_assert!(ptr as usize % core::mem::size_of::<u64>() == 0);
         // (if ptr as usize % core::mem::size_of::<u64>() == 0 {
         *(ptr as *const u64)
@@ -551,8 +549,7 @@ pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
     const ASCII_ZEROS: u32 = 0x30303030u32;
     let ptr = s.as_ptr() as usize;
     let chunk1 = unsafe {
-        
-        debug_assert!(ptr as usize % core::mem::size_of::<u32>() == 0);
+        debug_assert!(ptr % core::mem::size_of::<u32>() == 0);
         // (if ptr % size == 0 {
         *(s.as_ptr() as *const u32)
         // } else {
@@ -1072,6 +1069,16 @@ mod tests {
 
     #[wasm_bindgen_test]
     #[test]
+    fn test_fuzz8() {
+        check::<i8, 6>([45, 48, 48, 48, 48, 176]);
+    }
+
+    #[wasm_bindgen_test]
+    #[test]
+    fn test_fuzz9() {
+        check::<u64, 3>([45, 49, 170]);
+    }
+  
     fn test_invalid_after_plus() {
         assert_eq!(
             parse::<u32>(b"+/"),

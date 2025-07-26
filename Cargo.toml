@@ -2,7 +2,7 @@
 name = "atoi_radix10"
 version = "0.0.1"
 authors = ["Giles Cope <gilescope@gmail.com>", "Ivan Tham <pickfire@riseup.net>"]
-edition = "2018"
+edition = "2021"
 description = "Parse strings as base 10 integers quickly (especially u64/u128)"
 license = "MIT OR Apache-2.0"
 keywords = ["parse", "atoi", "conversion", "integer"]
@@ -12,7 +12,6 @@ repository = "https://github.com/gilescope/atoi_radix10"
 
 [features]
 default = []
-nightly = []
 simd = []
 
 [dependencies]
