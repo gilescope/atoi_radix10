@@ -34,7 +34,7 @@ numtoa = "0.3.0"
 # Wasm testing:
 wasm-bindgen-test = "0.3"
 # We need to enable this as well for wasm:
-getrandom = { version = "0.3", features = ["js"] }
+getrandom = "0.3"
 rand = "0.9"
 
 [[bench]]
