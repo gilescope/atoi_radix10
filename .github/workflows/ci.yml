@@ -11,7 +11,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: "1.55.0"
+          toolchain: "1.87.0"
           override: true
           components: rustfmt, clippy
 
@@ -41,13 +41,13 @@ jobs:
     strategy:
       matrix:
         RUSTFLAGS: [""]
-        rust: ["1.55.0"]
+        rust: ["1.87.0"]
         args: ["--target=wasm32-unknown-unknown"]
         include:
-          - rust: 1.55.0
+          - rust: 1.87.0
             args: "--target=wasm32-unknown-unknown"
             RUSTFLAGS: "-C target-feature=+simd128"
-          - rust: 1.55.0
+          - rust: 1.87.0
             args: "--target=wasm32-unknown-unknown"
             RUSTFLAGS: ""
     env:

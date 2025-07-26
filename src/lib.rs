@@ -1067,6 +1067,12 @@ mod tests {
         check::<u64, 3>([45, 57, 166]);
     }
 
+    #[wasm_bindgen_test]
+    #[test]
+    fn test_fuzz8() {
+        check::<i8, 6>([45, 48, 48, 48, 48, 176]);
+    }
+
     fn check<T, const N: usize>(data: [u8; N])
     where
         T: FromStrRadixHelper,
