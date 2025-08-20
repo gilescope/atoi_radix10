@@ -28,7 +28,7 @@ paste = "1.0"
 # Benchmarking:
 #criterion-cycles-per-byte = "0.1"
 # These are for creating test strings (in no_std)
-heapless = "0.8"
+heapless = "0.9"
 numtoa = "0.3.0"
 # Wasm testing:
 wasm-bindgen-test = "0.3"
