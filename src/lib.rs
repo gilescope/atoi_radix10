@@ -845,10 +845,10 @@ mod tests {
                 fn [<test_random_ $target_type $postfix>]() {
                     use rand::prelude::*;
                     let mut s = [0u8; 42];
-                    let mut rng = rand::thread_rng();
+                    let mut rng = rand::rng();
 
                     for _ in 1..100_000 {
-                        let i = rng.gen::<$target_type>();
+                        let i = rng.random::<$target_type>();
                         let s = unsafe { core::str::from_utf8_unchecked(i.numtoa(10, &mut s)) };
                         let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                         assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);

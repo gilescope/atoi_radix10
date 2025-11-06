@@ -1,6 +1,8 @@
 on: push
 
 name: Continuous integration
+permissions:
+  contents: read
 
 jobs:
   ci:
@@ -36,7 +38,7 @@ jobs:
 
       - run: |
          cargo install wasm-pack
-         wasm-pack test --node
+         RUSTFLAGS='--cfg getrandom_backend="wasm_js"' wasm-pack test --node
   wasm32:
     runs-on: ubuntu-latest
     steps:
@@ -52,7 +54,7 @@ jobs:
 
       - run: |
          cargo install wasm-pack
-         wasm-pack test --node
+         RUSTFLAGS='--cfg getrandom_backend="wasm_js"' wasm-pack test --node
   miri:
     runs-on: ubuntu-latest
     env:
