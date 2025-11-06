@@ -6,9 +6,9 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  #v5.0.0
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@56751392ac172fc3a68fef1413f507767ed5f563  #v1.0.6
         with:
           profile: minimal
           toolchain: stable
@@ -24,9 +24,9 @@ jobs:
   wasi:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  #v5.0.0
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@56751392ac172fc3a68fef1413f507767ed5f563  #v1.0.6
         with:
           profile: minimal
           toolchain: stable
@@ -40,9 +40,9 @@ jobs:
   wasm32:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  #v5.0.0
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@56751392ac172fc3a68fef1413f507767ed5f563  #v1.0.6
         with:
           profile: minimal
           toolchain: stable
@@ -58,9 +58,9 @@ jobs:
     env:
       RUSTFLAGS: ""
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  #v5.0.0
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@56751392ac172fc3a68fef1413f507767ed5f563  #v1.0.6
         with:
           profile: minimal
           toolchain: "nightly"
@@ -72,9 +72,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  #v5.0.0
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@56751392ac172fc3a68fef1413f507767ed5f563  #v1.0.6
         with:
           profile: minimal
           toolchain: nightly
@@ -96,9 +96,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  #v5.0.0
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@56751392ac172fc3a68fef1413f507767ed5f563  #v1.0.6
         with:
           profile: minimal
           toolchain: nightly
