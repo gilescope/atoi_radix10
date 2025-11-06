@@ -335,7 +335,7 @@ pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
 
     let chunk = unsafe {
         let ptr = s.as_ptr();
-        debug_assert!(ptr as usize % core::mem::size_of::<u128>() == 0);
+        debug_assert!((ptr as usize).is_multiple_of(core::mem::size_of::<u128>()));
         *(ptr as *const u128)
         //    core::ptr::read_unaligned(ptr as *const u128)
         ^ ASCII_ZEROS
@@ -393,7 +393,7 @@ pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
         //     panic!("swoops16");
 
         //     core::ptr::read_unaligned(ptr as *const u128)
-        //}) 
+        //})
         ^ ASCII_ZEROS
     };
     let chunk_og = chunk;
@@ -440,7 +440,7 @@ pub unsafe fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
     const ASCII_ZEROS: u64 = 0x3030303030303030u64;
     let ptr = s.as_ptr();
     let chunk = unsafe {
-        debug_assert!(ptr as usize % core::mem::size_of::<u64>() == 0);
+        debug_assert!((ptr as usize).is_multiple_of(core::mem::size_of::<u64>()));
         // (if ptr as usize % core::mem::size_of::<u64>() == 0 {
         *(ptr as *const u64)
         // } else {
@@ -549,13 +549,13 @@ pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
     const ASCII_ZEROS: u32 = 0x30303030u32;
     let ptr = s.as_ptr() as usize;
     let chunk1 = unsafe {
-        debug_assert!(ptr % core::mem::size_of::<u32>() == 0);
+        debug_assert!(ptr.is_multiple_of(core::mem::size_of::<u32>()));
         // (if ptr % size == 0 {
         *(s.as_ptr() as *const u32)
         // } else {
         //     panic!("swoops4");
         //     core::ptr::read_unaligned(ptr as *const u32)
-        // }) 
+        // })
         ^ ASCII_ZEROS
     };
     // 1-byte mask trick (works on 4 pairs of single digits)
