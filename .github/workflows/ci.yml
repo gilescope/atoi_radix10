@@ -8,9 +8,9 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  #v5.0.0
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@56751392ac172fc3a68fef1413f507767ed5f563  #v1.0.6
         with:
           profile: minimal
           toolchain: stable
@@ -26,9 +26,9 @@ jobs:
   wasi:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  #v5.0.0
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@56751392ac172fc3a68fef1413f507767ed5f563  #v1.0.6
         with:
           profile: minimal
           toolchain: stable
@@ -42,9 +42,9 @@ jobs:
   wasm32:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  #v5.0.0
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@56751392ac172fc3a68fef1413f507767ed5f563  #v1.0.6
         with:
           profile: minimal
           toolchain: stable
@@ -60,9 +60,9 @@ jobs:
     env:
       RUSTFLAGS: ""
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  #v5.0.0
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@56751392ac172fc3a68fef1413f507767ed5f563  #v1.0.6
         with:
           profile: minimal
           toolchain: "nightly"
@@ -74,15 +74,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  #v5.0.0
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@56751392ac172fc3a68fef1413f507767ed5f563  #v1.0.6
         with:
           profile: minimal
           toolchain: nightly
           override: true
 
-      - uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@b0651d9f4d4983fd4cc8e94d927bdc0bb5566667  #v1.0.1
         with:
           command: install
           args: -f cargo-fuzz
@@ -98,15 +98,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  #v5.0.0
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@56751392ac172fc3a68fef1413f507767ed5f563  #v1.0.6
         with:
           profile: minimal
           toolchain: nightly
           override: true
 
-      - uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@b0651d9f4d4983fd4cc8e94d927bdc0bb5566667  #v1.0.1
         with:
           command: install
           args: -f cargo-fuzz
