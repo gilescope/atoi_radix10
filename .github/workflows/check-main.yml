@@ -13,9 +13,16 @@ jobs:
       - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd  #v8.0.0
         with:
           script: |
-            const {owner, repo} = context.repo, branch = 'main';
-            const {data: {sha}} = await github.rest.repos.getCommit({owner, repo, ref: branch});
-            const {data: {state}} = await github.rest.repos.getCombinedStatusForRef({owner, repo, ref: sha});
-            const checks = await github.paginate(github.rest.checks.listForRef, {owner, repo, ref: sha, filter: 'latest', per_page: 100});
-            const bad = checks.filter(c => c.status === 'completed' ? c.conclusion !== 'success' : true).map(c => c.name);
-            if (state !== 'success' || bad.length) core.setFailed(`main not green: combined=${state}; checks=${bad.join(', ') || 'ok'}`);
+            const { owner, repo } = context.repo;
+            const { data: { sha } } = await github.rest.repos.getCommit({ owner, repo, ref: 'main' });
+            const runs = await github.paginate(github.rest.checks.listForRef, {
+                owner, repo, ref: sha, filter: 'latest', per_page: 100
+            });
+            const failing = runs.filter(r => r.status === 'completed' && r.conclusion !== 'success');
+            if (failing.length) {
+                core.setFailed('main not green:\n' + failing
+                .map(r => `- ${r.name}: ${r.html_url || r.details_url}`)
+                .join('\n'));
+            } else {
+                core.info('main green');
+            }
