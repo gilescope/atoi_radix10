@@ -82,7 +82,7 @@ jobs:
           toolchain: nightly
           override: true
 
-      - uses: actions-rs/cargo@b0651d9f4d4983fd4cc8e94d927bdc0bb5566667  #v1.0.1
+      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505  # v1.0.3
         with:
           command: install
           args: -f cargo-fuzz
@@ -106,7 +106,7 @@ jobs:
           toolchain: nightly
           override: true
 
-      - uses: actions-rs/cargo@b0651d9f4d4983fd4cc8e94d927bdc0bb5566667  #v1.0.1
+      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505  # v1.0.3
         with:
           command: install
           args: -f cargo-fuzz
