@@ -2,5 +2,9 @@ import Proofs.Load
 import Proofs.Bytes
 import Proofs.Lanes
 import Proofs.DigitTest
+import Proofs.Fold
 import Proofs.Swar
 import Proofs.Swar4
+import Proofs.Swar8
+import Proofs.Swar16
+import Proofs.Swar32

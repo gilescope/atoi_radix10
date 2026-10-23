@@ -157,7 +157,9 @@ prove:
     FROM +tools
     WORKDIR /proofs
     COPY verification/lakefile.lean verification/lake-manifest.json verification/lean-toolchain ./
-    RUN lake exe cache get
+    # The backend the lakefile requires, at the path the manifest records (see
+    # verification/scripts/dev-link.sh for the same link on a laptop).
+    RUN ln -s /opt/aeneas/backends/lean .aeneas && lake exe cache get
     COPY +extract/AtoiRadix10.lean ./
     COPY +extract/AtoiRadix10 ./AtoiRadix10
     COPY verification/AtoiRadix10/FunsExternal.lean verification/AtoiRadix10/TypesExternal.lean ./AtoiRadix10/

@@ -15,3 +15,12 @@ open atoi_radix10
 
 /-- info: 'atoi_radix10.parse_4_chars_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms parse_4_chars_spec
+
+/-- info: 'atoi_radix10.parse_8_chars_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms parse_8_chars_spec
+
+/-- info: 'atoi_radix10.parse_16_chars_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms parse_16_chars_spec
+
+/-- info: 'atoi_radix10.parse_32_chars_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms parse_32_chars_spec
