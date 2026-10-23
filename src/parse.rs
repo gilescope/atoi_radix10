@@ -1,6 +1,6 @@
 use super::{
-    parse_16_chars, parse_2_chars, parse_32_chars, parse_4_chars, parse_8_chars, trees::*,
-    IntErrorKind, ParseIntErrorPublic, MINUS, PLUS,
+    load::misaligned, parse_16_chars, parse_2_chars, parse_32_chars, parse_4_chars, parse_8_chars,
+    trees::*, IntErrorKind, ParseIntErrorPublic, MINUS, PLUS,
 };
 use core::ops::{Add, Mul, Sub};
 
@@ -203,7 +203,7 @@ where
 
                         for _ in 0..1 {
                             // Align so that s ptr ends b0
-                            if s.as_ptr() as usize & 1 != 0 {
+                            if misaligned(s, 1) {
                                 let val_t = T::from_u8(val);
                                 s = &s[1..];
                                 if s.is_empty() {
@@ -214,7 +214,7 @@ where
                             }
                             if s.len() >= 2 && T::BITS >= 8 {
                                 // Align so that s ptr ends b00
-                                if s.as_ptr() as usize & 2 != 0 {
+                                if misaligned(s, 2) {
                                     let val = T::from_u16(unsafe { parse_2_chars(s) }?);
                                     s = &s[2..];
                                     if s.is_empty() {
@@ -225,7 +225,7 @@ where
                                 }
                                 if s.len() >= 4 && T::BITS >= 16 {
                                     // Align so that s ptr ends b000
-                                    if s.as_ptr() as usize & 4 != 0 {
+                                    if misaligned(s, 4) {
                                         let val = T::from_u16(unsafe { parse_4_chars(s) }?);
                                         s = &s[4..];
                                         if s.is_empty() {
@@ -236,7 +236,7 @@ where
                                     }
                                     if s.len() >= 8 && T::BITS >= 32 {
                                         // Align so that s ptr ends b0000
-                                        if s.as_ptr() as usize & 8 != 0 {
+                                        if misaligned(s, 8) {
                                             let val = T::from_u32(unsafe { parse_8_chars(s) }?);
                                             s = &s[8..];
                                             if s.is_empty() {
@@ -247,7 +247,7 @@ where
                                         }
                                         if s.len() >= 16 && T::BITS >= 64 {
                                             // Align so that s ptr ends b00000
-                                            if s.as_ptr() as usize & 16 != 0 {
+                                            if misaligned(s, 16) {
                                                 let val =
                                                     T::from_u64(unsafe { parse_16_chars(s) }?);
                                                 s = &s[16..];
@@ -372,7 +372,7 @@ where
                         let mut res = T::from_u8(0);
                         for _ in 0..1 {
                             // Align so that s ptr ends b0
-                            if s.as_ptr() as usize & 1 != 0 {
+                            if misaligned(s, 1) {
                                 let val = s[0].wrapping_sub(b'0');
                                 if likely!(val <= 9 && l == 1) {
                                     res = res - T::from_u8(val);
@@ -387,7 +387,7 @@ where
                             }
                             if s.len() >= 2 && T::BITS >= 8 {
                                 // Align so that s ptr ends b00
-                                if s.as_ptr() as usize & 2 != 0 {
+                                if misaligned(s, 2) {
                                     let val = unsafe { T::from_u16(parse_2_chars(s)?) };
                                     s = &s[2..];
                                     if s.is_empty() {
@@ -398,7 +398,7 @@ where
                                 }
                                 if s.len() >= 4 && T::BITS >= 16 {
                                     // Align so that s ptr ends b000
-                                    if s.as_ptr() as usize & 4 != 0 {
+                                    if misaligned(s, 4) {
                                         let val = unsafe { T::from_u16(parse_4_chars(s)?) };
                                         s = &s[4..];
                                         if s.is_empty() {
@@ -409,7 +409,7 @@ where
                                     }
                                     if s.len() >= 8 && T::BITS >= 32 {
                                         // Align so that s ptr ends b0000
-                                        if s.as_ptr() as usize & 8 != 0 {
+                                        if misaligned(s, 8) {
                                             let val = unsafe { T::from_u32(parse_8_chars(s)?) };
                                             s = &s[8..];
                                             if s.is_empty() {
@@ -420,7 +420,7 @@ where
                                         }
                                         if s.len() >= 16 && T::BITS >= 64 {
                                             // Align so that s ptr ends b00000
-                                            if s.as_ptr() as usize & 16 != 0 {
+                                            if misaligned(s, 16) {
                                                 let val =
                                                     unsafe { T::from_u64(parse_16_chars(s)?) };
                                                 s = &s[16..];
