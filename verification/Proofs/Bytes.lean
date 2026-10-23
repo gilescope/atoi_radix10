@@ -61,3 +61,11 @@ theorem byte_digit_masks : ∀ b < 256, 48 ≤ b → b ≤ 57 →
     (b ^^^ 48) &&& 240 = 0 ∧ ((b ^^^ 48) + 118) &&& 128 = 0 := by decide +kernel
 
 end atoi_radix10
+
+namespace atoi_radix10
+
+theorem byte_and255 : ∀ e < 256, e &&& 255 = e := by decide +kernel
+
+theorem byte_lt16_hi_zero : ∀ c < 16, c &&& 240 = 0 := by decide +kernel
+
+end atoi_radix10
