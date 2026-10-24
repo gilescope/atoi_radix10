@@ -15,13 +15,22 @@ built checkout of the fork's backend and `lake build` works as usual.
 
 ## What is extracted
 
-The shipped code. The four raw-pointer word loads and the address test behind the SWAR parsers
-live in `src/load.rs` as `#[inline(always)]` wrappers (the same instructions as before) and are
-left opaque to Charon (`--opaque` in the Earthfile), because Aeneas has no memory model to give
-them a meaning. `AtoiRadix10/FunsExternal.lean` models each load as the little-endian value of
-the first `N` bytes, failing when the slice is shorter. That model is the trust boundary: it says
+The shipped code, every function of the crate but the `usize`/`isize` instances (Lean keeps the
+platform word size abstract, 32 or 64 bits, so their 64-bit tables cannot be shown in range;
+their `parse` is the same generic code). The generic `parse<T>` needs the fork's
+`-join-early-exits`: without it Aeneas duplicates the code after each of its 71 `if`s and runs
+out of memory.
+
+The four raw-pointer word loads and the address test behind the SWAR parsers live in
+`src/load.rs` as `#[inline(always)]` wrappers (the same instructions as before) and are left
+opaque to Charon (`--opaque` in the Earthfile), because Aeneas has no memory model to give them
+a meaning. `AtoiRadix10/FunsExternal.lean` models each load as the little-endian value of the
+first `N` bytes, failing when the slice is shorter, and leaves `misaligned` uninterpreted, so
+every theorem holds whichever alignment branch runs. That model is the trust boundary: it says
 an aligned `N`-byte read on a little-endian target yields the little-endian value of the bytes,
 and it leaves the memory safety of the reads (length and alignment) to Miri and the fuzzers.
+The same file gives core's `Add`/`Sub`/`Mul` for the integer types Aeneas's meaning, which
+fails on overflow: a proof under it also shows no operation overflows.
 
 ## Proved (`Proofs/`)
 
@@ -47,8 +56,13 @@ digit lanes); `Proofs/DigitTest.lean` is the digit test (`c & 0xf0.. = 0` and
 `(c +wrap 0x76..) & 0x80.. = 0` exactly when every byte is a digit), with the per-byte facts
 decided over the 256 bytes.
 
-## Not yet
+## Stated, not yet proved (`Proofs/Parse.lean`)
 
-The generic `parse<T>` (`src/parse.rs`): Aeneas duplicated the code after each of its 71 `if`s
-and ran out of memory. The fork's `-join-early-exits` (branch `giles-join-early-exit`) fixes
-that by joining the branches that fall through; `parse` is the next target once the pin moves.
+`parse<T>`. `Proofs/Ref.lean` is the reference, core's `from_str_radix` over the integers
+(`stdParse lo hi`), and `ParseSpec` says `parse` agrees with it: the same `Ok` values, `Err`
+exactly where core errs, and the same error kind except where core says `InvalidDigit` (the crate
+answers `Empty` or an overflow on some such inputs; the fuzzer compares `Ok`/`Err` only). The
+theorem is to be proved for any `Faithful` instance of `FromStrRadixHelper`, the record of facts
+about the methods that `doit!` guarantees; `faithful_u8` proves them for `u8`. Of the seven
+extracted loops, the two leading-zero loops are proved (`Proofs/ParseLoops.lean`); the sign
+dispatch, the two length/first-digit pre-passes and the two SWAR blocks are the remaining work.

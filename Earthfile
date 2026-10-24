@@ -11,11 +11,12 @@ VERSION 0.8
 # behind the SWAR parsers (`src/load.rs`) are left opaque and modelled by hand, so every
 # theorem holds for the little-endian value of the bytes, whichever alignment branch runs.
 
-# Aeneas is a fork (Lean 4.34 backend, iterator and closure fixes); Charon is built at the
-# fork's `charon-pin`, so the LLBC producer and the OCaml AST Aeneas is compiled against are
-# the same commit. Bump AENEAS_COMMIT and CHARON_PIN together.
+# Aeneas is a fork (Lean 4.34 backend, iterator and closure fixes, and `-join-early-exits`,
+# branch giles-join-early-exit); Charon is built at the fork's `charon-pin`, so the LLBC
+# producer and the OCaml AST Aeneas is compiled against are the same commit. Bump
+# AENEAS_COMMIT and CHARON_PIN together.
 ARG --global AENEAS_REPO=https://github.com/gilescope/aeneas
-ARG --global AENEAS_COMMIT=fbd149f8693ee58a4bb0f78d447564e9c70496a1
+ARG --global AENEAS_COMMIT=0aa40e434d466384492a0b56eec59c129654030d
 ARG --global CHARON_REPO=https://github.com/gilescope/charon
 ARG --global CHARON_PIN=c3baf87fb05a44d6fdc1892b3d4b4ad7b9dd9d3b
 # Must match charon/rust-toolchain at CHARON_PIN and backends/lean/lean-toolchain at
@@ -108,18 +109,21 @@ llbc:
     COPY Cargo.toml Cargo.lock ./
     # benches/ only because Cargo.toml declares the bench target; it is not extracted.
     COPY --dir src benches ./
-    # What to extract. The default is the five SWAR chunk parsers, which the proofs cover. The
-    # generic `parse` needs the fork's join of early-exit branches (branch giles-join-early-exit):
-    # without it Aeneas duplicates the code after each of its 71 `if`s and runs out of memory.
-    # Pass --CHARON_FLAGS='' to extract the whole crate.
-    ARG CHARON_FLAGS="--start-from crate::parse_2_chars --start-from crate::parse_4_chars \
-        --start-from crate::parse_8_chars --start-from crate::parse_16_chars \
-        --start-from crate::parse_32_chars"
+    # What to extract: the whole crate by default. To extract only the five SWAR chunk parsers
+    # (a minute instead of forty), pass
+    # --CHARON_FLAGS='--start-from crate::parse_2_chars ... --start-from crate::parse_32_chars'.
+    # The usize/isize instances are left out: Lean keeps the platform word size abstract (32 or
+    # 64), so their 64-bit tables (10^19) and TAIL constants cannot be shown in range. Their
+    # `parse` is the same generic code.
+    ARG CHARON_FLAGS=""
     RUN charon cargo --preset=aeneas $CHARON_FLAGS \
           --opaque crate::load::misaligned \
           --opaque crate::load::load_u16 --opaque crate::load::load_u32 \
           --opaque crate::load::load_u64 --opaque crate::load::load_u128 \
           --include core::num::error::IntErrorKind \
+          --exclude 'crate::parse::{impl crate::parse::FromStrRadixHelper for usize}' \
+          --exclude 'crate::parse::{impl crate::parse::FromStrRadixHelper for isize}' \
+          --exclude crate::trees::TENS_USIZE --exclude crate::trees::TENS_ISIZE \
           --dest-file atoi_radix10.llbc > charon.log 2>&1 || { cat charon.log; exit 1; }
     SAVE ARTIFACT atoi_radix10.llbc
     SAVE ARTIFACT charon.log AS LOCAL verification/build/charon.log
@@ -127,9 +131,13 @@ llbc:
 # The pure Lean model; also written under verification/ for editor use (git-ignored).
 extract:
     FROM +tools
+    # `-join-early-exits`: join an `if`'s fall-through branches even when others break or
+    # return, instead of duplicating the code after it per branch (`parse` has 71 such `if`s).
+    ARG AENEAS_FLAGS="-join-early-exits"
     COPY +llbc/atoi_radix10.llbc .
     RUN aeneas -backend lean -dest gen -split-files -gen-lib-entry -no-progress-bar \
-          -filter-trait-methods atoi_radix10.llbc > aeneas.log 2>&1 || { cat aeneas.log; exit 1; }
+          -filter-trait-methods $AENEAS_FLAGS atoi_radix10.llbc > aeneas.log 2>&1 \
+          || { cat aeneas.log; exit 1; }
     # Aeneas writes a template only when there is something external; keep the saves total.
     RUN for f in FunsExternal_Template TypesExternal_Template; do \
           [ -f gen/$f.lean ] || echo '-- nothing external' > gen/$f.lean; done
@@ -157,6 +165,10 @@ prove:
     FROM +tools
     WORKDIR /proofs
     COPY verification/lakefile.lean verification/lake-manifest.json verification/lean-toolchain ./
+    # Lake's outputs (Mathlib's cache, our .olean files: gigabytes) live in a cache mount, not
+    # in the image layers: the engine's store could not hold a layer that size, and the content
+    # is keyed by hash anyway.
+    CACHE /proofs/.lake
     # The backend the lakefile requires, at the path the manifest records (see
     # verification/scripts/dev-link.sh for the same link on a laptop).
     RUN ln -s /opt/aeneas/backends/lean .aeneas && lake exe cache get
@@ -174,8 +186,18 @@ diagnose:
     FROM +tools
     ARG LOGGERS=Interp
     ARG ULIMIT_KB=8000000
+    ARG AENEAS_FLAGS="-join-early-exits"
+    # With GREP set, keep the 600 lines before its first match instead of the tail.
+    ARG GREP
     COPY +llbc/atoi_radix10.llbc .
     RUN aeneas -help 2>&1 | grep -o 'existing loggers are: {[^}]*}' | head -1 > diag.log; \
-        (ulimit -v $ULIMIT_KB; aeneas -backend lean -dest gen -sequential -no-progress-bar \
-          -log $LOGGERS atoi_radix10.llbc 2>&1; echo "aeneas exit=$?") | tail -c 400000 >> diag.log
+        if [ -n "$GREP" ]; then \
+          (ulimit -v $ULIMIT_KB; aeneas -backend lean -dest gen -sequential -no-progress-bar \
+            -log $LOGGERS $AENEAS_FLAGS atoi_radix10.llbc 2>&1) | grep -a -m1 -B 600 "$GREP" \
+            >> diag.log; \
+        else \
+          (ulimit -v $ULIMIT_KB; aeneas -backend lean -dest gen -sequential -no-progress-bar \
+            -log $LOGGERS $AENEAS_FLAGS atoi_radix10.llbc 2>&1; echo "aeneas exit=$?") \
+            | tail -c 400000 >> diag.log; \
+        fi
     SAVE ARTIFACT diag.log AS LOCAL verification/build/aeneas-diag.log
