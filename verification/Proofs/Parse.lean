@@ -41,6 +41,10 @@ structure Faithful {T : Type} (inst : parse.FromStrRadixHelper T) (toInt : T →
   signed : lo < 0 → lo = -(hi + 1)
   hi_lt : hi < 10 ^ c
   hi_ge : 10 ^ (c - 1) ≤ hi
+  two_le_c : 2 ≤ c
+  /-- The first significant digit times its weight fits (`hi + 1` is a power of two, so
+  `10^(c-1)` never divides it). -/
+  fs_mul_le : ((hi + 1) / 10 ^ (c - 1)) * 10 ^ (c - 1) ≤ hi
   range : ∀ x, InRange lo hi (toInt x)
   inj : ∀ x y, toInt x = toInt y → x = y
   MIN : inst.MIN ⦃ m => toInt m = lo ⦄
@@ -157,7 +161,8 @@ end U8F
 
 theorem faithful_u8 : Faithful U8F.inst (fun x : U8 => (x.val : ℤ)) 0 255 3 :=
   { lo_le := le_refl 0, hi_pos := by norm_num, signed := fun h => absurd h (lt_irrefl 0)
-    hi_lt := by norm_num, hi_ge := by norm_num, range := U8F.range, inj := U8F.inj
+    hi_lt := by norm_num, hi_ge := by norm_num, two_le_c := by norm_num, fs_mul_le := by norm_num
+    range := U8F.range, inj := U8F.inj
     MIN := U8F.MIN, CHARS := U8F.CHARS, FIRST_SIG := U8F.FIRST_SIG, TAIL := U8F.TAIL
     TREE := U8F.TREE, BITS := U8F.BITS
     from_u8 := U8F.from_u8, from_u16 := U8F.from_u16, from_u32 := U8F.from_u32
