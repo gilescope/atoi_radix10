@@ -212,7 +212,7 @@ structure PreInv {T : Type} (toInt : T → ℤ) (lo hi : ℤ) (c : ℕ) (D0 : Li
   head : ∃ d, s.val[0]? = some d ∧ isDigit d ∧ val1.val = d.val - 48
   acc : ∃ a : ℤ, 0 ≤ a ∧ a ≤ hi ∧
     stdDigits lo hi false 0 D0 = stdDigits lo hi false a s.val ∧
-    (∀ k, k < s.val.length → a * 10 ^ k + (10 ^ k - 1) ≤ hi) ∧
+    (∀ k, k < s.val.length → k + 1 < c → a * 10 ^ k + (10 ^ k - 1) ≤ hi) ∧
     (checked = none → a = 0) ∧
     (∀ d t, checked = some (d, t) → toInt t = a * 10 ^ s.val.length ∧ s.val.length + 1 = c)
 
@@ -378,7 +378,7 @@ theorem parse_loop1_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt :
             · rw [hs5]; simp; omega
             · rw [hs5]; simp; exact hvnd
             · rw [hval2, hw]; omega
-            · intro k hk
+            · intro k hk _
               rw [hs5l] at hk
               have hfs9 := fs_le_9 hi c (by have := hF.hi_lt; omega) (by omega) hF.fs_mul_le
               have hp : (0 : ℤ) ≤ 10 ^ k := by positivity
@@ -443,7 +443,7 @@ theorem parse_loop1_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt :
                 _ < (↑s : List U8).length := by simp; omega
             have hpre : PreInv toInt lo hi c (↑s0) s4 ch val2 := by
               refine ⟨by rw [hs4]; simp, ⟨d', by rw [hs4]; simp, hdg, hval2⟩, 0, le_refl 0, by omega, hfold', ?_, fun _ => rfl, ?_⟩
-              · intro k hk; exact hbnd k (by omega)
+              · intro k hk hkc; exact hbnd k (by omega) hkc
               · intro d2 t2' h; rw [hchn] at h; cases h
             step*
           · -- a non-digit after the zeros: `Err(Empty)`, where core says bad digit

@@ -17,3 +17,5 @@ import Proofs.NegBlock
 import Proofs.NegChunks
 import Proofs.NegLoop
 import Proofs.NegPre
+import Proofs.Sign
+import Proofs.Final

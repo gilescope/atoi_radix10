@@ -56,15 +56,21 @@ digit lanes); `Proofs/DigitTest.lean` is the digit test (`c & 0xf0.. = 0` and
 `(c +wrap 0x76..) & 0x80.. = 0` exactly when every byte is a digit), with the per-byte facts
 decided over the 256 bytes.
 
-## Stated, not yet proved (`Proofs/Parse.lean`)
+## `parse<T>` (`Proofs/Parse.lean`, `Proofs/Final.lean`)
 
-`parse<T>`. `Proofs/Ref.lean` is the reference, core's `from_str_radix` over the integers
-(`stdParse lo hi`), and `ParseSpec` says `parse` agrees with it: the same `Ok` values, `Err`
-exactly where core errs, and the same error kind except where core says `InvalidDigit` (the crate
-answers `Empty` or an overflow on some such inputs; the fuzzer compares `Ok`/`Err` only). The
-theorem is to be proved for any `Faithful` instance of `FromStrRadixHelper`, the record of facts
-about the methods that `doit!` guarantees; `faithful_u8` proves them for `u8`. Of the seven
-extracted loops, four are proved: the two leading-zero loops and the positive pre-pass
-(`Proofs/ParseLoops.lean`), and the positive SWAR block, all eleven chunks against core's fold
-(`Proofs/Block.lean`, with the fold's closed form in `Proofs/StdDigits.lean`). The sign dispatch
-and the negative path's pre-pass and SWAR block are the remaining work.
+`Proofs/Ref.lean` is the reference, core's `from_str_radix` over the integers (`stdParse lo hi`),
+and `ParseSpec` says `parse` agrees with it: the same `Ok` values, `Err` exactly where core errs,
+and the same error kind except where core says `InvalidDigit` (the crate answers `Empty` or an
+overflow on some such inputs; the fuzzer compares `Ok`/`Err` only). `parse_spec` proves it for
+any `Faithful` instance of `FromStrRadixHelper`, the record of facts about the methods that
+`doit!` guarantees; `faithful_u8` proves those facts for `u8`, so `parse_spec_u8` is the theorem
+for `parse::<u8>`. The seven extracted loops each have their lemma: the sign dispatch
+(`Proofs/Sign.lean`), the positive pre-pass and the two leading-zero loops
+(`Proofs/ParseLoops.lean`), the positive SWAR block (`Proofs/Block.lean`), the negative pre-pass
+and block (`Proofs/NegPre.lean`, `Proofs/NegLoop.lean`); `Proofs/StdDigits.lean` has the fold's
+closed forms.
+
+## Not yet
+
+`Faithful` for the other nine integer types (`u16` .. `u128`, `i8` .. `i128`): each is the `u8`
+record again with its constants, the signed ones over `IScalar`.

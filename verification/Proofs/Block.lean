@@ -39,7 +39,7 @@ theorem Handover.of_pre {T : Type} {toInt : T → ℤ} {lo hi : ℤ} {c : ℕ} {
     (h : PreInv toInt lo hi c D0 s checked val1) (hlt : s.val.length < c) :
     Handover toInt lo hi c D0 s.val checked := by
   obtain ⟨hlen, _, a, ha0, hahi, hfold, hb, hn, hs⟩ := h
-  exact ⟨hlen, hlt, a, ha0, hahi, hfold, hb, hn, fun d t hdt => (hs d t hdt).1⟩
+  exact ⟨hlen, hlt, a, ha0, hahi, hfold, fun k hk => hb k hk (by omega), hn, fun d t hdt => (hs d t hdt).1⟩
 
 /-! ### Chunk arithmetic -/
 

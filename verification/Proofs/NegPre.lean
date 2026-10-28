@@ -36,7 +36,7 @@ digit with its weight, and the slice is empty exactly when the whole input after
 structure NegPreInv {T : Type} (toInt : T → ℤ) (lo hi : ℤ) (c : ℕ) (D0 : List U8) (s : Slice U8)
     (checked : Option (U8 × T)) : Prop where
   acc : ∃ a : ℤ, a ≤ 0 ∧ lo ≤ a ∧ stdDigits lo hi true 0 D0 = stdDigits lo hi true a s.val ∧
-    (∀ k, k < s.val.length → lo ≤ a * 10 ^ k - (10 ^ k - 1)) ∧
+    (∀ k, k < s.val.length → k + 1 < c → lo ≤ a * 10 ^ k - (10 ^ k - 1)) ∧
     (checked = none → a = 0) ∧
     (∀ d t, checked = some (d, t) →
       a = -(d.val : ℤ) ∧ toInt t = (d.val : ℤ) * 10 ^ s.val.length ∧ s.val.length + 1 = c)
@@ -46,7 +46,7 @@ theorem NegHandover.of_pre {T : Type} {toInt : T → ℤ} {lo hi : ℤ} {c : ℕ
     {s : Slice U8} {checked : Option (U8 × T)} (h : NegPreInv toInt lo hi c D0 s checked)
     (hpos : 0 < s.val.length) (hlt : s.val.length < c) : NegHandover toInt lo hi c D0 s.val checked := by
   obtain ⟨⟨a, ha0, halo, hfold, hb, hn, hs⟩, hiff⟩ := h
-  refine ⟨hpos, hlt, ⟨a, ha0, halo, hfold, hb, hn, hs⟩, ?_⟩
+  refine ⟨hpos, hlt, ⟨a, ha0, halo, hfold, fun k hk => hb k hk (by omega), hn, hs⟩, ?_⟩
   intro h0
   have := hiff.mpr h0
   rw [this] at hpos; simp at hpos
@@ -298,8 +298,8 @@ theorem parse_loop0_loop0_spec {T : Type} {inst : parse.FromStrRadixHelper T} {t
                 have hfoldN : stdDigits lo hi true 0 D0 = stdDigits lo hi true (-(val3.val : ℤ)) s7.val := by
                   rw [hfold, hcons, stdDigits_neg_cons_digit lo hi 0 val2 _ hdd ⟨by omega, by omega⟩, hs7]
                   simp [hv3d]
-                have hbndN : ∀ k, k < s7.val.length → lo ≤ -(val3.val : ℤ) * 10 ^ k - (10 ^ k - 1) := by
-                  intro k hk
+                have hbndN : ∀ k, k < s7.val.length → k + 1 < c → lo ≤ -(val3.val : ℤ) * 10 ^ k - (10 ^ k - 1) := by
+                  intro k hk _
                   rw [hs7l] at hk
                   have hp : (0 : ℤ) ≤ 10 ^ k := by positivity
                   have hk1 : (10 : ℤ) ^ (k + 1) ≤ 10 ^ (c - 1) := pow_le_pow_right₀ (by norm_num) (by omega)
@@ -366,7 +366,8 @@ theorem parse_loop0_loop0_spec {T : Type} {inst : parse.FromStrRadixHelper T} {t
                       (List.dropWhile_sublist _).length_le
                     rw [hdz] at hle
                     rw [hs6] at hk
-                    exact hbnd k (by simp at hle hk; omega)
+                    intro hkc
+                    exact hbnd k (by simp at hle hk; omega) hkc
                   · intro d2 t2' h'; rw [hchn] at h'; cases h'
                   · constructor
                     · intro h'; rw [h'] at hs6; cases hs6
