@@ -39,9 +39,10 @@ structure Faithful {T : Type} (inst : parse.FromStrRadixHelper T) (toInt : T →
   lo_le : lo ≤ 0
   hi_pos : 0 < hi
   signed : lo < 0 → lo = -(hi + 1)
-  hi_lt : hi < 10 ^ c
+  /-- `hi + 1` is a power of two, so never a power of ten: `hi + 1 < 10^c`. -/
+  hi_lt : hi + 1 < 10 ^ c
   hi_ge : 10 ^ (c - 1) ≤ hi
-  two_le_c : 2 ≤ c
+  three_le_c : 3 ≤ c
   /-- The first significant digit times its weight fits (`hi + 1` is a power of two, so
   `10^(c-1)` never divides it). -/
   fs_mul_le : ((hi + 1) / 10 ^ (c - 1)) * 10 ^ (c - 1) ≤ hi
@@ -61,6 +62,7 @@ structure Faithful {T : Type} (inst : parse.FromStrRadixHelper T) (toInt : T →
   from_u64 : ∀ u : U64, inst.from_u64 u ⦃ t => (u.val : ℤ) ≤ hi → toInt t = u.val ⦄
   from_u128 : ∀ u : U128, inst.from_u128 u ⦃ t => (u.val : ℤ) ≤ hi → toInt t = u.val ⦄
   gt : ∀ x y, inst.corecmpPartialOrdInst.gt x y ⦃ b => b = decide (toInt y < toInt x) ⦄
+  eq : ∀ x y, inst.corecmpPartialOrdInst.partialEqInst.eq x y ⦃ b => b = decide (toInt x = toInt y) ⦄
   add : ∀ x y, InRange lo hi (toInt x + toInt y) →
     inst.coreopsarithAddInst.add x y ⦃ z => toInt z = toInt x + toInt y ⦄
   sub : ∀ x y, InRange lo hi (toInt x - toInt y) →
@@ -118,6 +120,12 @@ theorem from_u128 (u : U128) : inst.from_u128 u ⦃ t => (u.val : ℤ) ≤ 255 �
 theorem gt (x y : U8) :
     inst.corecmpPartialOrdInst.gt x y ⦃ b => b = decide ((y.val : ℤ) < (x.val : ℤ)) ⦄ := by
   simp [WP.spec_ok, core.cmp.impls.PartialOrdU8.gt, liftFun2]
+theorem eq (x y : U8) :
+    inst.corecmpPartialOrdInst.partialEqInst.eq x y ⦃ b => b = decide ((x.val : ℤ) = (y.val : ℤ)) ⦄ := by
+  simp [WP.spec_ok, core.cmp.impls.PartialEqU8.eq, liftFun2]
+  constructor
+  · rintro rfl; rfl
+  · intro h; exact UScalar.eq_of_val_eq (by omega)
 theorem add (x y : U8) (h : InRange 0 255 ((x.val : ℤ) + (y.val : ℤ))) :
     inst.coreopsarithAddInst.add x y ⦃ z => (z.val : ℤ) = (x.val : ℤ) + (y.val : ℤ) ⦄ := by
   rw [show inst.coreopsarithAddInst.add = U8.Insts.CoreOpsArithAddU8U8.add from rfl,
@@ -163,12 +171,12 @@ end U8F
 
 theorem faithful_u8 : Faithful U8F.inst (fun x : U8 => (x.val : ℤ)) 0 255 3 :=
   { lo_le := le_refl 0, hi_pos := by norm_num, signed := fun h => absurd h (lt_irrefl 0)
-    hi_lt := by norm_num, hi_ge := by norm_num, two_le_c := by norm_num, fs_mul_le := by norm_num
+    hi_lt := by norm_num, hi_ge := by norm_num, three_le_c := by norm_num, fs_mul_le := by norm_num
     range := U8F.range, inj := U8F.inj
     MIN := U8F.MIN, CHARS := U8F.CHARS, FIRST_SIG := U8F.FIRST_SIG, TAIL := U8F.TAIL
     TREE := U8F.TREE, BITS := U8F.BITS
     from_u8 := U8F.from_u8, from_u16 := U8F.from_u16, from_u32 := U8F.from_u32
-    from_u64 := U8F.from_u64, from_u128 := U8F.from_u128, gt := U8F.gt
+    from_u64 := U8F.from_u64, from_u128 := U8F.from_u128, gt := U8F.gt, eq := U8F.eq
     add := U8F.add, sub := U8F.sub, mul := U8F.mul
     add_checked := U8F.add_checked, sub_checked := U8F.sub_checked, mul_checked := U8F.mul_checked }
 

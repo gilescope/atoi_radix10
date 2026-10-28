@@ -879,7 +879,7 @@ macro_rules
       · first
           | exact (WP.spec_ok _).mpr $h
           | (rcases b1 with ⟨r', _, _, _, _⟩; exact (WP.spec_ok _).mpr $h)
-      try exact (WP.spec_ok _).mpr $h))
+      try (rw [WP.spec_ok]; exact $h)))
 
 /-- A chunk guarded by the alignment test, from a state with `M` bytes or fewer. -/
 syntax "guarded " term:max term:max : tactic

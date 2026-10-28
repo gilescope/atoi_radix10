@@ -197,4 +197,133 @@ theorem fs_floor (hi : ℤ) (c : ℕ) : hi + 1 < ((hi + 1) / 10 ^ (c - 1) + 1) *
   have hp : (0 : ℤ) < 10 ^ (c - 1) := by positivity
   exact Int.lt_ediv_add_one_mul_self (hi + 1) hp
 
+/-! ### The negative fold -/
+
+/-- Unfolding one step of the negative fold on a digit. -/
+theorem stdDigits_neg_cons (lo hi a : ℤ) (b : U8) (l : List U8) (hb : isDigit b) :
+    stdDigits lo hi true a (b :: l) =
+      if lo ≤ a * 10 - ((b.val : ℤ) - 48) ∧ a * 10 - ((b.val : ℤ) - 48) ≤ hi
+      then stdDigits lo hi true (a * 10 - ((b.val : ℤ) - 48)) l
+      else .error .NegOverflow := by
+  simp [stdDigits, hb]
+
+theorem stdDigits_neg_cons_zero (lo hi : ℤ) (l : List U8) (hlo : lo ≤ 0) (hhi : 0 ≤ hi) :
+    stdDigits lo hi true 0 (48#u8 :: l) = stdDigits lo hi true 0 l := by
+  have h48 : isDigit 48#u8 := by show 48 ≤ (48#u8).val ∧ (48#u8).val ≤ 57; simp
+  rw [stdDigits_neg_cons lo hi 0 48#u8 l h48]
+  simp [hlo, hhi]
+
+theorem stdDigits_neg_cons_digit (lo hi a : ℤ) (b : U8) (l : List U8) (hb : isDigit b)
+    (hr : lo ≤ a * 10 - ((b.val : ℤ) - 48) ∧ a * 10 - ((b.val : ℤ) - 48) ≤ hi) :
+    stdDigits lo hi true a (b :: l) = stdDigits lo hi true (a * 10 - ((b.val : ℤ) - 48)) l := by
+  rw [stdDigits_neg_cons lo hi a b l hb]; simp [hr]
+
+/-- An `ok` answer of the negative fold is at most `a · 10^len`, and at least `lo` when there
+was a digit. -/
+theorem stdDigits_neg_ok_bounds (lo hi : ℤ) (a : ℤ) (l : List U8) (v : ℤ) (ha : a ≤ 0)
+    (h : stdDigits lo hi true a l = .ok v) : v ≤ a * 10 ^ l.length ∧ (l ≠ [] → lo ≤ v) := by
+  induction l generalizing a with
+  | nil =>
+    simp [stdDigits] at h
+    simp [h]
+  | cons b bs ih =>
+    by_cases hb : isDigit b
+    · have hd := digit_sub48_nonneg hb
+      rw [stdDigits_neg_cons lo hi a b bs hb] at h
+      split_ifs at h with hr
+      · obtain ⟨h1, h2⟩ := ih _ (by omega) h
+        refine ⟨?_, fun _ => ?_⟩
+        · rw [List.length_cons, pow_succ]
+          have hp : (0 : ℤ) ≤ 10 ^ bs.length := by positivity
+          nlinarith
+        · rcases bs with _ | ⟨c, cs⟩
+          · simp [stdDigits] at h; omega
+          · exact h2 (by simp)
+    · rw [stdDigits_nonDigit lo hi true a b bs hb] at h
+      simp at h
+
+/-- An accumulator already below `lo`, with a digit still to read: never `ok`. -/
+theorem stdDigits_neg_err_of_big (lo hi a : ℤ) (l : List U8) (ha : a ≤ 0)
+    (hbig : a * 10 ^ l.length < lo) (hne : l ≠ []) : ∃ k, stdDigits lo hi true a l = .error k := by
+  rcases h : stdDigits lo hi true a l with k | v
+  · exact ⟨k, rfl⟩
+  · exfalso
+    obtain ⟨h1, h2⟩ := stdDigits_neg_ok_bounds lo hi a l v ha h
+    have := h2 hne
+    omega
+
+/-- The negative fold only ever reports a bad digit or a negative overflow. -/
+theorem stdDigits_neg_err_kinds (lo hi a : ℤ) (l : List U8) (k : Kind)
+    (h : stdDigits lo hi true a l = .error k) : k = .NegOverflow ∨ k = .InvalidDigit := by
+  induction l generalizing a with
+  | nil => simp [stdDigits] at h
+  | cons b bs ih =>
+    by_cases hb : isDigit b
+    · rw [stdDigits_neg_cons lo hi a b bs hb] at h
+      split_ifs at h with hr
+      · exact ih _ h
+      · simp at h; exact Or.inl h.symm
+    · rw [stdDigits_nonDigit lo hi true a b bs hb] at h
+      simp at h; exact Or.inr h.symm
+
+theorem stdDigits_neg_dropZeros (lo hi : ℤ) (l : List U8) (hlo : lo ≤ 0) (hhi : 0 ≤ hi) :
+    stdDigits lo hi true 0 l = stdDigits lo hi true 0 (l.dropWhile fun b => decide (b = 48#u8)) := by
+  induction l with
+  | nil => rfl
+  | cons b bs ih =>
+    by_cases hb : b = 48#u8
+    · subst hb
+      rw [stdDigits_neg_cons_zero lo hi bs hlo hhi, ih]
+      simp
+    · simp [hb]
+
+theorem stdDigits_neg_zeros (lo hi : ℤ) (l : List U8) (hlo : lo ≤ 0) (hhi : 0 ≤ hi)
+    (h : l.dropWhile (fun b => decide (b = 48#u8)) = []) : stdDigits lo hi true 0 l = .ok 0 := by
+  rw [stdDigits_neg_dropZeros lo hi l hlo hhi, h]; rfl
+
+/-- The negative closed form: when no proper prefix can overflow downwards, the fold is
+`InvalidDigit` if some byte is not a digit, else the number, or `NegOverflow` below `lo`. -/
+theorem stdDigits_neg_closed (lo hi a : ℤ) (l : List U8) (ha : a ≤ 0) (hhi : 0 ≤ hi) (halo : lo ≤ a)
+    (hb : ∀ k, k < l.length → lo ≤ a * 10 ^ k - (10 ^ k - 1)) :
+    stdDigits lo hi true a l =
+      if allDigits l then
+        (if lo ≤ a * 10 ^ l.length - (decimal l : ℤ)
+          then .ok (a * 10 ^ l.length - (decimal l : ℤ)) else .error .NegOverflow)
+      else .error .InvalidDigit := by
+  induction l generalizing a with
+  | nil =>
+    simp [stdDigits, allDigits, decimal, halo]
+  | cons b bs ih =>
+    by_cases hd : isDigit b
+    · have hd0 := digit_sub48_nonneg hd
+      have hd9 := digit_sub48_le9 hd
+      have hval : a * 10 ^ (b :: bs).length - (decimal (b :: bs) : ℤ) =
+          (a * 10 - ((b.val : ℤ) - 48)) * 10 ^ bs.length - (decimal bs : ℤ) := by
+        rw [decimal_cons, List.length_cons]
+        have h48 : ((b.val - 48 : ℕ) : ℤ) = (b.val : ℤ) - 48 := by
+          have := hd.1; omega
+        push_cast [h48]
+        ring
+      rw [hval]
+      have hall : allDigits (b :: bs) ↔ allDigits bs := by simp [allDigits, hd]
+      simp only [hall]
+      rw [stdDigits_neg_cons lo hi a b bs hd]
+      have hhi' : a * 10 - ((b.val : ℤ) - 48) ≤ hi := by omega
+      rcases bs with _ | ⟨c, cs⟩
+      · by_cases hlo' : lo ≤ a * 10 - ((b.val : ℤ) - 48)
+        · simp [stdDigits, allDigits, decimal, hlo', hhi']
+        · simp [allDigits, decimal, hlo']
+      · have h1 := hb 1 (by simp)
+        have ha'lo : lo ≤ a * 10 - ((b.val : ℤ) - 48) := by omega
+        simp only [ha'lo, hhi', and_self, ite_true]
+        apply ih _ (by omega) ha'lo
+        intro k hk
+        have h2 := hb (k + 1) (by simp at hk ⊢; omega)
+        have hp : (0 : ℤ) ≤ 10 ^ k := by positivity
+        have hstep : ((b.val : ℤ) - 48 + 1) * 10 ^ k ≤ 10 * 10 ^ k := by nlinarith
+        rw [pow_succ] at h2
+        nlinarith
+    · rw [stdDigits_nonDigit lo hi true a b bs hd]
+      simp [allDigits, hd]
+
 end atoi_radix10

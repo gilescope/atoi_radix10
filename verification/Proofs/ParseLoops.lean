@@ -231,7 +231,7 @@ theorem pre_overflow {T : Type} {inst : parse.FromStrRadixHelper T} {toInt : T �
     (hd1 : 1 ≤ (d.val : ℤ) - 48)
     (hbig : c ≤ s.val.length - 1 ∨ (s.val.length = c ∧ (hi + 1) / 10 ^ (c - 1) < (d.val : ℤ) - 48)) :
     PosResult toInt lo hi D0 (.Err { kind := .PosOverflow }) := by
-  have hc2 := hF.two_le_c
+  have hc2 := hF.three_le_c
   have hlo := hF.lo_le
   have hhi9 : (9 : ℤ) ≤ hi := by
     have := hF.hi_ge
@@ -247,7 +247,7 @@ theorem pre_overflow {T : Type} {inst : parse.FromStrRadixHelper T} {toInt : T �
     rcases hbig with h1 | ⟨h1, _⟩ <;> omega
   obtain ⟨k, hk⟩ : ∃ k, stdDigits lo hi false ((d.val : ℤ) - 48) (↑s : List U8).tail = .error k := by
     rcases hbig with h1 | ⟨h1, h2⟩
-    · exact stdDigits_long_err lo hi _ c _ hd1 hF.hi_lt (by omega) (by omega)
+    · exact stdDigits_long_err lo hi _ c _ hd1 (by have := hF.hi_lt; omega) (by omega) (by omega)
     · apply stdDigits_err_of_big lo hi _ _ (by omega) _ hne
       rw [htail, h1]
       have hfl := fs_floor hi c
@@ -281,7 +281,7 @@ theorem parse_loop1_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt :
   · rintro ⟨s, b, ch, v, v1, t1, t2⟩ ⟨rfl, rfl, rfl, rfl, hinv⟩
     have hinv0 := hinv
     obtain ⟨hlen, ⟨d, hd0, hdd, hv1⟩, a, ha0, hahi, hfold, hbnd, hnone, hsome⟩ := hinv
-    have hc2 := hF.two_le_c
+    have hc2 := hF.three_le_c
     have hC := hF.CHARS
     have hFS := hF.FIRST_SIG
     have hTR := hF.TREE
@@ -380,7 +380,7 @@ theorem parse_loop1_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt :
             · rw [hval2, hw]; omega
             · intro k hk
               rw [hs5l] at hk
-              have hfs9 := fs_le_9 hi c hF.hi_lt (by omega) hF.fs_mul_le
+              have hfs9 := fs_le_9 hi c (by have := hF.hi_lt; omega) (by omega) hF.fs_mul_le
               have hp : (0 : ℤ) ≤ 10 ^ k := by positivity
               have hk1 : (10 : ℤ) ^ (k + 1) ≤ 10 ^ (c - 1) := pow_le_pow_right₀ (by norm_num) (by omega)
               have := hF.hi_ge

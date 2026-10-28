@@ -13,3 +13,6 @@ import Proofs.Parse
 import Proofs.ParseLoops
 import Proofs.StdDigits
 import Proofs.Block
+import Proofs.NegBlock
+import Proofs.NegChunks
+import Proofs.NegLoop
