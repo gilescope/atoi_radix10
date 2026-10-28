@@ -53,7 +53,8 @@ structure Faithful {T : Type} (inst : parse.FromStrRadixHelper T) (toInt : T →
   TAIL : inst.TAIL ⦃ t => lo < 0 → toInt t = lo + ((hi + 1) / 10 ^ (c - 1)) * 10 ^ (c - 1) ⦄
   TREE : inst.TREE ⦃ (tr : Slice T) =>
     tr.val.length = c ∧ ∀ i (h : i < tr.val.length), toInt tr.val[i] = 10 ^ i ⦄
-  BITS : inst.BITS ⦃ (b : U32) => 2 ^ b.val = hi - lo + 1 ⦄
+  BITS : inst.BITS ⦃ (b : U32) => 2 ^ b.val = hi - lo + 1 ∧
+    (b.val = 8 ∨ b.val = 16 ∨ b.val = 32 ∨ b.val = 64 ∨ b.val = 128) ⦄
   from_u8 : ∀ u : U8, inst.from_u8 u ⦃ t => (u.val : ℤ) ≤ hi → toInt t = u.val ⦄
   from_u16 : ∀ u : U16, inst.from_u16 u ⦃ t => (u.val : ℤ) ≤ hi → toInt t = u.val ⦄
   from_u32 : ∀ u : U32, inst.from_u32 u ⦃ t => (u.val : ℤ) ≤ hi → toInt t = u.val ⦄
@@ -101,7 +102,8 @@ theorem TREE :
     | 0, _ => simp
     | 1, _ => simp
     | 2, _ => simp
-theorem BITS : inst.BITS ⦃ (b : U32) => (2 : ℤ) ^ b.val = 255 - 0 + 1 ⦄ := by
+theorem BITS : inst.BITS ⦃ (b : U32) => (2 : ℤ) ^ b.val = 255 - 0 + 1 ∧
+    (b.val = 8 ∨ b.val = 16 ∨ b.val = 32 ∨ b.val = 64 ∨ b.val = 128) ⦄ := by
   simp [WP.spec_ok, U8.Insts.Atoi_radix10ParseFromStrRadixHelper.BITS, core.num.U8.BITS]
 theorem from_u8 (u : U8) : inst.from_u8 u ⦃ t => (u.val : ℤ) ≤ 255 → (t.val : ℤ) = u.val ⦄ := by
   simp [WP.spec_ok, U8.Insts.Atoi_radix10ParseFromStrRadixHelper.from_u8]

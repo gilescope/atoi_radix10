@@ -50,11 +50,14 @@ def load.load_u128 (s : Slice U8) : Result U128 := do
 
 `core`'s own items that Aeneas has no model for, and the alignment test. -/
 
-/-- `load::misaligned`: `s.as_ptr() as usize & bit != 0`, a fact about the address, of which the
-model knows nothing. Left uninterpreted: a theorem about `parse` then holds for every answer at
-every call, so for the answers the real addresses give. (The calls of one run differ in `bit`
-or in the slice, so a function of the two realises any run.) -/
-opaque load.misaligned (_s : Slice U8) (_bit : Usize) : Result Bool := ok false
+/-- The answer of `load::misaligned`: `s.as_ptr() as usize & bit != 0`, a fact about the
+address, of which the model knows nothing. Left uninterpreted: a theorem about `parse` then
+holds for every answer at every call, so for the answers the real addresses give. (The calls
+of one run differ in `bit` or in the slice, so a function of the two realises any run.) -/
+opaque misalignedOracle (_s : Slice U8) (_bit : Usize) : Bool := false
+
+/-- `load::misaligned` always answers; what it answers is `misalignedOracle`. -/
+def load.misaligned (s : Slice U8) (bit : Usize) : Result Bool := ok (misalignedOracle s bit)
 
 /-- `<[T]>::first`. -/
 def core.slice.Slice.first {T : Type} (s : Slice T) : Result (Option T) := ok s.val.head?

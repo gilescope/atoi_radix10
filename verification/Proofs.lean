@@ -11,3 +11,5 @@ import Proofs.Swar32
 import Proofs.Ref
 import Proofs.Parse
 import Proofs.ParseLoops
+import Proofs.StdDigits
+import Proofs.Block

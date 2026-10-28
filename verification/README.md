@@ -64,5 +64,7 @@ exactly where core errs, and the same error kind except where core says `Invalid
 answers `Empty` or an overflow on some such inputs; the fuzzer compares `Ok`/`Err` only). The
 theorem is to be proved for any `Faithful` instance of `FromStrRadixHelper`, the record of facts
 about the methods that `doit!` guarantees; `faithful_u8` proves them for `u8`. Of the seven
-extracted loops, the two leading-zero loops are proved (`Proofs/ParseLoops.lean`); the sign
-dispatch, the two length/first-digit pre-passes and the two SWAR blocks are the remaining work.
+extracted loops, four are proved: the two leading-zero loops and the positive pre-pass
+(`Proofs/ParseLoops.lean`), and the positive SWAR block, all eleven chunks against core's fold
+(`Proofs/Block.lean`, with the fold's closed form in `Proofs/StdDigits.lean`). The sign dispatch
+and the negative path's pre-pass and SWAR block are the remaining work.
