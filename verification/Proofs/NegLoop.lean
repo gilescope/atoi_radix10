@@ -218,7 +218,7 @@ theorem parse_loop0_loop0_loop0_spec {T : Type} {inst : parse.FromStrRadixHelper
                   rcases hck : ch with _ | ⟨d', ct⟩
                   · rfl
                   · exfalso
-                    obtain ⟨_, _, a, _, _, _, _, _, hs⟩ := hH
+                    obtain ⟨_, _, ⟨a, _, _, _, _, _, hs⟩, _⟩ := hH
                     have := (hs d' ct hck).2.2; omega
                 subst hchn
                 step as ⟨t1, ht1⟩
