@@ -19,3 +19,4 @@ import Proofs.NegLoop
 import Proofs.NegPre
 import Proofs.Sign
 import Proofs.Final
+import Proofs.Instances

@@ -57,3 +57,57 @@ open atoi_radix10
 
 /-- info: 'atoi_radix10.parse_spec_u8' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms parse_spec_u8
+
+/-- info: 'atoi_radix10.faithful_u16' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms faithful_u16
+
+/-- info: 'atoi_radix10.parse_spec_u16' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms parse_spec_u16
+
+/-- info: 'atoi_radix10.faithful_u32' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms faithful_u32
+
+/-- info: 'atoi_radix10.parse_spec_u32' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms parse_spec_u32
+
+/-- info: 'atoi_radix10.faithful_u64' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms faithful_u64
+
+/-- info: 'atoi_radix10.parse_spec_u64' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms parse_spec_u64
+
+/-- info: 'atoi_radix10.faithful_u128' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms faithful_u128
+
+/-- info: 'atoi_radix10.parse_spec_u128' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms parse_spec_u128
+
+/-- info: 'atoi_radix10.faithful_i8' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms faithful_i8
+
+/-- info: 'atoi_radix10.parse_spec_i8' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms parse_spec_i8
+
+/-- info: 'atoi_radix10.faithful_i16' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms faithful_i16
+
+/-- info: 'atoi_radix10.parse_spec_i16' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms parse_spec_i16
+
+/-- info: 'atoi_radix10.faithful_i32' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms faithful_i32
+
+/-- info: 'atoi_radix10.parse_spec_i32' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms parse_spec_i32
+
+/-- info: 'atoi_radix10.faithful_i64' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms faithful_i64
+
+/-- info: 'atoi_radix10.parse_spec_i64' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms parse_spec_i64
+
+/-- info: 'atoi_radix10.faithful_i128' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms faithful_i128
+
+/-- info: 'atoi_radix10.parse_spec_i128' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms parse_spec_i128

@@ -63,14 +63,12 @@ and `ParseSpec` says `parse` agrees with it: the same `Ok` values, `Err` exactly
 and the same error kind except where core says `InvalidDigit` (the crate answers `Empty` or an
 overflow on some such inputs; the fuzzer compares `Ok`/`Err` only). `parse_spec` proves it for
 any `Faithful` instance of `FromStrRadixHelper`, the record of facts about the methods that
-`doit!` guarantees; `faithful_u8` proves those facts for `u8`, so `parse_spec_u8` is the theorem
-for `parse::<u8>`. The seven extracted loops each have their lemma: the sign dispatch
+`doit!` guarantees; `faithful_u8` .. `faithful_i128` (`Proofs/Parse.lean`,
+`Proofs/Instances.lean`) prove those facts for each of the ten integer types, so
+`parse_spec_u8` .. `parse_spec_i128` are the theorems for `parse::<T>` at every `T` the crate
+ships (`usize`/`isize` are excluded from extraction: their width is platform-abstract in
+Aeneas). The seven extracted loops each have their lemma: the sign dispatch
 (`Proofs/Sign.lean`), the positive pre-pass and the two leading-zero loops
 (`Proofs/ParseLoops.lean`), the positive SWAR block (`Proofs/Block.lean`), the negative pre-pass
 and block (`Proofs/NegPre.lean`, `Proofs/NegLoop.lean`); `Proofs/StdDigits.lean` has the fold's
 closed forms.
-
-## Not yet
-
-`Faithful` for the other nine integer types (`u16` .. `u128`, `i8` .. `i128`): each is the `u8`
-record again with its constants, the signed ones over `IScalar`.
