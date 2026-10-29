@@ -1,7 +1,7 @@
 import Proofs.NegChunks
 
 /-!
-The negative SWAR block of `parse` (`src/parse.rs` lines 372-502, `parse_loop0_loop0_loop0`),
+The negative SWAR block of `parse` (`src/parse.rs` lines 372-502, `parse_inner_loop0_loop0_loop0`),
 chunk by chunk, against the negative fold. Its lifted `return`s come back in the 22 slots.
 -/
 
@@ -150,17 +150,17 @@ macro_rules
 
 set_option maxHeartbeats 4000000 in
 set_option linter.unusedTactic false in
-theorem parse_loop0_loop0_loop0_spec {T : Type} {inst : parse.FromStrRadixHelper T}
+theorem parse_inner_loop0_loop0_loop0_spec {T : Type} {inst : parse.FromStrRadixHelper T}
     {toInt : T → ℤ} {lo hi : ℤ} {c : ℕ} (hF : Faithful inst toInt lo hi c) (hlo : lo < 0)
     (D0 : List U8) (t : T) (ht : toInt t = lo) (s : Slice U8) (is_signed_ty : Bool)
     (checked : Option (U8 × T)) (val val1 : U8) (l : Usize) (res : T) (i : U8)
     (s1 s2 s3 s4 : Slice U8) (hH : NegHandover toInt lo hi c D0 s.val checked)
     (hres : toInt res = 0) (hl : l.val = s.val.length) :
-    parse.parse_loop0_loop0_loop0 inst t { start := 0#i32, «end» := 1#i32 } s is_signed_ty
+    parse.parse_inner_loop0_loop0_loop0 inst t { start := 0#i32, «end» := 1#i32 } s is_signed_ty
         checked val val1 l res i s1 s2 s3 s4
       ⦃ (out : NegExit T) => match out with
         | (_, _, _, _, _, _, _, o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15, o16, o17, o18, o19, o20, o21, o22, _, _, _, _, _) => SlotsOK (NegResult toInt lo hi D0) [o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15, o16, o17, o18, o19, o20, o21, o22] ⦄ := by
-  unfold parse.parse_loop0_loop0_loop0
+  unfold parse.parse_inner_loop0_loop0_loop0
   apply loop.spec_decr_nat
     (fun (p : core.ops.range.Range I32 × Slice U8 × Bool × Option (U8 × T) × U8 × U8 × Usize × T ×
         U8 × Slice U8 × Slice U8 × Slice U8 × Slice U8) => (p.1.«end».val - p.1.start.val).toNat)
@@ -182,7 +182,7 @@ theorem parse_loop0_loop0_loop0_spec {T : Type} {inst : parse.FromStrRadixHelper
     have hFS := hF.FIRST_SIG
     have hBITS := hF.BITS
     have hc3 := hF.three_le_c
-    unfold parse.parse_loop0_loop0_loop0.body
+    unfold parse.parse_inner_loop0_loop0_loop0.body
     step as ⟨o, iter1, hnext, hend1⟩
     rcases hcase with ⟨hstart, rfl, hres'⟩ | ⟨hstart, hall, hres'⟩
     · -- first iteration: the block

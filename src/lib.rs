@@ -791,6 +791,30 @@ mod tests {
                     );
                 }
 
+                /// Error kinds match `str::parse`, not just `Ok`/`Err`: every mix of sign,
+                /// digit run (0..45 bytes, so every SWAR width) and one bad byte at each position.
+                #[wasm_bindgen_test]
+                #[test]
+                fn [<test_error_kind_ $target_type $postfix>]() {
+                    let mut v = Vec::<u8, 64>::new();
+                    for prefix in ["", "+", "-"] {
+                        for digit in [b'0', b'9'] {
+                            for n in 0..45usize {
+                                for bad in 0..=n {
+                                    v.clear();
+                                    v.extend_from_slice(prefix.as_bytes()).unwrap();
+                                    for j in 0..n {
+                                        v.push(if j == bad { b'x' } else { digit }).unwrap();
+                                    }
+                                    let s = core::str::from_utf8(&v).unwrap();
+                                    let p: Result<$target_type, _> = s.parse();
+                                    assert_eq!(p.map_err(|e| e.kind().clone()), [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|e| e.kind), "parsing `{}`", s);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 #[wasm_bindgen_test]
                 #[test]
                 fn [<test_empty_ $target_type $postfix>]() {

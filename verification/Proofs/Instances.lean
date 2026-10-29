@@ -1,4 +1,4 @@
-import Proofs.Final
+import Proofs.Kind
 import Mathlib.Tactic.IntervalCases
 
 /-!

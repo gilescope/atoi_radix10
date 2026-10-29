@@ -1,7 +1,7 @@
 import Proofs.NegPre
 
 /-!
-The sign dispatch of `parse` (`src/parse.rs` lines 196-543, `parse_loop0`): a digit first goes to
+The sign dispatch of `parse` (`src/parse.rs` lines 196-543, `parse_inner_loop0`): a digit first goes to
 the positive path; a `-` on a signed type runs the negative path, whose 25 result slots are
 cascaded into one; a `+` is skipped once and must be followed by a digit (else `Err(Empty)`,
 where core says bad digit); anything else is `Err(InvalidDigit)`.
@@ -98,14 +98,14 @@ theorem wrap_le_9 (d v1 : U8) (hv : v1.val = (d.val + 256 - 48) % 256) :
   exact ht
 
 set_option maxHeartbeats 4000000 in
-theorem parse_loop0_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt : T → ℤ}
+theorem parse_inner_loop0_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt : T → ℤ}
     {lo hi : ℤ} {c : ℕ} (hF : Faithful inst toInt lo hi c) (D0 : List U8) (t : T)
     (ht : toInt t = lo) (s : Slice U8) (is_signed_ty : Bool) (val val1 : U8) (s1 : Slice U8)
     (hsg : is_signed_ty = decide (lo < 0)) (hs : s.val = D0)
     (hd : ∃ d, s.val[0]? = some d ∧ val1.val = (d.val + 256 - 48) % 256) :
-    parse.parse_loop0 inst t s is_signed_ty val val1 s1
+    parse.parse_inner_loop0 inst t s is_signed_ty val val1 s1
       ⦃ (out : SignDone T) => SignPost toInt lo hi c D0 out ⦄ := by
-  unfold parse.parse_loop0
+  unfold parse.parse_inner_loop0
   apply loop.spec_decr_nat (fun p : SignCont => p.1.val.length)
     (fun p : SignCont => match p with
       | (s', b, v, v1, t1) =>
@@ -121,7 +121,7 @@ theorem parse_loop0_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt :
       have := hF.hi_ge
       have : (10 : ℤ) ^ 1 ≤ 10 ^ (c - 1) := pow_le_pow_right₀ (by norm_num) (by omega)
       omega
-    unfold parse.parse_loop0.body
+    unfold parse.parse_inner_loop0.body
     refine WP.spec_ite (fun h9 => ?_) (fun h9 => ?_)
     · -- a digit: the positive path
       have hdd : isDigit d := hdig.mp h9
@@ -159,7 +159,7 @@ theorem parse_loop0_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt :
               have := hF.hi_ge
               have := hF.signed hlo
               omega
-            step with parse_loop0_loop0_spec hF hlo (↑s3 : List U8) t ht s3 b none v v1 MINUS t1 s' s3 hpre as ⟨s4, b1, ch1, v2, v3, o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15, o16, o17, o18, o19, o20, o21, o22, o23, o24, o25, i2, s5, s6, s7, hpost⟩
+            step with parse_inner_loop0_loop0_spec hF hlo (↑s3 : List U8) t ht s3 b none v v1 MINUS t1 s' s3 hpre as ⟨s4, b1, ch1, v2, v3, o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15, o16, o17, o18, o19, o20, o21, o22, o23, o24, o25, i2, s5, s6, s7, hpost⟩
             rw [hs3'] at hpost
             have hpost : SlotsOK (NegResult toInt lo hi (↑s' : List U8).tail) [o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15, o16, o17, o18, o19, o20, o21, o22, o23, o24, o25] := hpost
             rcases o1 with _ | r1

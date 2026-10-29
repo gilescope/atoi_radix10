@@ -56,10 +56,10 @@ s.first() { Some(v) => *v, None => return Ok(0) } }; val -= b'0'; if val > 9 { r
 Err(Empty) }`. Entered with `val = s[0] = b'0'`. The lifted exits come back as the two `Option`s
 (`Ok(0)`, `Err(Empty)`) and the flag says the loop fell through to the next digit. -/
 
-theorem parse_loop1_loop0_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt : T → ℤ}
+theorem parse_inner_loop1_loop0_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt : T → ℤ}
     {lo hi : ℤ} {c : ℕ} (hF : Faithful inst toInt lo hi c) (s : Slice U8) (val : U8)
     (h0 : 0 < s.val.length) (hv : s.val[0]? = some val) :
-    parse.parse_loop1_loop0 inst s val ⦃ (out : Slice U8 × U8 × Option (core.result.Result T ParseIntErrorPublic) ×
+    parse.parse_inner_loop1_loop0 inst s val ⦃ (out : Slice U8 × U8 × Option (core.result.Result T ParseIntErrorPublic) ×
         Option (core.result.Result T ParseIntErrorPublic) × Bool) =>
       match out with
       | (s', v', r1, r2, b) =>
@@ -68,13 +68,13 @@ theorem parse_loop1_loop0_spec {T : Type} {inst : parse.FromStrRadixHelper T} {t
         | d :: rest => s'.val = d :: rest ∧ r1 = none ∧
             if isDigit d then r2 = none ∧ b = true ∧ v'.val = d.val - 48
             else r2 = some (.Err { kind := .Empty }) ∧ b = false ⦄ := by
-  unfold parse.parse_loop1_loop0
+  unfold parse.parse_inner_loop1_loop0
   apply loop.spec_decr_nat (fun (p : Slice U8 × U8) => p.1.val.length)
     (fun (p : Slice U8 × U8) => 0 < p.1.val.length ∧ p.1.val[0]? = some p.2 ∧
       dropZeros p.1.val = dropZeros s.val)
   · rintro ⟨sl, v1⟩ ⟨h1, hv1, hd⟩
     simp only at h1 hv1 hd
-    unfold parse.parse_loop1_loop0.body
+    unfold parse.parse_inner_loop1_loop0.body
     have hb : v1.val < 256 := by scalar_tac
     have hw := U8.wrapping_sub_48_val v1
     have hdig := wrapping_digit_test v1.val hb
@@ -137,11 +137,11 @@ theorem parse_loop1_loop0_spec {T : Type} {inst : parse.FromStrRadixHelper T} {t
 `src/parse.rs` lines 516-522, the same `while val == b'0'` loop without the digit check after
 it: the loop returns to the top of the outer `loop`. The other variables ride through. -/
 
-theorem parse_loop0_loop0_loop1_spec {T : Type} {inst : parse.FromStrRadixHelper T}
+theorem parse_inner_loop0_loop0_loop1_spec {T : Type} {inst : parse.FromStrRadixHelper T}
     {toInt : T → ℤ} {lo hi : ℤ} {c : ℕ} (hF : Faithful inst toInt lo hi c)
     (s : Slice U8) (is_signed_ty : Bool) (checked : Option (U8 × T)) (val val1 : U8) (l : Usize)
     (i : U8) (s1 s2 s3 s4 : Slice U8) (h0 : 0 < s.val.length) (hv : s.val[0]? = some val1) :
-    parse.parse_loop0_loop0_loop1 inst s is_signed_ty checked val val1 l i s1 s2 s3 s4
+    parse.parse_inner_loop0_loop0_loop1 inst s is_signed_ty checked val val1 l i s1 s2 s3 s4
       ⦃ (out : Slice U8 × Bool × Option (U8 × T) × U8 × U8 × Usize ×
           Option (core.result.Result T ParseIntErrorPublic) × U8 × Slice U8 × Slice U8 × Slice U8 ×
           Slice U8) =>
@@ -152,13 +152,13 @@ theorem parse_loop0_loop0_loop1_spec {T : Type} {inst : parse.FromStrRadixHelper
         match dropZeros s.val with
         | [] => ∃ t, r = some (.Ok t) ∧ toInt t = 0
         | d :: rest => s'.val = d :: rest ∧ r = none ∧ v1' = d ⦄ := by
-  unfold parse.parse_loop0_loop0_loop1
+  unfold parse.parse_inner_loop0_loop0_loop1
   apply loop.spec_decr_nat (fun (p : Slice U8 × U8) => p.1.val.length)
     (fun (p : Slice U8 × U8) => 0 < p.1.val.length ∧ p.1.val[0]? = some p.2 ∧
       dropZeros p.1.val = dropZeros s.val)
   · rintro ⟨sl, v1⟩ ⟨h1, hv1, hd⟩
     simp only at h1 hv1 hd
-    unfold parse.parse_loop0_loop0_loop1.body
+    unfold parse.parse_inner_loop0_loop0_loop1.body
     step*
     · -- all zeros: `return Ok(0)`
       have hv48 : v1 = 48#u8 := by assumption
@@ -258,11 +258,11 @@ theorem pre_overflow {T : Type} {inst : parse.FromStrRadixHelper T} {toInt : T �
   · exact Or.inl h.symm
   · exact Or.inr h
 
-theorem parse_loop1_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt : T → ℤ}
+theorem parse_inner_loop1_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt : T → ℤ}
     {lo hi : ℤ} {c : ℕ} (hF : Faithful inst toInt lo hi c) (s0 : Slice U8) (is_signed_ty : Bool)
     (checked : Option (U8 × T)) (val val1 : U8) (s1 s2 : Slice U8)
     (h : PreInv toInt lo hi c s0.val s0 checked val1) :
-    parse.parse_loop1 inst s0 is_signed_ty checked val val1 s1 s2
+    parse.parse_inner_loop1 inst s0 is_signed_ty checked val val1 s1 s2
       ⦃ (out : Slice U8 × Bool × Option (U8 × T) × U8 × U8 ×
           Option (core.result.Result T ParseIntErrorPublic) × Slice U8 × Slice U8) =>
       match out with
@@ -271,7 +271,7 @@ theorem parse_loop1_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt :
         match r with
         | none => PreInv toInt lo hi c s0.val s' ch' v1' ∧ s'.val.length < c
         | some r => PosResult toInt lo hi s0.val r ⦄ := by
-  unfold parse.parse_loop1
+  unfold parse.parse_inner_loop1
   apply loop.spec_decr_nat
     (fun (p : Slice U8 × Bool × Option (U8 × T) × U8 × U8 × Slice U8 × Slice U8) => p.1.val.length)
     (fun (p : Slice U8 × Bool × Option (U8 × T) × U8 × U8 × Slice U8 × Slice U8) =>
@@ -287,7 +287,7 @@ theorem parse_loop1_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt :
     have hTR := hF.TREE
     have hF8 := hF.from_u8
     have hMul := hF.mul
-    unfold parse.parse_loop1.body
+    unfold parse.parse_inner_loop1.body
     have hlo := hF.lo_le
     have hhi9 : (9 : ℤ) ≤ hi := by
       have := hF.hi_ge
@@ -415,7 +415,7 @@ theorem parse_loop1_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt :
       step*
       · -- leading zero: strip the zeros
         have hv0 : v1 = 0#u8 := by assumption
-        step with parse_loop1_loop0_spec hF s 48#u8 hlen (h48 hv0) as ⟨s4, val2, lr, lr1, le, hpost⟩
+        step with parse_inner_loop1_loop0_spec hF s 48#u8 hlen (h48 hv0) as ⟨s4, val2, lr, lr1, le, hpost⟩
         rcases hdz : dropZeros ↑s with _ | ⟨d', rest⟩ <;> simp only [hdz] at hpost
         · -- all zeros
           obtain ⟨⟨t, hlr, ht⟩, hlr1, hle⟩ := hpost

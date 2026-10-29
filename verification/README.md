@@ -59,15 +59,19 @@ decided over the 256 bytes.
 ## `parse<T>` (`Proofs/Parse.lean`, `Proofs/Final.lean`)
 
 `Proofs/Ref.lean` is the reference, core's `from_str_radix` over the integers (`stdParse lo hi`),
-and `ParseSpec` says `parse` agrees with it: the same `Ok` values, `Err` exactly where core errs,
-and the same error kind except where core says `InvalidDigit` (the crate answers `Empty` or an
-overflow on some such inputs; the fuzzer compares `Ok`/`Err` only). `parse_spec` proves it for
-any `Faithful` instance of `FromStrRadixHelper`, the record of facts about the methods that
-`doit!` guarantees; `faithful_u8` .. `faithful_i128` (`Proofs/Parse.lean`,
-`Proofs/Instances.lean`) prove those facts for each of the ten integer types, so
-`parse_spec_u8` .. `parse_spec_i128` are the theorems for `parse::<T>` at every `T` the crate
-ships (`usize`/`isize` are excluded from extraction: their width is platform-abstract in
-Aeneas). The seven extracted loops each have their lemma: the sign dispatch
+and `ParseSpec` says `parse` is it: the same `Ok` values, `Err` exactly where core errs, with
+the same `IntErrorKind`. `parse` is `parse_inner`, the fast path, which decides `Ok`/`Err` and
+the value but reports the first thing that stopped it (`Empty` for a lone sign, an overflow for
+a bad byte after an overflowing run), followed on the error path by `std_error_kind`, core's
+digit fold with no value kept, which recomputes the kind (`Proofs/Kind.lean`).
+`parse_inner_spec` proves the fast path against `stdParse` up to `kindLike` (core's
+`InvalidDigit` may come back as any kind), `std_error_kind_spec` proves the classifier returns
+core's kind on every input core rejects, and `parse_spec` combines them, for any `Faithful`
+instance of `FromStrRadixHelper`, the record of facts about the methods that `doit!`
+guarantees; `faithful_u8` .. `faithful_i128` (`Proofs/Parse.lean`, `Proofs/Instances.lean`)
+prove those facts for each of the ten integer types, so `parse_spec_u8` .. `parse_spec_i128`
+are the theorems for `parse::<T>` at every `T` the crate ships (`usize`/`isize` are excluded
+from extraction: their width is platform-abstract in Aeneas). The seven extracted loops each have their lemma: the sign dispatch
 (`Proofs/Sign.lean`), the positive pre-pass and the two leading-zero loops
 (`Proofs/ParseLoops.lean`), the positive SWAR block (`Proofs/Block.lean`), the negative pre-pass
 and block (`Proofs/NegPre.lean`, `Proofs/NegLoop.lean`); `Proofs/StdDigits.lean` has the fold's

@@ -185,7 +185,84 @@ pub fn parse_from_str<T: FromStrRadixHelper, S: AsRef<str>>(s: S) -> Result<T, P
 /// let s: String = "+000123".into();
 /// assert_eq!(atoi_radix10::parse::<u8>(s.as_bytes()), Ok(123));
 /// ```
-pub fn parse<T>(mut s: &[u8]) -> Result<T, Pie>
+pub fn parse<T>(s: &[u8]) -> Result<T, Pie>
+where
+    T: FromStrRadixHelper,
+{
+    // The fast path decides `Ok`/`Err` and the value; it reports the first thing that
+    // stopped it, which is not always the kind core reports (a bad byte after an
+    // overflowing run, a lone sign). The kind is recomputed off the hot path.
+    match parse_inner(s) {
+        Ok(v) => Ok(v),
+        Err(_) => Err(std_error_kind::<T>(s)),
+    }
+}
+
+/// Core's error kind for an input `parse_inner` rejected. Core folds the digits one at a
+/// time and stops at the first problem, so a bad byte after an overflowing run is
+/// `PosOverflow`, and a bad byte before it is `InvalidDigit`; this is that fold, with no
+/// value kept. It is reached only on the error path, so its cost does not matter.
+#[cold]
+#[inline(never)]
+fn std_error_kind<T>(s: &[u8]) -> Pie
+where
+    T: FromStrRadixHelper,
+{
+    let is_signed_ty = T::from_u32(0) > T::MIN;
+    let (digits, neg) = match s.first() {
+        None => return empty!(),
+        Some(&b'+') | Some(&b'-') if s.len() == 1 => return invalid!(),
+        Some(&b'+') => (&s[1..], false),
+        Some(&b'-') if is_signed_ty => (&s[1..], true),
+        _ => (s, false),
+    };
+    let ten = T::from_u8(10);
+    let mut acc = T::from_u8(0);
+    let mut i = 0;
+    // Every exit is a `return` from inside the loop, including the impossible one, so the
+    // loop never falls through (the shape the extraction handles).
+    loop {
+        if i >= digits.len() {
+            // Every digit fitted, so core accepts this input - and `parse_inner` only rejects
+            // what core rejects (`verification/Proofs/Kind.lean` proves this branch is never
+            // taken; a `debug_assert!` here does not survive the Lean extraction). The
+            // overflow kind is the least wrong answer if it ever is.
+            return overflow(neg);
+        }
+        let d = digits[i].wrapping_sub(b'0');
+        if d > 9 {
+            return invalid!();
+        }
+        let d = T::from_u8(d);
+        acc = match acc.mul_checked(ten) {
+            None => return overflow(neg),
+            Some(m) => match if neg {
+                m.sub_checked(d)
+            } else {
+                m.add_checked(d)
+            } {
+                None => return overflow(neg),
+                Some(v) => v,
+            },
+        };
+        i += 1;
+    }
+}
+
+/// The overflow kind for the sign being folded. Built where it is returned: `IntErrorKind`
+/// is not `Copy`, and a value moved out of the loop is dead after it for the extraction.
+fn overflow(neg: bool) -> Pie {
+    if neg {
+        neg_overflow!()
+    } else {
+        pos_overflow!()
+    }
+}
+
+// Inlined into `parse` unconditionally so the fast path compiles exactly as it did when it
+// was `parse`'s own body; only the classifier is a call.
+#[inline(always)]
+fn parse_inner<T>(mut s: &[u8]) -> Result<T, Pie>
 where
     T: FromStrRadixHelper,
 {

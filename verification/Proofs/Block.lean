@@ -2,7 +2,7 @@ import Proofs.ParseLoops
 import Proofs.Swar32
 
 /-!
-The SWAR block of the positive path (`src/parse.rs` lines 204-327, `parse_loop2`): the
+The SWAR block of the positive path (`src/parse.rs` lines 204-327, `parse_inner_loop2`): the
 definitions and arithmetic the block proof runs on. The block consumes the bytes `D` the
 pre-pass handed over, chunk by chunk, keeping `res` equal to the value of the consumed digits
 at the weight of what remains; a non-digit anywhere is `InvalidDigit`; at the end the digit set
@@ -904,15 +904,15 @@ theorem len_ge_of_guard {N : ℕ} (s : Slice U8) (n : Usize) (hn : n.val = N) (h
 
 /-! ### The loop -/
 
-theorem parse_loop2_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt : T → ℤ}
+theorem parse_inner_loop2_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt : T → ℤ}
     {lo hi : ℤ} {c : ℕ} (hF : Faithful inst toInt lo hi c) (D0 : List U8) (s : Slice U8)
     (is_signed_ty : Bool) (checked : Option (U8 × T)) (val val1 : U8) (res : T)
     (s1 s2 s3 : Slice U8) (hH : Handover toInt lo hi c D0 s.val checked) (hres : toInt res = 0)
     (hv1 : ∃ d, s.val[0]? = some d ∧ isDigit d ∧ val1.val = d.val - 48) :
-    parse.parse_loop2 inst { start := 0#i32, «end» := 1#i32 } s is_signed_ty checked val val1
+    parse.parse_inner_loop2 inst { start := 0#i32, «end» := 1#i32 } s is_signed_ty checked val val1
         res s1 s2 s3
       ⦃ (r : core.result.Result T ParseIntErrorPublic) => PosResult toInt lo hi D0 r ⦄ := by
-  unfold parse.parse_loop2
+  unfold parse.parse_inner_loop2
   apply loop.spec_decr_nat
     (fun (p : core.ops.range.Range I32 × Slice U8 × Bool × Option (U8 × T) × U8 × U8 × T ×
         Slice U8 × Slice U8 × Slice U8) => (p.1.«end».val - p.1.start.val).toNat)
@@ -939,7 +939,7 @@ theorem parse_loop2_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt :
     have hp8 := parse_8_chars_spec
     have hp16 := parse_16_chars_spec
     have hp32 := parse_32_chars_spec
-    unfold parse.parse_loop2.body
+    unfold parse.parse_inner_loop2.body
     step as ⟨o, iter1, hnext, hend1⟩
     rcases hcase with ⟨hstart, rfl, rfl, hres'⟩ | ⟨hstart, hall, hres'⟩
     · -- first iteration: the block

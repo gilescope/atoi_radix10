@@ -14,12 +14,20 @@ namespace atoi_radix10
 
 /-- What `parse` promises: `str::parse` for the values `[lo, hi]`, read through `toInt`,
 the error kinds matching core's up to `kindLike`. -/
+def ParseInnerSpec {T : Type} (inst : parse.FromStrRadixHelper T) (toInt : T → ℤ) (lo hi : ℤ) :
+    Prop :=
+  ∀ s : Slice U8, parse.parse_inner inst s ⦃ (out : core.result.Result T ParseIntErrorPublic) =>
+    match out with
+    | .Ok v => stdParse lo hi s.val = .ok (toInt v)
+    | .Err e => ∃ k, stdParse lo hi s.val = .error k ∧ kindLike e.kind k ⦄
+
+/-- `parse` is `stdParse`: the same `Ok` values, and the same error kind on the same inputs. -/
 def ParseSpec {T : Type} (inst : parse.FromStrRadixHelper T) (toInt : T → ℤ) (lo hi : ℤ) :
     Prop :=
   ∀ s : Slice U8, parse.parse inst s ⦃ (out : core.result.Result T ParseIntErrorPublic) =>
     match out with
     | .Ok v => stdParse lo hi s.val = .ok (toInt v)
-    | .Err e => ∃ k, stdParse lo hi s.val = .error k ∧ kindLike e.kind k ⦄
+    | .Err e => stdParse lo hi s.val = .error e.kind ⦄
 
 /-- `v` is in `[lo, hi]`. -/
 def InRange (lo hi v : ℤ) : Prop := lo ≤ v ∧ v ≤ hi

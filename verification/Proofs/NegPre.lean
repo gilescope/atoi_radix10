@@ -1,7 +1,7 @@
 import Proofs.NegLoop
 
 /-!
-The negative pre-pass (`src/parse.rs` lines 369-526, `parse_loop0_loop0`): the `loop` around the
+The negative pre-pass (`src/parse.rs` lines 369-526, `parse_inner_loop0_loop0`): the `loop` around the
 negative SWAR block. Shorter than `CHARS` digits and not empty: the block, whose 22 result slots
 are cascaded into the pre-pass's 25; empty: `Err(Empty)`; exactly `CHARS` long with a small
 first digit: that digit set aside with its weight; leading zeros stripped; anything else a
@@ -97,13 +97,13 @@ theorem neg_pre_overflow {T : Type} {inst : parse.FromStrRadixHelper T} {toInt :
     rw [negRef_of_ne lo hi hne, hfold, hcons, stdDigits_nonDigit lo hi true 0 d _ hnd]
 
 set_option maxHeartbeats 4000000 in
-theorem parse_loop0_loop0_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt : T → ℤ}
+theorem parse_inner_loop0_loop0_spec {T : Type} {inst : parse.FromStrRadixHelper T} {toInt : T → ℤ}
     {lo hi : ℤ} {c : ℕ} (hF : Faithful inst toInt lo hi c) (hlo : lo < 0) (D0 : List U8) (t : T)
     (ht : toInt t = lo) (s0 : Slice U8) (is_signed_ty : Bool) (checked : Option (U8 × T))
     (val val1 : U8) (i : U8) (s1 s2 s3 : Slice U8) (h : NegPreInv toInt lo hi c D0 s0 checked) :
-    parse.parse_loop0_loop0 inst t s0 is_signed_ty checked val val1 i s1 s2 s3
+    parse.parse_inner_loop0_loop0 inst t s0 is_signed_ty checked val val1 i s1 s2 s3
       ⦃ (out : NegPreExit T) => NegPreSlots toInt lo hi D0 out ⦄ := by
-  unfold parse.parse_loop0_loop0
+  unfold parse.parse_inner_loop0_loop0
   apply loop.spec_decr_nat (fun p : NegPreCont T => p.1.val.length)
     (fun p : NegPreCont T => match p with
       | (s, b, ch, v, v1, i', t1, t2, t3) => NegPreInv toInt lo hi c D0 s ch)
@@ -122,7 +122,7 @@ theorem parse_loop0_loop0_spec {T : Type} {inst : parse.FromStrRadixHelper T} {t
     have hTR := hF.TREE
     have hF8 := hF.from_u8
     have hMul := hF.mul
-    unfold parse.parse_loop0_loop0.body
+    unfold parse.parse_inner_loop0_loop0.body
     step as ⟨i1, hi1⟩
     refine WP.spec_bind (Pₘ := NegPrePost toInt lo hi D0 (fun _ => False)
       (c ≤ s.val.length ∨ s.val.length = 0)) ?_ ?_
@@ -141,7 +141,7 @@ theorem parse_loop0_loop0_spec {T : Type} {inst : parse.FromStrRadixHelper T} {t
           have hH := NegHandover.of_pre hinv0 hlen_pos hlen_lt
           step as ⟨res, hres⟩
           have hres0 : toInt res = 0 := by have := hres (by simp; omega); simpa using this
-          step with parse_loop0_loop0_loop0_spec hF hlo D0 t ht s b ch v v1 s.len res i' t1 t2 t3 s hH hres0
+          step with parse_inner_loop0_loop0_loop0_spec hF hlo D0 t ht s b ch v v1 s.len res i' t1 t2 t3 s hH hres0
             (Slice.len_val s) as ⟨s5, b', ch', v2, v3, l', res', o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15, o16, o17, o18, o19, o20, o21, o22, i2, s6, s7, s8, s9', hpost⟩
           rcases o1 with _ | r1
           · rcases o2 with _ | r2
@@ -342,7 +342,7 @@ theorem parse_loop0_loop0_spec {T : Type} {inst : parse.FromStrRadixHelper T} {t
                   rw [hval3, hw] at hv0
                   have : val2 = 48#u8 := by apply UScalar.eq_of_val_eq; simp; omega
                   rw [hcons, this]; simp
-                step with parse_loop0_loop0_loop1_spec hF s b ch v 48#u8 s.len i' t1 t2 t3 s hlen_pos h48
+                step with parse_inner_loop0_loop0_loop1_spec hF s b ch v 48#u8 s.len i' t1 t2 t3 s hlen_pos h48
                   as ⟨s6, b2, ch2, v4, v5, l2, lr, i2, s7, s8, s9, s10, hpz⟩
                 obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, hs10, hpz⟩ := hpz
                 rcases hdz : dropZeros (↑s : List U8) with _ | ⟨d', rest⟩ <;> simp only [hdz] at hpz
