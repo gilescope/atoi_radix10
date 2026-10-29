@@ -1081,7 +1081,7 @@ mod tests {
     fn check<T, const N: usize>(data: [u8; N])
     where
         T: FromStrRadixHelper,
-        T: core::str::FromStr,
+        T: core::str::FromStr<Err = core::num::ParseIntError>,
         T: core::fmt::Debug,
     {
         let mut s = heapless::String::<N>::new();
@@ -1093,10 +1093,8 @@ mod tests {
         }
         //if let Ok(s) = heapless::String<N>::from_utf8(data.to_vec()) {
         let spec: Result<T, _> = s.parse();
-        let expected = spec.map_err(|_| ());
-        assert_eq!(expected, parse::<T>(&data).map_err(|_| ()));
-        // let expected = spec.map_err(|e| e.kind().clone());
-        // assert_eq!(expected, parse_u32(&data).map_err(|e| e.kind));
+        let expected = spec.map_err(|e| e.kind().clone());
+        assert_eq!(expected, parse::<T>(&data).map_err(|e| e.kind));
         // } else {
         //     //just make sure doesn't panic:
         //     let _ = parse::<u32>(&data);

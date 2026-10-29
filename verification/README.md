@@ -71,7 +71,9 @@ instance of `FromStrRadixHelper`, the record of facts about the methods that `do
 guarantees; `faithful_u8` .. `faithful_i128` (`Proofs/Parse.lean`, `Proofs/Instances.lean`)
 prove those facts for each of the ten integer types, so `parse_spec_u8` .. `parse_spec_i128`
 are the theorems for `parse::<T>` at every `T` the crate ships (`usize`/`isize` are excluded
-from extraction: their width is platform-abstract in Aeneas). The seven extracted loops each have their lemma: the sign dispatch
+from extraction: their width is platform-abstract in Aeneas).
+
+The seven extracted loops each have their lemma: the sign dispatch
 (`Proofs/Sign.lean`), the positive pre-pass and the two leading-zero loops
 (`Proofs/ParseLoops.lean`), the positive SWAR block (`Proofs/Block.lean`), the negative pre-pass
 and block (`Proofs/NegPre.lean`, `Proofs/NegLoop.lean`); `Proofs/StdDigits.lean` has the fold's

@@ -12,8 +12,8 @@ open Aeneas Aeneas.Std Result
 
 namespace atoi_radix10
 
-/-- What `parse` promises: `str::parse` for the values `[lo, hi]`, read through `toInt`,
-the error kinds matching core's up to `kindLike`. -/
+/-- What `parse_inner`, the fast path, promises: `str::parse` for the values `[lo, hi]`, read
+through `toInt`, the error kinds matching core's up to `kindLike`. -/
 def ParseInnerSpec {T : Type} (inst : parse.FromStrRadixHelper T) (toInt : T → ℤ) (lo hi : ℤ) :
     Prop :=
   ∀ s : Slice U8, parse.parse_inner inst s ⦃ (out : core.result.Result T ParseIntErrorPublic) =>
