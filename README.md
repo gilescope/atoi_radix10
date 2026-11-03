@@ -42,9 +42,10 @@ For u16, u32, u64 it's around 1/3 faster than std.
 Usage and Features
 ==================
 
-`nightly` and `simd` features for highest speed (and target your specific cpu).
+It's `no_std` by default and will parse from any `[u8]` slice, at any alignment.
 
-It's `no_std` by default and will parse from any `[u8]` slice.
+The parser is pure SWAR (no explicit SIMD intrinsics): the `simd` feature is
+accepted for backwards compatibility but currently does nothing.
 
 How this works
 ==============

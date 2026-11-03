@@ -57,8 +57,15 @@ jobs:
          RUSTFLAGS='--cfg getrandom_backend="wasm_js"' wasm-pack test --node
   miri:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+          - target: mips64-unknown-linux-gnuabi64  # big-endian
     env:
       RUSTFLAGS: ""
+      MIRIFLAGS: "-Zmiri-symbolic-alignment-check"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
@@ -69,7 +76,7 @@ jobs:
           override: true
           components: miri
 
-      - run: cargo miri test
+      - run: cargo miri test --target ${{ matrix.target }}
   fuzz-unsigned:
     runs-on: ubuntu-latest
 
