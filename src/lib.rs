@@ -35,30 +35,50 @@ pub struct ParseIntErrorPublic {
 type Pie = ParseIntErrorPublic;
 // SWAR digit parsing.
 //
-// Every helper below works on a "chunk": 2, 4 or 8 ASCII bytes loaded
-// little-endian into an integer (so the first character is the lowest byte)
-// and XORed with 0x30 in every byte. For valid digits that leaves each byte
-// holding 0..=9. `validN` checks that every byte is 0..=9 and `valueN` folds
-// the digits into a number. The value is computed speculatively and validity
-// is checked afterwards so the two don't serialise.
+// Every helper below works on a "chunk": 2, 4 or 8 ASCII bytes loaded in
+// native byte order and XORed with 0x30 in every byte. For valid digits that
+// leaves each byte holding 0..=9. `validN` checks that every byte is 0..=9
+// and `valueN` folds the digits into a number. The value is computed
+// speculatively and validity is checked afterwards so the two don't
+// serialise.
+//
+// Native order means no byte swap on big-endian targets. On little-endian
+// the first character is the lowest byte, on big-endian the highest, so the
+// folds and the head shift are mirrored under `cfg!(target_endian)`; the
+// validity check is byte-wise and doesn't care.
 //
 // Only 8-byte chunks are used for anything longer than 8 digits: u128 SWAR
 // is slower than two u64 SWARs on every target we've measured.
 
+/// True on little-endian targets; selects between the two mirrored folds.
+const LE: bool = cfg!(target_endian = "little");
+
+/// Drop the trailing `n` bytes (characters) of a head chunk, leaving only its
+/// leading characters. The vacated bytes read as digit 0, i.e. leading zeros.
+macro_rules! head {
+    ($c:expr, $n:expr) => {
+        if LE {
+            $c << ($n * 8)
+        } else {
+            $c >> ($n * 8)
+        }
+    };
+}
+
 /// SAFETY: `p` must be readable for 2 bytes. Alignment doesn't matter.
 #[inline(always)]
 unsafe fn ld2(p: *const u8) -> u16 {
-    u16::from_le_bytes(unsafe { core::ptr::read_unaligned(p as *const [u8; 2]) }) ^ 0x3030
+    u16::from_ne_bytes(unsafe { core::ptr::read_unaligned(p as *const [u8; 2]) }) ^ 0x3030
 }
 /// SAFETY: `p` must be readable for 4 bytes. Alignment doesn't matter.
 #[inline(always)]
 unsafe fn ld4(p: *const u8) -> u32 {
-    u32::from_le_bytes(unsafe { core::ptr::read_unaligned(p as *const [u8; 4]) }) ^ 0x30303030
+    u32::from_ne_bytes(unsafe { core::ptr::read_unaligned(p as *const [u8; 4]) }) ^ 0x30303030
 }
 /// SAFETY: `p` must be readable for 8 bytes. Alignment doesn't matter.
 #[inline(always)]
 unsafe fn ld8(p: *const u8) -> u64 {
-    u64::from_le_bytes(unsafe { core::ptr::read_unaligned(p as *const [u8; 8]) })
+    u64::from_ne_bytes(unsafe { core::ptr::read_unaligned(p as *const [u8; 8]) })
         ^ 0x3030303030303030
 }
 
@@ -79,18 +99,33 @@ fn valid8(c: u64) -> bool {
 
 #[inline(always)]
 fn value2(c: u16) -> u16 {
-    (c & 0x000f) * 10 + (c >> 8)
+    if LE {
+        (c & 0x000f) * 10 + (c >> 8)
+    } else {
+        (c >> 8) * 10 + (c & 0x000f)
+    }
 }
 #[inline(always)]
 fn value4(c: u32) -> u16 {
-    let c = ((c & 0x0f000f00) >> 8) + (c & 0x000f000f) * 10;
-    ((c & 0x00ff) * 100 + (c >> 16)) as u16
+    if LE {
+        let c = ((c & 0x0f000f00) >> 8) + (c & 0x000f000f) * 10;
+        ((c & 0x00ff) * 100 + (c >> 16)) as u16
+    } else {
+        let c = ((c >> 8) & 0x000f000f) * 10 + (c & 0x000f000f);
+        ((c >> 16) * 100 + (c & 0x00ff)) as u16
+    }
 }
 #[inline(always)]
 fn value8(c: u64) -> u32 {
-    let c = ((c & 0x0f000f000f000f00) >> 8) + (c & 0x000f000f000f000f) * 10;
-    let c = ((c & 0x00ff000000ff0000) >> 16) + (c & 0x000000ff000000ff) * 100;
-    ((c & 0xffff) * 10000 + (c >> 32)) as u32
+    if LE {
+        let c = ((c & 0x0f000f000f000f00) >> 8) + (c & 0x000f000f000f000f) * 10;
+        let c = ((c & 0x00ff000000ff0000) >> 16) + (c & 0x000000ff000000ff) * 100;
+        ((c & 0xffff) * 10000 + (c >> 32)) as u32
+    } else {
+        let c = ((c >> 8) & 0x000f000f000f000f) * 10 + (c & 0x000f000f000f000f);
+        let c = ((c >> 16) & 0x000000ff000000ff) * 100 + (c & 0x000000ff000000ff);
+        ((c >> 32) * 10000 + (c & 0xffff)) as u32
+    }
 }
 
 #[inline(always)]
@@ -180,8 +215,8 @@ pub unsafe fn parse_32_chars(s: &[u8]) -> Result<u128, Pie> {
 ///
 /// Lengths that aren't a whole number of chunks are read as overlapping
 /// chunks: the trailing chunks exactly, plus a head chunk shifted so that only
-/// the leading `len % chunk` digits remain (the vacated low bytes read as
-/// `'0'`). That avoids any per-length loop or alignment fix-ups.
+/// the leading `len % chunk` digits remain (the vacated bytes read as `'0'`).
+/// That avoids any per-length loop or alignment fix-ups.
 #[inline(always)]
 pub(crate) fn parse_digits<T: FromStrRadixHelper>(s: &[u8]) -> Result<T, Pie> {
     let l = s.len();
@@ -208,7 +243,7 @@ pub(crate) fn parse_digits<T: FromStrRadixHelper>(s: &[u8]) -> Result<T, Pie> {
                 };
             }
             if l <= 4 {
-                let hi = ld2(p) << ((4 - l) * 8);
+                let hi = head!(ld2(p), 4 - l);
                 let lo = ld2(p.add(l - 2));
                 return if likely!(valid2(hi) & valid2(lo)) {
                     Ok(T::from_u16(value2(hi) * 100 + value2(lo)))
@@ -216,7 +251,7 @@ pub(crate) fn parse_digits<T: FromStrRadixHelper>(s: &[u8]) -> Result<T, Pie> {
                     Err(invalid())
                 };
             }
-            let hi = ld4(p) << ((8 - l) * 8);
+            let hi = head!(ld4(p), 8 - l);
             let lo = ld4(p.add(l - 4));
             return if likely!(valid4(hi) & valid4(lo)) {
                 Ok(T::from_u32(value4(hi) as u32 * 10000 + value4(lo) as u32))
@@ -225,7 +260,7 @@ pub(crate) fn parse_digits<T: FromStrRadixHelper>(s: &[u8]) -> Result<T, Pie> {
             };
         }
         if l <= 16 {
-            let hi = ld8(p) << ((16 - l) * 8);
+            let hi = head!(ld8(p), 16 - l);
             let lo = ld8(p.add(l - 8));
             return if likely!(valid8(hi) & valid8(lo)) {
                 Ok(T::from_u64(
@@ -239,7 +274,7 @@ pub(crate) fn parse_digits<T: FromStrRadixHelper>(s: &[u8]) -> Result<T, Pie> {
         // Head holds the leading `l % 8` digits (or 8 if `l % 8 == 0`), then
         // whole 8-digit chunks follow.
         let r = ((l - 1) % 8) + 1;
-        let hi = ld8(p) << ((8 - r) * 8);
+        let hi = head!(ld8(p), 8 - r);
         let a = ld8(p.add(r));
         let b = ld8(p.add(r + 8));
         let ok = valid8(hi) & valid8(a) & valid8(b);
@@ -330,6 +365,11 @@ mod tests {
         );
     }
 
+    /// Miri is ~1000x slower than native, so the exhaustive and random
+    /// sweeps run a slice of their inputs there instead of being skipped.
+    const ITERS: usize = if cfg!(miri) { 200 } else { usize::MAX };
+    const RANDOM_ITERS: usize = if cfg!(miri) { 200 } else { 100_000 };
+
     macro_rules! gen_tests {
         ($target_type:ty, $min:expr, $max:expr, $step: expr, $max_chars: literal,$postfix: literal, $specific: literal) => {
             paste! {
@@ -339,6 +379,25 @@ mod tests {
                     let s = $specific;
                     let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                     assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
+                }
+
+                /// Every length from 1 to the maximum, positive and negative,
+                /// so each chunking branch is covered by a test that also runs
+                /// under miri on big-endian targets.
+                #[wasm_bindgen_test]
+                #[test]
+                fn [<test_every_length_ $target_type $postfix>]() {
+                    let digits = b"9876543210123456789012345678901234567890123";
+                    for len in 1..=$max_chars {
+                        for sign in ["", "-", "+"] {
+                            let mut v = Vec::<u8, 48>::new();
+                            v.extend_from_slice(sign.as_bytes()).unwrap();
+                            v.extend_from_slice(&digits[..len]).unwrap();
+                            let s = unsafe { core::str::from_utf8_unchecked(&v[..]) };
+                            let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
+                            assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", s);
+                        }
+                    }
                 }
 
                 #[wasm_bindgen_test]
@@ -389,26 +448,24 @@ mod tests {
                 }
 
                 //#[wasm_bindgen_test] step too small for wasm
-                #[cfg_attr(miri, ignore)]
                 #[test]
                 fn [<test_ $target_type $postfix>]() {
                     let mut s = [0u8; 42];
 
-                    for i in ($min..$max as $target_type).step_by($step) {
+                    for i in ($min..$max as $target_type).step_by($step).take(ITERS) {
                         let s = unsafe { core::str::from_utf8_unchecked(i.numtoa(10, &mut s)) };
                         let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                         assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                     }
                 }
 
-                #[cfg_attr(miri, ignore)]
                 #[test]
                 fn [<test_random_ $target_type $postfix>]() {
                     use rand::prelude::*;
                     let mut s = [0u8; 42];
                     let mut rng = rand::rng();
 
-                    for _ in 1..100_000 {
+                    for _ in 0..RANDOM_ITERS {
                         let i = rng.random::<$target_type>();
                         let s = unsafe { core::str::from_utf8_unchecked(i.numtoa(10, &mut s)) };
                         let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
@@ -417,10 +474,9 @@ mod tests {
                 }
 
                 //#[wasm_bindgen_test] step too small for wasm
-                #[cfg_attr(miri, ignore)]
                 #[test]
                 fn [<test_ $target_type _plus $postfix>]() {
-                    for i in ($min..$max as $target_type).step_by($step) {
+                    for i in ($min..$max as $target_type).step_by($step).take(ITERS) {
                         let mut s = [0u8; 42];
                         s[0] = b'+';
                         let ss = i.numtoa(10, &mut s[1..]);
