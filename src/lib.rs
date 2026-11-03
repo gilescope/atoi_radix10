@@ -4,6 +4,7 @@
 #![warn(unsafe_op_in_unsafe_fn)]
 #[macro_use]
 mod parse;
+mod load;
 
 //use log::*;
 // mod parse_i16;
@@ -15,6 +16,8 @@ mod parse;
 mod trees;
 
 use core::num::IntErrorKind;
+#[cfg(target_endian = "little")]
+use load::{load_u128, load_u16, load_u32, load_u64};
 
 pub use parse::{parse, parse_challenger, parse_from_str, FromStrRadixHelper};
 // pub use parse_i16::{parse_i16, parse_i16_challenger};
@@ -333,13 +336,7 @@ pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
     const MASK_HI: u128 = 0xf0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0u128;
     const ASCII_ZEROS: u128 = 0x30303030303030303030303030303030u128;
 
-    let chunk = unsafe {
-        let ptr = s.as_ptr();
-        debug_assert!((ptr as usize).is_multiple_of(core::mem::size_of::<u128>()));
-        *(ptr as *const u128)
-        //    core::ptr::read_unaligned(ptr as *const u128)
-        ^ ASCII_ZEROS
-    };
+    let chunk = unsafe { load_u128(s) } ^ ASCII_ZEROS;
     let chunk_og = chunk;
 
     // 1-byte mask trick (works on 8 pairs of single digits)
@@ -438,18 +435,7 @@ pub unsafe fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
     debug_assert!(s.len() >= 8);
     const MASK_HI: u64 = 0xf0f0f0f0f0f0f0f0u64;
     const ASCII_ZEROS: u64 = 0x3030303030303030u64;
-    let ptr = s.as_ptr();
-    let chunk = unsafe {
-        debug_assert!((ptr as usize).is_multiple_of(core::mem::size_of::<u64>()));
-        // (if ptr as usize % core::mem::size_of::<u64>() == 0 {
-        *(ptr as *const u64)
-        // } else {
-        //     panic!("swoops8");
-
-        //     core::ptr::read_unaligned(ptr as *const u64)
-        // })
-         ^ ASCII_ZEROS
-    };
+    let chunk = unsafe { load_u64(s) } ^ ASCII_ZEROS;
     let valid = (chunk & MASK_HI)
         | (chunk.wrapping_add(0x7676767676767676u64) & 0x8080808080808080u64)
         == 0;
@@ -547,17 +533,7 @@ pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
 
     const MASK_HI: u32 = 0xf0f0f0f0u32;
     const ASCII_ZEROS: u32 = 0x30303030u32;
-    let ptr = s.as_ptr() as usize;
-    let chunk1 = unsafe {
-        debug_assert!(ptr.is_multiple_of(core::mem::size_of::<u32>()));
-        // (if ptr % size == 0 {
-        *(s.as_ptr() as *const u32)
-        // } else {
-        //     panic!("swoops4");
-        //     core::ptr::read_unaligned(ptr as *const u32)
-        // })
-        ^ ASCII_ZEROS
-    };
+    let chunk1 = unsafe { load_u32(s) } ^ ASCII_ZEROS;
     // 1-byte mask trick (works on 4 pairs of single digits)
     let lower_digits = (chunk1 & 0x0f000f00) >> 8; // => 0x00f000f0
 
@@ -665,8 +641,7 @@ pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
 pub unsafe fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
     //SAFETY:
     debug_assert!(s.len() >= 2);
-    debug_assert_eq!(s.as_ptr() as usize % core::mem::size_of::<u16>(), 0);
-    let chunk = unsafe { *(s.as_ptr() as *const u16) ^ 0x3030u16 };
+    let chunk = unsafe { load_u16(s) } ^ 0x3030u16;
     //Early add
     let ch = chunk.wrapping_add(0x7676u16);
     //Early calc result before use
@@ -814,6 +789,30 @@ mod tests {
                         " when parsing '{}'",
                         &s
                     );
+                }
+
+                /// Error kinds match `str::parse`, not just `Ok`/`Err`: every mix of sign,
+                /// digit run (0..45 bytes, so every SWAR width) and one bad byte at each position.
+                #[wasm_bindgen_test]
+                #[test]
+                fn [<test_error_kind_ $target_type $postfix>]() {
+                    let mut v = Vec::<u8, 64>::new();
+                    for prefix in ["", "+", "-"] {
+                        for digit in [b'0', b'9'] {
+                            for n in 0..45usize {
+                                for bad in 0..=n {
+                                    v.clear();
+                                    v.extend_from_slice(prefix.as_bytes()).unwrap();
+                                    for j in 0..n {
+                                        v.push(if j == bad { b'x' } else { digit }).unwrap();
+                                    }
+                                    let s = core::str::from_utf8(&v).unwrap();
+                                    let p: Result<$target_type, _> = s.parse();
+                                    assert_eq!(p.map_err(|e| e.kind().clone()), [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|e| e.kind), "parsing `{}`", s);
+                                }
+                            }
+                        }
+                    }
                 }
 
                 #[wasm_bindgen_test]
@@ -1082,7 +1081,7 @@ mod tests {
     fn check<T, const N: usize>(data: [u8; N])
     where
         T: FromStrRadixHelper,
-        T: core::str::FromStr,
+        T: core::str::FromStr<Err = core::num::ParseIntError>,
         T: core::fmt::Debug,
     {
         let mut s = heapless::String::<N>::new();
@@ -1094,10 +1093,8 @@ mod tests {
         }
         //if let Ok(s) = heapless::String<N>::from_utf8(data.to_vec()) {
         let spec: Result<T, _> = s.parse();
-        let expected = spec.map_err(|_| ());
-        assert_eq!(expected, parse::<T>(&data).map_err(|_| ()));
-        // let expected = spec.map_err(|e| e.kind().clone());
-        // assert_eq!(expected, parse_u32(&data).map_err(|e| e.kind));
+        let expected = spec.map_err(|e| e.kind().clone());
+        assert_eq!(expected, parse::<T>(&data).map_err(|e| e.kind));
         // } else {
         //     //just make sure doesn't panic:
         //     let _ = parse::<u32>(&data);
