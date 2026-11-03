@@ -10,6 +10,8 @@ earthly +extract   # also writes the generated model here for editor use (git-ig
 
 Everything runs in the `+tools` image (pinned in the root `Earthfile`: the
 [gilescope/aeneas](https://github.com/gilescope/aeneas) fork, Charon at its pin, Lean 4.34).
+The Lean side (Mathlib's cache, the fork's backend, our modules) builds in `+prove`'s Lake cache
+mount, which outlives the image layers, so a run that changes nothing replays it in minutes.
 For editing proofs on a laptop, `scripts/dev-link.sh <aeneas-checkout>` points `.aeneas` at a
 built checkout of the fork's backend and `lake build` works as usual.
 

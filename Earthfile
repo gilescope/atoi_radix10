@@ -51,7 +51,8 @@ aeneas-fork:
     SAVE ARTIFACT src/_build/default/main.exe aeneas
     SAVE ARTIFACT backends/lean lean
 
-# Rust nightly (charon's), charon, Lean and the fork's Aeneas with its backend built.
+# Rust nightly (charon's), charon, Lean, and the fork's Aeneas with its backend's sources (the
+# backend is built in `+prove`, inside the Lake cache mount: see there).
 tools:
     FROM debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f
     ARG TARGETARCH
@@ -95,8 +96,6 @@ tools:
     COPY +aeneas-fork/aeneas /opt/aeneas/aeneas
     COPY +aeneas-fork/lean /opt/aeneas/backends/lean
     RUN grep -qx "leanprover/lean4:v$LEAN_VERSION" /opt/aeneas/backends/lean/lean-toolchain
-    # The backend against Mathlib's cache, once.
-    RUN cd /opt/aeneas/backends/lean && lake exe cache get && lake build Aeneas
     SAVE IMAGE atoi-radix10-aeneas-tools:local
 
 # The crate as LLBC, from the production code: the five `load` wrappers (raw-pointer reads and
@@ -156,7 +155,7 @@ lock:
     FROM +tools
     WORKDIR /proofs
     COPY verification/lakefile.lean verification/lean-toolchain ./
-    RUN lake update
+    RUN ln -s /opt/aeneas/backends/lean .aeneas && lake update
     SAVE ARTIFACT lake-manifest.json AS LOCAL verification/lake-manifest.json
 
 # Checks the proofs: the generated model, the hand-written externals, the specs, and the
@@ -165,13 +164,19 @@ prove:
     FROM +tools
     WORKDIR /proofs
     COPY verification/lakefile.lean verification/lake-manifest.json verification/lean-toolchain ./
-    # Lake's outputs (Mathlib's cache, our .olean files: gigabytes) live in a cache mount, not
-    # in the image layers: the engine's store could not hold a layer that size, and the content
-    # is keyed by hash anyway.
+    # Lake's outputs (Mathlib's cache, the Aeneas backend's and our .olean files: gigabytes) live
+    # in a cache mount, not in image layers. A layer that size is the first thing the engine's
+    # least-recently-used collector takes when another project fills the store, and then the
+    # backend (~20 min) is rebuilt on every run; a cache mount is kept while a target names it.
+    # Lake keys its outputs by content hash, so a run that changes nothing replays them.
     CACHE /proofs/.lake
     # The backend the lakefile requires, at the path the manifest records (see
-    # verification/scripts/dev-link.sh for the same link on a laptop).
-    RUN ln -s /opt/aeneas/backends/lean .aeneas && lake exe cache get
+    # verification/scripts/dev-link.sh for the same link on a laptop): its sources copied into
+    # the mount under a per-commit name, so a pin bump starts clean and the old build is dropped.
+    RUN mkdir -p ".lake/aeneas-$AENEAS_COMMIT" && ln -s ".lake/aeneas-$AENEAS_COMMIT" .aeneas \
+        && cp -a /opt/aeneas/backends/lean/. .aeneas/ \
+        && find .lake -maxdepth 1 -name 'aeneas-*' ! -name "aeneas-$AENEAS_COMMIT" -exec rm -rf {} + \
+        && lake exe cache get
     COPY +extract/AtoiRadix10.lean ./
     COPY +extract/AtoiRadix10 ./AtoiRadix10
     COPY verification/AtoiRadix10/FunsExternal.lean verification/AtoiRadix10/TypesExternal.lean ./AtoiRadix10/
