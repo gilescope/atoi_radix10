@@ -1,9 +1,10 @@
 import Lake
 open Lake DSL
 
-/-- The Aeneas fork's Lean backend: `.aeneas` is a symlink, `/opt/aeneas/backends/lean` in the
-`+tools` image (pinned by `AENEAS_COMMIT` in the Earthfile), a checkout of the fork locally
-(`scripts/dev-link.sh`). A relative path so the manifest is the same in both. -/
+/-- The Aeneas fork's Lean backend: `.aeneas` is a symlink. In `+prove` it points into the Lake
+cache mount, at a copy of the `+tools` image's sources (pinned by `AENEAS_COMMIT` in the
+Earthfile) that `lake build` compiles there; locally, at a checkout of the fork
+(`scripts/dev-link.sh`). A relative path so the manifest is the same everywhere. -/
 require aeneas from ".aeneas"
 
 /-- Aeneas's Mathlib, required explicitly so its pin wins for the shared dependencies. -/
