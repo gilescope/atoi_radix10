@@ -1,7 +1,4 @@
-use super::{
-    parse_16_chars, parse_2_chars, parse_32_chars, parse_4_chars, parse_8_chars, trees::*,
-    IntErrorKind, ParseIntErrorPublic, MINUS, PLUS,
-};
+use super::{parse_digits, IntErrorKind, ParseIntErrorPublic, MINUS, PLUS};
 use core::ops::{Add, Mul, Sub};
 
 macro_rules! likely {
@@ -26,10 +23,12 @@ pub trait FromStrRadixHelper:
 {
     const MIN: Self;
     const BITS: u32;
-    const FIRST_SIG: u8;
-    const TAIL: Self;
-    const TREE: &'static [Self];
+    /// Number of digits in `Self::MAX`.
     const CHARS: usize;
+    /// Most significant digit of `Self::MAX` (or of `-Self::MIN` when signed).
+    const FIRST_SIG: u8;
+    /// `10^(CHARS - 1)`: the place value of the most significant digit.
+    const TOP: Self;
     fn from_u128(u: u128) -> Self;
     fn from_u64(u: u64) -> Self;
     fn from_u32(u: u32) -> Self;
@@ -42,13 +41,12 @@ pub trait FromStrRadixHelper:
 }
 
 macro_rules! doit {
-    ($($t:ty,$tr:expr,$chars:literal,$first_sig:literal,$tail:literal)*) => ($(impl FromStrRadixHelper for $t {
+    ($($t:ty,$chars:literal,$first_sig:literal,$top:literal)*) => ($(impl FromStrRadixHelper for $t {
         const MIN: Self = Self::MIN;
-        const FIRST_SIG: u8 = $first_sig;
-        const TAIL: Self = $tail;
         const BITS: u32 = Self::BITS;
-        const TREE: &'static[Self] = $tr;
         const CHARS: usize = $chars;
+        const FIRST_SIG: u8 = $first_sig;
+        const TOP: Self = $top;
         #[inline(always)]
         fn from_u128(u: u128) -> Self { u as Self }
         #[inline(always)]
@@ -75,34 +73,34 @@ macro_rules! doit {
 }
 
 doit! {
-    i8,TENS_I8,3,1,-28
-    i16,TENS_I16,5,3,-2768
-    i32,TENS_I32,10,2,-147_483_648
-    i64,TENS_I64,19,9,-223_372_036_854_775_808
-    i128,TENS_I128,39,1,-70141183460469231731687303715884105728
-    u8,TENS_U8,3,2,55
-    u16,TENS_U16,5,6,5535
-    u32,TENS_U32,10,4,294_967_295
-    u64,TENS_U64,20,1,8_446_744_073_709_551_615
-    u128,TENS_U128,39,3,40_282_366_920_938_463_463_374_607_431_768_211_455
+    i8,3,1,100
+    i16,5,3,10_000
+    i32,10,2,1_000_000_000
+    i64,19,9,1_000_000_000_000_000_000
+    i128,39,1,100_000_000_000_000_000_000_000_000_000_000_000_000
+    u8,3,2,100
+    u16,5,6,10_000
+    u32,10,4,1_000_000_000
+    u64,20,1,10_000_000_000_000_000_000
+    u128,39,3,100_000_000_000_000_000_000_000_000_000_000_000_000
 }
 
 #[cfg(target_pointer_width = "16")] //E.g. msp430-none-elf micro-controller.
 doit! {
-    isize,TENS_ISIZE,5,3,-2768
-    usize,TENS_USIZE,5,6,5535
+    isize,5,3,10_000
+    usize,5,6,10_000
 }
 
 #[cfg(target_pointer_width = "32")]
 doit! {
-    isize,TENS_ISIZE,10,2,-147_483_648
-    usize,TENS_USIZE,10,4,294_967_295
+    isize,10,2,1_000_000_000
+    usize,10,4,1_000_000_000
 }
 
 #[cfg(target_pointer_width = "64")]
 doit! {
-    isize,TENS_ISIZE,19,9,-223_372_036_854_775_808
-    usize,TENS_USIZE,20,1,8_446_744_073_709_551_615
+    isize,19,9,1_000_000_000_000_000_000
+    usize,20,1,10_000_000_000_000_000_000
 }
 
 // u128: 0 to 340_282_366_920_938_463_463_374_607_431_768_211_455
@@ -173,8 +171,7 @@ pub fn parse_from_str<T: FromStrRadixHelper, S: AsRef<str>>(s: S) -> Result<T, P
 /// Takes a `&[u8]` because any non-utf/non-ascii will fail parsing as an integer.
 ///
 /// It has exactly the same semantics as `std::str::parse`,
-/// but faster. (compiled with nightly,simd features
-/// and target native cpu will get the absolute fastest result.)
+/// but faster.
 ///
 /// Positives are slightly faster than negatives when parsing and
 /// if you don't need to put a leading `+` then that will be faster too.
@@ -185,363 +182,84 @@ pub fn parse_from_str<T: FromStrRadixHelper, S: AsRef<str>>(s: S) -> Result<T, P
 /// let s: String = "+000123".into();
 /// assert_eq!(atoi_radix10::parse::<u8>(s.as_bytes()), Ok(123));
 /// ```
+#[inline]
 pub fn parse<T>(mut s: &[u8]) -> Result<T, Pie>
 where
     T: FromStrRadixHelper,
 {
     let is_signed_ty = T::from_u32(0) > T::MIN;
-    let mut checked: Option<(u8, T)> = None;
-    if let Some(val) = s.first() {
-        let mut val = val.wrapping_sub(b'0');
-        loop {
-            if likely!(val <= 9) {
-                // positive without +. could be long with lots of leading zeros.
-                loop {
-                    let l = s.len();
-                    if likely!(l < T::CHARS) {
-                        let mut res = T::from_u8(0);
-
-                        for _ in 0..1 {
-                            // Align so that s ptr ends b0
-                            if s.as_ptr() as usize & 1 != 0 {
-                                let val_t = T::from_u8(val);
-                                s = &s[1..];
-                                if s.is_empty() {
-                                    res = val_t;
-                                    break;
-                                }
-                                res = val_t * T::TREE[s.len()];
-                            }
-                            if s.len() >= 2 && T::BITS >= 8 {
-                                // Align so that s ptr ends b00
-                                if s.as_ptr() as usize & 2 != 0 {
-                                    let val = T::from_u16(unsafe { parse_2_chars(s) }?);
-                                    s = &s[2..];
-                                    if s.is_empty() {
-                                        res = res + val;
-                                        break;
-                                    }
-                                    res = res + T::TREE[s.len()] * val;
-                                }
-                                if s.len() >= 4 && T::BITS >= 16 {
-                                    // Align so that s ptr ends b000
-                                    if s.as_ptr() as usize & 4 != 0 {
-                                        let val = T::from_u16(unsafe { parse_4_chars(s) }?);
-                                        s = &s[4..];
-                                        if s.is_empty() {
-                                            res = res + val;
-                                            break;
-                                        }
-                                        res = res + T::TREE[s.len()] * val;
-                                    }
-                                    if s.len() >= 8 && T::BITS >= 32 {
-                                        // Align so that s ptr ends b0000
-                                        if s.as_ptr() as usize & 8 != 0 {
-                                            let val = T::from_u32(unsafe { parse_8_chars(s) }?);
-                                            s = &s[8..];
-                                            if s.is_empty() {
-                                                res = res + val;
-                                                break;
-                                            }
-                                            res = res + T::TREE[s.len()] * val;
-                                        }
-                                        if s.len() >= 16 && T::BITS >= 64 {
-                                            // Align so that s ptr ends b00000
-                                            if s.as_ptr() as usize & 16 != 0 {
-                                                let val =
-                                                    T::from_u64(unsafe { parse_16_chars(s) }?);
-                                                s = &s[16..];
-                                                if s.is_empty() {
-                                                    res = res + val;
-                                                    break;
-                                                }
-                                                res = res + T::TREE[s.len()] * val;
-                                            }
-
-                                            // Did you see what we did there? at this point,
-                                            // s is aligned for reading as a u128.
-                                            if s.len() >= 32 && T::BITS >= 128 {
-                                                let val =
-                                                    T::from_u128(unsafe { parse_32_chars(s) }?);
-                                                s = &s[32..];
-                                                if s.is_empty() {
-                                                    res = res + val;
-                                                    break;
-                                                }
-                                                res = res + T::TREE[s.len()] * val;
-                                            }
-
-                                            //Even if we couldn't take 32 chars, 16 chars is aligned
-                                            if s.len() >= 16 {
-                                                let val =
-                                                    T::from_u64(unsafe { parse_16_chars(s) }?);
-                                                s = &s[16..];
-                                                if s.is_empty() {
-                                                    res = res + val;
-                                                    break;
-                                                }
-                                                res = res + T::TREE[s.len()] * val;
-                                            }
-                                        }
-
-                                        if s.len() >= 8 {
-                                            let val = T::from_u32(unsafe { parse_8_chars(s) }?);
-                                            s = &s[8..];
-                                            if s.is_empty() {
-                                                res = res + val;
-                                                break;
-                                            }
-                                            res = res + T::TREE[s.len()] * val;
-                                        }
-                                    }
-
-                                    if s.len() >= 4 {
-                                        let val = T::from_u16(unsafe { parse_4_chars(s) }?);
-                                        s = &s[4..];
-                                        if s.is_empty() {
-                                            res = res + val;
-                                            break;
-                                        }
-                                        res = res + T::TREE[s.len()] * val;
-                                    }
-                                }
-
-                                if s.len() >= 2 {
-                                    let val = T::from_u16(unsafe { parse_2_chars(s) }?);
-                                    s = &s[2..];
-                                    if s.is_empty() {
-                                        res = res + val;
-                                        break;
-                                    }
-                                    res = res + T::TREE[s.len()] * val;
-                                }
-                            }
-
-                            if let Some(val) = s.first() {
-                                let val = val.wrapping_sub(b'0');
-                                if val > 9 {
-                                    return Err(invalid!());
-                                }
-                                res = res + T::from_u8(val);
-                            }
-                        }
-                        return if let Some((_, checked_t)) = checked {
-                            checked_t.add_checked(res).ok_or(pos_overflow!())
-                        } else {
-                            Ok(res)
-                        };
-                    }
-                    // Deal with edge cases then get back to the top,
-                    if l == T::CHARS && val <= T::FIRST_SIG {
-                        // SAFETY: mul is in range as `checked` is constrained to <= T::FIRST_SIG
-                        let v = T::from_u8(val);
-                        let mult = v * T::TREE[T::CHARS - 1];
-                        let val_next = s[1];
-                        checked = Some((val, mult));
-                        val = val_next.wrapping_sub(b'0');
-                        s = &s[1..];
-                        if unlikely!(val > 9) {
-                            return Err(invalid!());
-                        }
-                    } else if val == 0 {
-                        // Remove leading zeros
-                        val = b'0';
-                        while val == b'0' {
-                            s = &s[1..];
-                            val = match s.first() {
-                                Some(val) => *val,
-                                None => return Ok(T::from_u8(0)),
-                            }
-                        }
-                        val = val.wrapping_sub(b'0');
-                        if val > 9 {
-                            return Err(empty!());
-                        }
-                    } else {
-                        return Err(pos_overflow!());
-                    }
-                    debug_assert!(val <= 9);
-                }
-            } else if likely!(is_signed_ty && val == MINUS) {
-                s = &s[1..];
-
-                // negative without -. could be long with lots of leading zeros.
-                loop {
-                    let l = s.len();
-                    if likely!(l < T::CHARS && l != 0) {
-                        let mut res = T::from_u8(0);
-                        for _ in 0..1 {
-                            // Align so that s ptr ends b0
-                            if s.as_ptr() as usize & 1 != 0 {
-                                let val = s[0].wrapping_sub(b'0');
-                                if likely!(val <= 9 && l == 1) {
-                                    res = res - T::from_u8(val);
-                                    return Ok(res);
-                                } else if likely!(val <= 9) {
-                                    res = res - T::from_u8(val);
-                                    s = &s[1..];
-                                    res = res * T::TREE[s.len()];
-                                } else {
-                                    return Err(invalid!());
-                                };
-                            }
-                            if s.len() >= 2 && T::BITS >= 8 {
-                                // Align so that s ptr ends b00
-                                if s.as_ptr() as usize & 2 != 0 {
-                                    let val = unsafe { T::from_u16(parse_2_chars(s)?) };
-                                    s = &s[2..];
-                                    if s.is_empty() {
-                                        res = res - val;
-                                        break;
-                                    }
-                                    res = res - T::TREE[s.len()] * val;
-                                }
-                                if s.len() >= 4 && T::BITS >= 16 {
-                                    // Align so that s ptr ends b000
-                                    if s.as_ptr() as usize & 4 != 0 {
-                                        let val = unsafe { T::from_u16(parse_4_chars(s)?) };
-                                        s = &s[4..];
-                                        if s.is_empty() {
-                                            res = res - val;
-                                            break;
-                                        }
-                                        res = res - T::TREE[s.len()] * val;
-                                    }
-                                    if s.len() >= 8 && T::BITS >= 32 {
-                                        // Align so that s ptr ends b0000
-                                        if s.as_ptr() as usize & 8 != 0 {
-                                            let val = unsafe { T::from_u32(parse_8_chars(s)?) };
-                                            s = &s[8..];
-                                            if s.is_empty() {
-                                                res = res - val;
-                                                break;
-                                            }
-                                            res = res - T::TREE[s.len()] * val;
-                                        }
-                                        if s.len() >= 16 && T::BITS >= 64 {
-                                            // Align so that s ptr ends b00000
-                                            if s.as_ptr() as usize & 16 != 0 {
-                                                let val =
-                                                    unsafe { T::from_u64(parse_16_chars(s)?) };
-                                                s = &s[16..];
-                                                if s.is_empty() {
-                                                    res = res - val;
-                                                    break;
-                                                }
-                                                res = res - T::TREE[s.len()] * val;
-                                            }
-
-                                            // s is aligned so that we can read u128
-                                            if s.len() >= 32 && T::BITS >= 128 {
-                                                let val =
-                                                    T::from_u128(unsafe { parse_32_chars(s) }?);
-                                                s = &s[32..];
-                                                if s.is_empty() {
-                                                    res = res - val;
-                                                    break;
-                                                }
-                                                res = res - T::TREE[s.len()] * val;
-                                            }
-                                            // all the following are now aligned.
-                                            if s.len() >= 16 {
-                                                let val =
-                                                    T::from_u64(unsafe { parse_16_chars(s)? });
-                                                s = &s[16..];
-                                                if s.is_empty() {
-                                                    res = res - val;
-                                                    break;
-                                                }
-                                                res = res - T::TREE[s.len()] * val;
-                                            }
-                                        }
-                                        if s.len() >= 8 {
-                                            let val = T::from_u32(unsafe { parse_8_chars(s) }?);
-                                            s = &s[8..];
-                                            if s.is_empty() {
-                                                res = res - val;
-                                                break;
-                                            }
-                                            res = res - T::TREE[s.len()] * val;
-                                        }
-                                    }
-                                    if s.len() >= 4 {
-                                        let val = T::from_u16(unsafe { parse_4_chars(s) }?);
-                                        s = &s[4..];
-                                        if s.is_empty() {
-                                            res = res - val;
-                                            break;
-                                        }
-                                        res = res - T::TREE[s.len()] * val;
-                                    }
-                                }
-                                if s.len() >= 2 {
-                                    let val = T::from_u16(unsafe { parse_2_chars(s) }?);
-                                    s = &s[2..];
-                                    if s.is_empty() {
-                                        res = res - val;
-                                        break;
-                                    }
-                                    res = res - T::TREE[s.len()] * val;
-                                }
-                            }
-                            if let Some(val) = s.first() {
-                                let val = val.wrapping_sub(b'0');
-                                if unlikely!(val > 9) {
-                                    return Err(invalid!());
-                                };
-                                res = res - T::from_u8(val);
-                            }
-                        }
-                        return if let Some((chk, chk_t)) = checked {
-                            if unlikely!(res == T::TAIL && chk == T::FIRST_SIG) {
-                                return Ok(T::MIN);
-                            }
-                            res.sub_checked(chk_t).ok_or(neg_overflow!())
-                        } else {
-                            Ok(res)
-                        };
-                    }
-                    val = if let Some(val) = s.first() {
-                        *val
-                    } else {
-                        return Err(empty!());
-                    };
-                    val = val.wrapping_sub(b'0');
-                    if l == T::CHARS && val <= T::FIRST_SIG {
-                        // SAFETY: mul is in range as `checked` is constrained to <= T::FIRST_SIG
-                        checked = Some((val, T::from_u8(val) * T::TREE[T::CHARS - 1]));
-                        s = &s[1..];
-                    } else if val == 0 {
-                        val = b'0';
-                        while val == b'0' {
-                            s = &s[1..];
-                            val = match s.first() {
-                                Some(val) => *val,
-                                None => return Ok(T::from_u8(0)),
-                            }
-                        }
-                    } else {
-                        return Err(neg_overflow!());
-                    }
-                }
-            } else if val == PLUS {
-                s = &s[1..];
-                val = match s.first() {
-                    Some(value) => {
-                        let value = value.wrapping_sub(b'0');
-                        if likely!(value <= 9) {
-                            value
-                        } else {
-                            return Err(empty!());
-                        }
-                    }
-                    None => return Err(empty!()),
-                };
-            } else {
-                return Err(invalid!());
+    let first = match s.first() {
+        Some(&c) => c,
+        None => return Err(empty!()),
+    };
+    let mut negative = false;
+    if unlikely!(first.wrapping_sub(b'0') > 9) {
+        if first == PLUS.wrapping_add(b'0') || (is_signed_ty && first == MINUS.wrapping_add(b'0')) {
+            negative = is_signed_ty && first == MINUS.wrapping_add(b'0');
+            s = &s[1..];
+            match s.first() {
+                Some(&c) if c.wrapping_sub(b'0') <= 9 => {}
+                Some(_) => return Err(invalid!()),
+                None => return Err(empty!()),
             }
+        } else {
+            return Err(invalid!());
         }
-    } else {
-        Err(empty!())
+    }
+    parse_magnitude(s, negative)
+}
+
+/// `s` is non-empty and starts with a digit.
+#[inline(always)]
+fn parse_magnitude<T>(s: &[u8], negative: bool) -> Result<T, Pie>
+where
+    T: FromStrRadixHelper,
+{
+    let l = s.len();
+    if likely!(l < T::CHARS) {
+        // Short enough that it cannot overflow.
+        let v = parse_digits::<T>(s)?;
+        return Ok(if negative { T::from_u8(0) - v } else { v });
+    }
+    if l == T::CHARS {
+        let d = s[0].wrapping_sub(b'0');
+        if likely!(d <= T::FIRST_SIG) {
+            // Peel the most significant digit off; the rest can't overflow,
+            // and `d <= FIRST_SIG` keeps `head` in range too.
+            let head = T::from_u8(d) * T::TOP;
+            let rest = parse_digits::<T>(&s[1..])?;
+            return if negative {
+                (T::from_u8(0) - rest)
+                    .sub_checked(head)
+                    .ok_or(neg_overflow!())
+            } else {
+                head.add_checked(rest).ok_or(pos_overflow!())
+            };
+        }
+    }
+    parse_long(s, negative)
+}
+
+/// `s` starts with a digit, has at least `T::CHARS` bytes and isn't the
+/// exactly-`CHARS`-digits-and-fits case: it either has leading zeros or it
+/// overflows.
+#[inline(never)]
+fn parse_long<T>(s: &[u8], negative: bool) -> Result<T, Pie>
+where
+    T: FromStrRadixHelper,
+{
+    if s[0] != b'0' {
+        return Err(if negative {
+            neg_overflow!()
+        } else {
+            pos_overflow!()
+        });
+    }
+    let zeros = s.iter().take_while(|&&c| c == b'0').count();
+    let s = &s[zeros..];
+    match s.first() {
+        None => Ok(T::from_u8(0)),
+        Some(&c) if c.wrapping_sub(b'0') <= 9 => parse_magnitude(s, negative),
+        Some(_) => Err(invalid!()),
     }
 }

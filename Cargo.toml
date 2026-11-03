@@ -12,6 +12,8 @@ repository = "https://github.com/gilescope/atoi_radix10"
 
 [features]
 default = []
+# Accepted for backwards compatibility; the parser is pure SWAR and this
+# feature currently has no effect.
 simd = []
 
 [dependencies]
