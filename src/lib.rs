@@ -1,7 +1,7 @@
 #![no_std]
 //#![cfg_attr(all(feature = "nightly", feature = "simd"), feature(stdsimd))]
 #![allow(clippy::inconsistent_digit_grouping)]
-#![warn(unsafe_op_in_unsafe_fn)]
+#![forbid(unsafe_code)]
 #[macro_use]
 mod parse;
 
@@ -407,7 +407,7 @@ mod tests {
                             let mut v = Vec::<u8, 48>::new();
                             v.extend_from_slice(sign.as_bytes()).unwrap();
                             v.extend_from_slice(&digits[..len]).unwrap();
-                            let s = unsafe { core::str::from_utf8_unchecked(&v[..]) };
+                            let s = core::str::from_utf8(&v[..]).unwrap();
                             let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                             assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", s);
                         }
@@ -427,7 +427,7 @@ mod tests {
                             for j in 1..i {
                                 let mut v = vec.clone();
                                 v[j] = ascii;
-                                let s = unsafe { core::str::from_utf8_unchecked(&v[..]) };
+                                let s = core::str::from_utf8(&v[..]).unwrap();
                                 assert_eq!(Err(ParseIntErrorPublic{kind:IntErrorKind::InvalidDigit}), [<parse $postfix>]::<$target_type>(s.as_bytes()), "parsing `{}`", s);
                             }
                         }
@@ -441,7 +441,7 @@ mod tests {
                     let ss = ($target_type::MAX as $target_type).numtoa(10, &mut s);
                     let len = ss.len();
                     s[len] = b'1';
-                    let s = unsafe { core::str::from_utf8_unchecked(&s[..len + 1]) };
+                    let s = core::str::from_utf8(&s[..len + 1]).unwrap();
                     assert_eq!(
                         Err(()),
                         [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_|()),
@@ -467,7 +467,7 @@ mod tests {
                     let mut s = [0u8; 42];
 
                     for i in ($min..$max as $target_type).step_by($step).take(ITERS) {
-                        let s = unsafe { core::str::from_utf8_unchecked(i.numtoa(10, &mut s)) };
+                        let s = core::str::from_utf8(i.numtoa(10, &mut s)).unwrap();
                         let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                         assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                     }
@@ -481,7 +481,7 @@ mod tests {
 
                     for _ in 0..RANDOM_ITERS {
                         let i = rng.random::<$target_type>();
-                        let s = unsafe { core::str::from_utf8_unchecked(i.numtoa(10, &mut s)) };
+                        let s = core::str::from_utf8(i.numtoa(10, &mut s)).unwrap();
                         let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                         assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                     }
@@ -495,7 +495,7 @@ mod tests {
                         s[0] = b'+';
                         let ss = i.numtoa(10, &mut s[1..]);
                         let len = ss.len();
-                        let s = unsafe { core::str::from_utf8_unchecked(&s[0..len+1]) };
+                        let s = core::str::from_utf8(&s[0..len+1]).unwrap();
                         let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                         assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                     }
@@ -506,7 +506,7 @@ mod tests {
                 fn [<test_does_not_accept_plus_after_zero_ $target_type _plus $postfix>]() {
                     let mut s = [0u8; 50];
                     s[s.len() - 1] = b'+';
-                    let s = unsafe { core::str::from_utf8_unchecked(&s) };
+                    let s = core::str::from_utf8(&s).unwrap();
                     let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                     assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{:?}'", &s);
                 }
@@ -516,7 +516,7 @@ mod tests {
                 fn [<test_accepts_many_zeros_ $target_type _plus $postfix>]() {
                     //let i = $max;
                     let s = [0u8; 142];
-                    let s = unsafe { core::str::from_utf8_unchecked(&s) };
+                    let s = core::str::from_utf8(&s).unwrap();
                     let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                     assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                 }
@@ -528,7 +528,7 @@ mod tests {
                     let ss = ($target_type::MAX as $target_type).numtoa(10, &mut s[100..]);
                     let len = ss.len();
 
-                    let s = unsafe { core::str::from_utf8_unchecked(&s[..100 + len]) };
+                    let s = core::str::from_utf8(&s[..100 + len]).unwrap();
                     let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                     assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                 }
