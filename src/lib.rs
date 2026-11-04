@@ -85,14 +85,6 @@ fn ld4(s: &[u8]) -> u32 {
 fn ld8(s: &[u8]) -> u64 {
     u64::from_ne_bytes(*s.first_chunk().unwrap()) ^ 0x3030303030303030
 }
-/// The 8-byte chunk ending `n` bytes before the end of `s` (at least `n + 8`
-/// long). Chunks after the head are addressed from the end: `s.len() - n` is
-/// in range whenever the caller's length test says `s.len() >= n`, which LLVM
-/// sees, whereas an offset derived from `len % 8` it cannot bound.
-#[inline(always)]
-fn ld8_back(s: &[u8], n: usize) -> u64 {
-    ld8(&s[s.len() - n..])
-}
 
 // A byte b is a digit iff its high nibble is 0 and b + 0x76 doesn't set the
 // high bit (i.e. b <= 9).
@@ -274,17 +266,21 @@ pub(crate) fn parse_digits<T: FromStrRadixHelper>(s: &[u8]) -> Result<T, Pie> {
             };
         }
         // 17..=38 digits (only u64, i64, u128, i128 and 64-bit usize get here).
-        // Head holds the leading `l % 8` digits (or 8 if `l % 8 == 0`), then
-        // whole 8-digit chunks follow, read from the end.
-        let r = ((l - 1) % 8) + 1;
+        // `k` whole 8-digit chunks follow a head of `r` digits (1..=8). `rest`
+        // is exactly `8 * k` bytes long and `k >= 2` here, which is what lets
+        // LLVM fold the chunk bounds checks; `k >= 3` and `k >= 4` follow from
+        // the length tests below.
+        let k = (l - 1) / 8;
+        let r = l - 8 * k;
         let hi = head!(ld8(s), 8 - r);
+        let rest = &s[r..];
+        let a = ld8(rest);
+        let b = ld8(&rest[8..]);
+        let ok = valid8(hi) & valid8(a) & valid8(b);
+        let top = value8(hi) as u64 * 1_0000_0000 + value8(a) as u64;
         if T::BITS <= 64 || l <= 24 {
-            // 17..=24 digits: (hi * 10^8 + a) * 10^8 + b. For 64-bit types
-            // l <= 19 so this fits a u64.
-            let a = ld8_back(s, 16);
-            let b = ld8_back(s, 8);
-            let ok = valid8(hi) & valid8(a) & valid8(b);
-            let top = value8(hi) as u64 * 1_0000_0000 + value8(a) as u64;
+            // 17..=24 digits: top * 10^8 + b. For 64-bit types l <= 19 so
+            // this fits a u64.
             return if likely!(ok) {
                 if T::BITS <= 64 {
                     Ok(T::from_u64(top * 1_0000_0000 + value8(b) as u64))
@@ -295,14 +291,10 @@ pub(crate) fn parse_digits<T: FromStrRadixHelper>(s: &[u8]) -> Result<T, Pie> {
                 Err(invalid())
             };
         }
+        let c = ld8(&rest[16..]);
+        let ok = ok & valid8(c);
+        let bottom = value8(b) as u64 * 1_0000_0000 + value8(c) as u64;
         if l <= 32 {
-            // 25..=32 digits: hi, then three whole chunks.
-            let a = ld8_back(s, 24);
-            let b = ld8_back(s, 16);
-            let c = ld8_back(s, 8);
-            let ok = valid8(hi) & valid8(a) & valid8(b) & valid8(c);
-            let top = value8(hi) as u64 * 1_0000_0000 + value8(a) as u64;
-            let bottom = value8(b) as u64 * 1_0000_0000 + value8(c) as u64;
             return if likely!(ok) {
                 Ok(T::from_u128(
                     top as u128 * 1_0000_0000_0000_0000 + bottom as u128,
@@ -311,15 +303,8 @@ pub(crate) fn parse_digits<T: FromStrRadixHelper>(s: &[u8]) -> Result<T, Pie> {
                 Err(invalid())
             };
         }
-        // 33..=38 digits: hi, then four whole chunks.
-        let a = ld8_back(s, 32);
-        let b = ld8_back(s, 24);
-        let c = ld8_back(s, 16);
-        let d = ld8_back(s, 8);
-        let ok = valid8(hi) & valid8(a) & valid8(b) & valid8(c) & valid8(d);
-        let top = value8(hi) as u64 * 1_0000_0000 + value8(a) as u64;
-        let bottom = value8(b) as u64 * 1_0000_0000 + value8(c) as u64;
-        if likely!(ok) {
+        let d = ld8(&rest[24..]);
+        if likely!(ok & valid8(d)) {
             let v = (top as u128 * 1_0000_0000_0000_0000 + bottom as u128) * 1_0000_0000
                 + value8(d) as u128;
             Ok(T::from_u128(v))
