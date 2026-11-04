@@ -1,7 +1,7 @@
 #![no_std]
 //#![cfg_attr(all(feature = "nightly", feature = "simd"), feature(stdsimd))]
 #![allow(clippy::inconsistent_digit_grouping)]
-#![warn(unsafe_op_in_unsafe_fn)]
+#![forbid(unsafe_code)]
 #[macro_use]
 mod parse;
 
@@ -65,21 +65,25 @@ macro_rules! head {
     };
 }
 
-/// SAFETY: `p` must be readable for 2 bytes. Alignment doesn't matter.
+// The loads are safe slice reads: `first_chunk` is one length check and then
+// the same unaligned load `read_unaligned` would emit. Every caller has
+// already branched on the length, so the check folds away once inlined, and
+// the whole crate stays in the fragment Aeneas can extract and prove.
+
+/// The first 2 bytes of `s` (at least 2 long) as a native-endian chunk.
 #[inline(always)]
-unsafe fn ld2(p: *const u8) -> u16 {
-    u16::from_ne_bytes(unsafe { core::ptr::read_unaligned(p as *const [u8; 2]) }) ^ 0x3030
+fn ld2(s: &[u8]) -> u16 {
+    u16::from_ne_bytes(*s.first_chunk().unwrap()) ^ 0x3030
 }
-/// SAFETY: `p` must be readable for 4 bytes. Alignment doesn't matter.
+/// The first 4 bytes of `s` (at least 4 long) as a native-endian chunk.
 #[inline(always)]
-unsafe fn ld4(p: *const u8) -> u32 {
-    u32::from_ne_bytes(unsafe { core::ptr::read_unaligned(p as *const [u8; 4]) }) ^ 0x30303030
+fn ld4(s: &[u8]) -> u32 {
+    u32::from_ne_bytes(*s.first_chunk().unwrap()) ^ 0x30303030
 }
-/// SAFETY: `p` must be readable for 8 bytes. Alignment doesn't matter.
+/// The first 8 bytes of `s` (at least 8 long) as a native-endian chunk.
 #[inline(always)]
-unsafe fn ld8(p: *const u8) -> u64 {
-    u64::from_ne_bytes(unsafe { core::ptr::read_unaligned(p as *const [u8; 8]) })
-        ^ 0x3030303030303030
+fn ld8(s: &[u8]) -> u64 {
+    u64::from_ne_bytes(*s.first_chunk().unwrap()) ^ 0x3030303030303030
 }
 
 // A byte b is a digit iff its high nibble is 0 and b + 0x76 doesn't set the
@@ -136,12 +140,11 @@ fn invalid() -> Pie {
 }
 
 /// Parse the first 2 chars in a u8 slice as a base 10 integer.
-/// SAFETY: slice length must be at least 2.
+/// Panics if the slice is shorter than 2.
 #[doc(hidden)]
 #[inline]
-pub unsafe fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
-    debug_assert!(s.len() >= 2);
-    let c = unsafe { ld2(s.as_ptr()) };
+pub fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
+    let c = ld2(s);
     if likely!(valid2(c)) {
         Ok(value2(c))
     } else {
@@ -150,12 +153,11 @@ pub unsafe fn parse_2_chars(s: &[u8]) -> Result<u16, Pie> {
 }
 
 /// Parse the first 4 chars in a u8 slice as a base 10 integer.
-/// SAFETY: slice length must be at least 4.
+/// Panics if the slice is shorter than 4.
 #[doc(hidden)]
 #[inline]
-pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
-    debug_assert!(s.len() >= 4);
-    let c = unsafe { ld4(s.as_ptr()) };
+pub fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
+    let c = ld4(s);
     if likely!(valid4(c)) {
         Ok(value4(c))
     } else {
@@ -164,12 +166,11 @@ pub unsafe fn parse_4_chars(s: &[u8]) -> Result<u16, Pie> {
 }
 
 /// Parse the first 8 chars in a u8 slice as a base 10 integer.
-/// SAFETY: slice length must be at least 8.
+/// Panics if the slice is shorter than 8.
 #[doc(hidden)]
 #[inline]
-pub unsafe fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
-    debug_assert!(s.len() >= 8);
-    let c = unsafe { ld8(s.as_ptr()) };
+pub fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
+    let c = ld8(s);
     if likely!(valid8(c)) {
         Ok(value8(c))
     } else {
@@ -178,12 +179,11 @@ pub unsafe fn parse_8_chars(s: &[u8]) -> Result<u32, Pie> {
 }
 
 /// Parse the first 16 chars in a u8 slice as a base 10 integer.
-/// SAFETY: slice length must be at least 16.
+/// Panics if the slice is shorter than 16.
 #[doc(hidden)]
 #[inline]
-pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
-    debug_assert!(s.len() >= 16);
-    let (a, b) = unsafe { (ld8(s.as_ptr()), ld8(s.as_ptr().add(8))) };
+pub fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
+    let (a, b) = (ld8(s), ld8(&s[8..]));
     if likely!(valid8(a) & valid8(b)) {
         Ok(value8(a) as u64 * 1_0000_0000 + value8(b) as u64)
     } else {
@@ -192,13 +192,11 @@ pub unsafe fn parse_16_chars(s: &[u8]) -> Result<u64, Pie> {
 }
 
 /// Parse the first 32 chars in a u8 slice as a base 10 integer.
-/// SAFETY: slice length must be at least 32.
+/// Panics if the slice is shorter than 32.
 #[doc(hidden)]
 #[inline]
-pub unsafe fn parse_32_chars(s: &[u8]) -> Result<u128, Pie> {
-    debug_assert!(s.len() >= 32);
-    let p = s.as_ptr();
-    let (a, b, c, d) = unsafe { (ld8(p), ld8(p.add(8)), ld8(p.add(16)), ld8(p.add(24))) };
+pub fn parse_32_chars(s: &[u8]) -> Result<u128, Pie> {
+    let (a, b, c, d) = (ld8(s), ld8(&s[8..]), ld8(&s[16..]), ld8(&s[24..]));
     if likely!(valid8(a) & valid8(b) & valid8(c) & valid8(d)) {
         let hi = value8(a) as u64 * 1_0000_0000 + value8(b) as u64;
         let lo = value8(c) as u64 * 1_0000_0000 + value8(d) as u64;
@@ -220,22 +218,19 @@ pub unsafe fn parse_32_chars(s: &[u8]) -> Result<u128, Pie> {
 #[inline(always)]
 pub(crate) fn parse_digits<T: FromStrRadixHelper>(s: &[u8]) -> Result<T, Pie> {
     let l = s.len();
-    let p = s.as_ptr();
     debug_assert!(l >= 1 && l < T::CHARS);
-    // SAFETY: every caller checks `1 <= l < T::CHARS`.
-    unsafe { core::hint::assert_unchecked(l >= 1 && l < T::CHARS) };
-    unsafe {
+    {
         if l <= 8 {
             if l <= 2 {
                 if l == 1 {
-                    let d = *p ^ b'0';
+                    let d = s[0] ^ b'0';
                     return if likely!(d <= 9) {
                         Ok(T::from_u8(d))
                     } else {
                         Err(invalid())
                     };
                 }
-                let c = ld2(p);
+                let c = ld2(s);
                 return if likely!(valid2(c)) {
                     Ok(T::from_u16(value2(c)))
                 } else {
@@ -243,16 +238,16 @@ pub(crate) fn parse_digits<T: FromStrRadixHelper>(s: &[u8]) -> Result<T, Pie> {
                 };
             }
             if l <= 4 {
-                let hi = head!(ld2(p), 4 - l);
-                let lo = ld2(p.add(l - 2));
+                let hi = head!(ld2(s), 4 - l);
+                let lo = ld2(&s[l - 2..]);
                 return if likely!(valid2(hi) & valid2(lo)) {
                     Ok(T::from_u16(value2(hi) * 100 + value2(lo)))
                 } else {
                     Err(invalid())
                 };
             }
-            let hi = head!(ld4(p), 8 - l);
-            let lo = ld4(p.add(l - 4));
+            let hi = head!(ld4(s), 8 - l);
+            let lo = ld4(&s[l - 4..]);
             return if likely!(valid4(hi) & valid4(lo)) {
                 Ok(T::from_u32(value4(hi) as u32 * 10000 + value4(lo) as u32))
             } else {
@@ -260,8 +255,8 @@ pub(crate) fn parse_digits<T: FromStrRadixHelper>(s: &[u8]) -> Result<T, Pie> {
             };
         }
         if l <= 16 {
-            let hi = head!(ld8(p), 16 - l);
-            let lo = ld8(p.add(l - 8));
+            let hi = head!(ld8(s), 16 - l);
+            let lo = ld8(&s[l - 8..]);
             return if likely!(valid8(hi) & valid8(lo)) {
                 Ok(T::from_u64(
                     value8(hi) as u64 * 1_0000_0000 + value8(lo) as u64,
@@ -271,12 +266,16 @@ pub(crate) fn parse_digits<T: FromStrRadixHelper>(s: &[u8]) -> Result<T, Pie> {
             };
         }
         // 17..=38 digits (only u64, i64, u128, i128 and 64-bit usize get here).
-        // Head holds the leading `l % 8` digits (or 8 if `l % 8 == 0`), then
-        // whole 8-digit chunks follow.
-        let r = ((l - 1) % 8) + 1;
-        let hi = head!(ld8(p), 8 - r);
-        let a = ld8(p.add(r));
-        let b = ld8(p.add(r + 8));
+        // `k` whole 8-digit chunks follow a head of `r` digits (1..=8). `rest`
+        // is exactly `8 * k` bytes long and `k >= 2` here, which is what lets
+        // LLVM fold the chunk bounds checks; `k >= 3` and `k >= 4` follow from
+        // the length tests below.
+        let k = (l - 1) / 8;
+        let r = l - 8 * k;
+        let hi = head!(ld8(s), 8 - r);
+        let rest = &s[r..];
+        let a = ld8(rest);
+        let b = ld8(&rest[8..]);
         let ok = valid8(hi) & valid8(a) & valid8(b);
         let top = value8(hi) as u64 * 1_0000_0000 + value8(a) as u64;
         if T::BITS <= 64 || l <= 24 {
@@ -292,7 +291,7 @@ pub(crate) fn parse_digits<T: FromStrRadixHelper>(s: &[u8]) -> Result<T, Pie> {
                 Err(invalid())
             };
         }
-        let c = ld8(p.add(r + 16));
+        let c = ld8(&rest[16..]);
         let ok = ok & valid8(c);
         let bottom = value8(b) as u64 * 1_0000_0000 + value8(c) as u64;
         if l <= 32 {
@@ -304,7 +303,7 @@ pub(crate) fn parse_digits<T: FromStrRadixHelper>(s: &[u8]) -> Result<T, Pie> {
                 Err(invalid())
             };
         }
-        let d = ld8(p.add(r + 24));
+        let d = ld8(&rest[24..]);
         if likely!(ok & valid8(d)) {
             let v = (top as u128 * 1_0000_0000_0000_0000 + bottom as u128) * 1_0000_0000
                 + value8(d) as u128;
@@ -344,7 +343,7 @@ mod tests {
         let s = "34028236692093846346337460743176821145";
         assert_eq!(
             Ok(34028236692093846346337460743176_u128),
-            unsafe { super::parse_32_chars(s.as_bytes()).map_err(|_| ()) },
+            super::parse_32_chars(s.as_bytes()).map_err(|_| ()),
             "fail to parse: '{}'",
             &s
         );
@@ -393,7 +392,7 @@ mod tests {
                             let mut v = Vec::<u8, 48>::new();
                             v.extend_from_slice(sign.as_bytes()).unwrap();
                             v.extend_from_slice(&digits[..len]).unwrap();
-                            let s = unsafe { core::str::from_utf8_unchecked(&v[..]) };
+                            let s = core::str::from_utf8(&v[..]).unwrap();
                             let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                             assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", s);
                         }
@@ -413,7 +412,7 @@ mod tests {
                             for j in 1..i {
                                 let mut v = vec.clone();
                                 v[j] = ascii;
-                                let s = unsafe { core::str::from_utf8_unchecked(&v[..]) };
+                                let s = core::str::from_utf8(&v[..]).unwrap();
                                 assert_eq!(Err(ParseIntErrorPublic{kind:IntErrorKind::InvalidDigit}), [<parse $postfix>]::<$target_type>(s.as_bytes()), "parsing `{}`", s);
                             }
                         }
@@ -427,7 +426,7 @@ mod tests {
                     let ss = ($target_type::MAX as $target_type).numtoa(10, &mut s);
                     let len = ss.len();
                     s[len] = b'1';
-                    let s = unsafe { core::str::from_utf8_unchecked(&s[..len + 1]) };
+                    let s = core::str::from_utf8(&s[..len + 1]).unwrap();
                     assert_eq!(
                         Err(()),
                         [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_|()),
@@ -453,7 +452,7 @@ mod tests {
                     let mut s = [0u8; 42];
 
                     for i in ($min..$max as $target_type).step_by($step).take(ITERS) {
-                        let s = unsafe { core::str::from_utf8_unchecked(i.numtoa(10, &mut s)) };
+                        let s = core::str::from_utf8(i.numtoa(10, &mut s)).unwrap();
                         let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                         assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                     }
@@ -467,7 +466,7 @@ mod tests {
 
                     for _ in 0..RANDOM_ITERS {
                         let i = rng.random::<$target_type>();
-                        let s = unsafe { core::str::from_utf8_unchecked(i.numtoa(10, &mut s)) };
+                        let s = core::str::from_utf8(i.numtoa(10, &mut s)).unwrap();
                         let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                         assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                     }
@@ -481,7 +480,7 @@ mod tests {
                         s[0] = b'+';
                         let ss = i.numtoa(10, &mut s[1..]);
                         let len = ss.len();
-                        let s = unsafe { core::str::from_utf8_unchecked(&s[0..len+1]) };
+                        let s = core::str::from_utf8(&s[0..len+1]).unwrap();
                         let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                         assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                     }
@@ -492,7 +491,7 @@ mod tests {
                 fn [<test_does_not_accept_plus_after_zero_ $target_type _plus $postfix>]() {
                     let mut s = [0u8; 50];
                     s[s.len() - 1] = b'+';
-                    let s = unsafe { core::str::from_utf8_unchecked(&s) };
+                    let s = core::str::from_utf8(&s).unwrap();
                     let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                     assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{:?}'", &s);
                 }
@@ -502,7 +501,7 @@ mod tests {
                 fn [<test_accepts_many_zeros_ $target_type _plus $postfix>]() {
                     //let i = $max;
                     let s = [0u8; 142];
-                    let s = unsafe { core::str::from_utf8_unchecked(&s) };
+                    let s = core::str::from_utf8(&s).unwrap();
                     let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                     assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                 }
@@ -514,7 +513,7 @@ mod tests {
                     let ss = ($target_type::MAX as $target_type).numtoa(10, &mut s[100..]);
                     let len = ss.len();
 
-                    let s = unsafe { core::str::from_utf8_unchecked(&s[..100 + len]) };
+                    let s = core::str::from_utf8(&s[..100 + len]).unwrap();
                     let p: Result<$target_type, ()> = s.parse().map_err(|_| ());
                     assert_eq!(p, [<parse $postfix>]::<$target_type>(s.as_bytes()).map_err(|_| ()), "fail to parse: '{}'", &s);
                 }

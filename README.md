@@ -24,8 +24,9 @@ Spec:
 
 Goals:
 
-An exploration of the fastest way to parse numbers without reading memory that you don't own. (Once happy with the result we can try and de-unsafe as much as possible
-while keeping the performance.)
+An exploration of the fastest way to parse numbers without reading memory that you don't own.
+The crate is `#![forbid(unsafe_code)]`: the SWAR chunks are read through slice accessors whose
+bounds checks fold away, so it is as fast as the raw-pointer version and Aeneas can prove it.
 
 We try to obey the rule of small numbers and make sure single digit numbers are especially fast, and in general all numbers will be parsed faster than std.
 
@@ -54,49 +55,51 @@ This is called SWAR: Simd within a register.
 Optimisations that did help
 ===========================
 
-   * Using likely and unlikely intrinsics.
-   * Moving `+` further up before it was accessed due to latency requirements.
-   * Try not to do any instructions requiring latency just before returning. For example `if cond { return a as u16 }`, you can calculate the `a as u16` before the if then it's faster. (We're optimising for the happy path)
-   * It was much easier to start fast and try and add things in than to start slow and make it faster (the latter you are in the dark as to why it is slow and just guessing, where as if you build it up you know instantly when you add something in that borks the speed.).
-   * It turns out that the error enum slows things down a bit so for max speed you can `.map_err(|_| ())` if you don't care what type of parse error it is.
+* Using likely and unlikely intrinsics.
+* Moving `+` further up before it was accessed due to latency requirements.
+* Try not to do any instructions requiring latency just before returning. For example `if cond { return a as u16 }`, you can calculate the `a as u16` before the if then it's faster. (We're optimising for the happy path)
+* It was much easier to start fast and try and add things in than to start slow and make it faster (the latter you are in the dark as to why it is slow and just guessing, where as if you build it up you know instantly when you add something in that borks the speed.).
+* It turns out that the error enum slows things down a bit so for max speed you can `.map_err(|_| ())` if you don't care what type of parse error it is.
 
 Optimisations that didn't
 =========================
 Things that didn't seem to have any effect:
 
-   * Compiler breaks down *10 to *8 + *2 behind the scenes so we don't have to.
-     (It seems to resort to imul for 100 so replacing shifts for that might make
-     a slight gain)
-   * casting len from usize to u8.
+* Compiler breaks down *10 to *8 + *2 behind the scenes so we don't have to.
+    (It seems to resort to imul for 100 so replacing shifts for that might make
+    a slight gain)
+* casting len from usize to u8.
 
 FAQ
 ===
 
-   * Should I use this in production? As it's a new crate I would treat it with caution,
-   there could still be a bug or two lurking despite tests and some light fuzzing. It's had one `reddit review` from which I've hopefully plugged a soundness hole around alignment.
+* Should I use this in production? As it's a new crate I would treat it with caution,
+  there could still be a bug or two lurking despite tests and some light fuzzing. It's had one `reddit review` from which I've hopefully plugged a soundness hole around alignment.
 
-   * Why not include this in the std library? The std library parsing code isn't radix specific. As the num parsing is in core, code size is important for embedded systems. This implementation is definitely more code than std.
+* Why not include this in the std library? The std library parsing code isn't radix specific. As the num parsing is in core, code size is important for embedded systems. This implementation is definitely more code than std.
 
-   * If you want to run the tests under wasm you need to install:
-   ```
-   cargo install wasm-bindgen-cli
-   ```
+* If you want to run the tests under wasm you need to install:
+
+  ```sh
+  cargo install wasm-bindgen-cli
+  ```
 
 TODO
 ====
 
-   - [x] make all the tests work in no_std mode.
-   - [x] Compile for wasm
-   - [ ] Bench on wasm?
-   - [x] Run tests under wasm: `cargo test --features nightly --target=wasm32-unknown-unknown`
-   - [x] have all wasm tests pass.
-   - [ ] Wasm + Simd - can I use core simd and things just work with simulation for 256bits?
-   - [ ] use no non-portable simd commands (so simd feature works on arm/neon).
-   - [x] make work on big-endian
+* [x] make all the tests work in no_std mode.
+* [x] Compile for wasm
+* [ ] Bench on wasm?
+* [x] Run tests under wasm: `cargo test --features nightly --target=wasm32-unknown-unknown`
+* [x] have all wasm tests pass.
+* [ ] Wasm + Simd - can I use core simd and things just work with simulation for 256bits?
+* [ ] use no non-portable simd commands (so simd feature works on arm/neon).
+* [x] make work on big-endian
 
-## Big-endien
+Big-endian
+----------
 
-We can run the tests on big-endien via MIRI:
+We can run the tests on big-endian via MIRI:
 
 ```sh
 rustup +nightly component add miri
